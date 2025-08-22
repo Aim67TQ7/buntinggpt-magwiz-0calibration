@@ -9,6 +9,25 @@ import { generateValidationExportData } from '@/utils/validation';
 import { Calculator, Settings, Thermometer, Globe, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Material database with bulk densities and magnetic properties
+const MATERIAL_DATABASE: Record<string, { bulkDensity: number; magneticSusceptibility: number }> = {
+  'Iron': { bulkDensity: 7.87, magneticSusceptibility: 2000 },
+  'Steel (Mild)': { bulkDensity: 7.85, magneticSusceptibility: 1800 },
+  'Copper': { bulkDensity: 8.96, magneticSusceptibility: -9.6 }, // Diamagnetic
+  'Cobalt': { bulkDensity: 8.9, magneticSusceptibility: 1100 },
+  'Nickel': { bulkDensity: 8.9, magneticSusceptibility: 600 },
+  'Lead': { bulkDensity: 11.34, magneticSusceptibility: -27 }, // Diamagnetic
+  'Aluminum': { bulkDensity: 2.70, magneticSusceptibility: 22 }, // Paramagnetic
+  'Zinc': { bulkDensity: 7.13, magneticSusceptibility: -11 }, // Diamagnetic
+  'Brass': { bulkDensity: 8.44, magneticSusceptibility: -9 }, // Diamagnetic
+  'Shredded Steel Scrap': { bulkDensity: 0.9, magneticSusceptibility: 1500 },
+  'High-Density Shredded Scrap': { bulkDensity: 2.0, magneticSusceptibility: 1600 },
+  'Iron Powder': { bulkDensity: 2.38, magneticSusceptibility: 1200 },
+  'Aluminum Powder': { bulkDensity: 1.0, magneticSusceptibility: 20 }, // Average of range
+  'Aluminum Shavings': { bulkDensity: 0.175, magneticSusceptibility: 18 }, // Average of range
+  'Custom': { bulkDensity: 2.5, magneticSusceptibility: 500 }
+};
+
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
   const [inputs, setInputs] = useState<CalculatorInputs>({
@@ -27,11 +46,11 @@ export function MagneticSeparatorCalculator() {
       magnetGap: 150
     },
     material: {
-      materialType: 'Iron Ore',
-      bulkDensity: 2.5,
+      materialType: 'Iron',
+      bulkDensity: 7.87,
       waterContent: 8,
       trampMetalSize: { min: 5, max: 150 },
-      magneticSusceptibility: 500,
+      magneticSusceptibility: 2000,
       particleDistribution: 'Normal'
     },
     environmental: {
@@ -260,14 +279,38 @@ export function MagneticSeparatorCalculator() {
             {/* Material Parameters */}
             <ParameterSection title="Material Properties" icon={<Globe size={20} />}>
               <div className="grid grid-cols-2 gap-4">
-                <ParameterInput
+                <ParameterSelect
                   label="Material Type"
                   value={inputs.material.materialType}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    material: { ...prev.material, materialType: value }
-                  }))}
-                  type="text"
+                  onChange={(value) => {
+                    const materialData = MATERIAL_DATABASE[value];
+                    setInputs(prev => ({
+                      ...prev,
+                      material: { 
+                        ...prev.material, 
+                        materialType: value,
+                        bulkDensity: materialData?.bulkDensity || prev.material.bulkDensity,
+                        magneticSusceptibility: materialData?.magneticSusceptibility || prev.material.magneticSusceptibility
+                      }
+                    }));
+                  }}
+                  options={[
+                    { value: 'Iron', label: 'Iron' },
+                    { value: 'Steel (Mild)', label: 'Steel (Mild)' },
+                    { value: 'Copper', label: 'Copper' },
+                    { value: 'Cobalt', label: 'Cobalt' },
+                    { value: 'Nickel', label: 'Nickel' },
+                    { value: 'Lead', label: 'Lead' },
+                    { value: 'Aluminum', label: 'Aluminum' },
+                    { value: 'Zinc', label: 'Zinc' },
+                    { value: 'Brass', label: 'Brass' },
+                    { value: 'Shredded Steel Scrap', label: 'Shredded Steel Scrap' },
+                    { value: 'High-Density Shredded Scrap', label: 'High-Density Shredded Scrap' },
+                    { value: 'Iron Powder', label: 'Iron Powder' },
+                    { value: 'Aluminum Powder', label: 'Aluminum Powder' },
+                    { value: 'Aluminum Shavings', label: 'Aluminum Shavings' },
+                    { value: 'Custom', label: 'Custom Material' }
+                  ]}
                 />
                 <ParameterInput
                   label="Bulk Density"
