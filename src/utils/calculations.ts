@@ -165,12 +165,22 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
 }
 
 export function performCompleteCalculation(inputs: CalculatorInputs): CalculationResults {
-  return {
-    magneticFieldStrength: calculateMagneticField(inputs),
-    trampMetalRemoval: calculateTrampMetalRemoval(inputs),
-    thermalPerformance: calculateThermalPerformance(inputs),
-    recommendedModel: recommendSeparatorModel(inputs)
-  };
+  console.log('Starting calculation with inputs:', inputs);
+  
+  try {
+    const results = {
+      magneticFieldStrength: calculateMagneticField(inputs),
+      trampMetalRemoval: calculateTrampMetalRemoval(inputs),
+      thermalPerformance: calculateThermalPerformance(inputs),
+      recommendedModel: recommendSeparatorModel(inputs)
+    };
+    
+    console.log('Calculation results:', results);
+    return results;
+  } catch (error) {
+    console.error('Error in performCompleteCalculation:', error);
+    throw error;
+  }
 }
 
 export function optimizeForEfficiency(
@@ -291,20 +301,37 @@ export function performEnhancedCalculation(
   optimizeMode: boolean = false,
   targetEfficiency?: number
 ): EnhancedCalculationResults {
-  const baseResults = performCompleteCalculation(inputs);
-  const validation = validateCalculationResults(baseResults);
-  const recommendedTools = getRecommendedValidationTools(baseResults);
+  console.log('Starting enhanced calculation:', { optimizeMode, targetEfficiency });
   
-  let optimization: OptimizationResult | undefined;
-  
-  if (optimizeMode && targetEfficiency) {
-    optimization = optimizeForEfficiency(inputs, targetEfficiency);
+  try {
+    const baseResults = performCompleteCalculation(inputs);
+    console.log('Base results completed');
+    
+    const validation = validateCalculationResults(baseResults);
+    console.log('Validation completed:', validation);
+    
+    const recommendedTools = getRecommendedValidationTools(baseResults);
+    console.log('Recommended tools:', recommendedTools);
+    
+    let optimization: OptimizationResult | undefined;
+    
+    if (optimizeMode && targetEfficiency) {
+      console.log('Starting optimization for target:', targetEfficiency);
+      optimization = optimizeForEfficiency(inputs, targetEfficiency);
+      console.log('Optimization completed:', optimization);
+    }
+    
+    const finalResults = {
+      ...baseResults,
+      validation,
+      recommendedTools,
+      optimization
+    };
+    
+    console.log('Enhanced calculation completed:', finalResults);
+    return finalResults;
+  } catch (error) {
+    console.error('Error in performEnhancedCalculation:', error);
+    throw error;
   }
-  
-  return {
-    ...baseResults,
-    validation,
-    recommendedTools,
-    optimization
-  };
 }

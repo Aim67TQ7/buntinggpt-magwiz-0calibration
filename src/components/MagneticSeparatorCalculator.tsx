@@ -64,11 +64,14 @@ export function MagneticSeparatorCalculator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleCalculate = async () => {
+    console.log('handleCalculate started with inputs:', inputs);
     setIsCalculating(true);
     try {
       // Simulate calculation time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('About to call performEnhancedCalculation');
       const calculationResults = performEnhancedCalculation(inputs, false);
+      console.log('Calculation results received:', calculationResults);
       setResults(calculationResults);
       
       // Show appropriate toast based on validation results
@@ -90,6 +93,7 @@ export function MagneticSeparatorCalculator() {
         });
       }
     } catch (error) {
+      console.error('Error in handleCalculate:', error);
       toast({
         title: "Calculation Error",
         description: "An error occurred during calculation. Please check your inputs.",
@@ -101,18 +105,22 @@ export function MagneticSeparatorCalculator() {
   };
 
   const handleOptimize = async () => {
+    console.log('handleOptimize started with inputs:', inputs, 'target:', targetEfficiency);
     setIsCalculating(true);
     
     try {
       // Simulate calculation time
       await new Promise(resolve => setTimeout(resolve, 1500));
       
+      console.log('About to call performEnhancedCalculation with optimization');
       const calculationResults = performEnhancedCalculation(inputs, true, targetEfficiency / 100);
+      console.log('Optimization results received:', calculationResults);
       setResults(calculationResults);
       
       if (calculationResults.optimization?.success) {
         // Apply optimized parameters to inputs
         const optimized = calculationResults.optimization.optimizedParameters;
+        console.log('Applying optimized parameters:', optimized);
         setInputs(prev => ({
           ...prev,
           magnet: {
@@ -141,6 +149,7 @@ export function MagneticSeparatorCalculator() {
         });
       }
     } catch (error) {
+      console.error('Error in handleOptimize:', error);
       toast({
         title: "Optimization Error",
         description: "Failed to perform optimization. Please check your inputs.",
