@@ -33,7 +33,7 @@ export function MagneticSeparatorCalculator() {
     magnet: {
       gap: 150,
       coreBeltRatio: 0.6,
-      position: 300,
+      position: 'overhead',
     },
     misc: {
       altitude: 1000,
@@ -60,7 +60,6 @@ export function MagneticSeparatorCalculator() {
 
   const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [optimizeMode, setOptimizeMode] = useState(false);
   const [targetEfficiency, setTargetEfficiency] = useState(95);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -395,17 +394,19 @@ export function MagneticSeparatorCalculator() {
                   max={0.9}
                   step={0.1}
                 />
-                <ParameterInput
+                <ParameterSelect
                   label="Position"
                   value={inputs.magnet.position}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    magnet: { ...prev.magnet, position: Number(value) }
+                    magnet: { ...prev.magnet, position: value as 'overhead' | 'crossbelt' | 'inline' | 'drum' }
                   }))}
-                  type="number"
-                  min={0}
-                  max={1000}
-                  unit="mm"
+                  options={[
+                    { value: 'overhead', label: 'Overhead' },
+                    { value: 'crossbelt', label: 'Crossbelt' },
+                    { value: 'inline', label: 'Inline' },
+                    { value: 'drum', label: 'Drum' }
+                  ]}
                 />
               </div>
             </ParameterSection>
@@ -445,27 +446,16 @@ export function MagneticSeparatorCalculator() {
 
             {/* Action Buttons */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="optimize-mode"
-                  checked={optimizeMode}
-                  onCheckedChange={setOptimizeMode}
-                />
-                <Label htmlFor="optimize-mode">Optimize for Target Efficiency</Label>
-              </div>
-              
-              {optimizeMode && (
-                <ParameterInput
-                  label="Target Efficiency"
-                  value={targetEfficiency}
-                  onChange={(value) => setTargetEfficiency(Number(value))}
-                  type="number"
-                  min={50}
-                  max={99}
-                  step={0.1}
-                  unit="%"
-                />
-              )}
+              <ParameterInput
+                label="Target Efficiency"
+                value={targetEfficiency}
+                onChange={(value) => setTargetEfficiency(Number(value))}
+                type="number"
+                min={50}
+                max={99}
+                step={0.1}
+                unit="%"
+              />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button 
@@ -479,12 +469,12 @@ export function MagneticSeparatorCalculator() {
                 
                 <Button 
                   onClick={handleOptimize}
-                  disabled={isCalculating || !optimizeMode}
+                  disabled={isCalculating}
                   variant="outline"
                   className="w-full h-12 text-lg font-semibold"
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  {isCalculating ? "Optimizing..." : "Optimize Design"}
+                  {isCalculating ? "Optimizing..." : `Optimize for ${targetEfficiency}% Efficiency`}
                 </Button>
               </div>
               

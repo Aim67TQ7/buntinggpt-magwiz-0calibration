@@ -20,7 +20,7 @@ export interface ShapeParameters {
 export interface MagnetParameters {
   gap: number; // mm (magnet gap)
   coreBeltRatio: number; // ratio 0.1-0.9
-  position: number; // mm (position along belt)
+  position: 'overhead' | 'crossbelt' | 'inline' | 'drum'; // magnet type/position
 }
 
 export interface MiscParameters {
