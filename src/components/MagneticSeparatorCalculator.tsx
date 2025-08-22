@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ParameterSection, ParameterInput, ParameterSelect } from "./ParameterSection";
 import { ResultsDisplay } from "./ResultsDisplay";
 import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
 import { performEnhancedCalculation } from '@/utils/calculations';
 import { generateValidationExportData } from '@/utils/validation';
-import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download } from "lucide-react";
+import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download, Atom, Cloud, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function MagneticSeparatorCalculator() {
@@ -37,17 +39,37 @@ export function MagneticSeparatorCalculator() {
       altitude: 1000,
       ambientTemperature: 25,
     },
+    advanced: {
+      materialProperties: {
+        magneticSusceptibility: 0.003,
+        particleDistribution: 'uniform',
+        bulkDensity: 1.6
+      },
+      environmental: {
+        humidity: 50,
+        dustExposure: 'medium',
+        vibrationLevel: 0.5
+      },
+      magneticSystem: {
+        ampereTurns: 5000,
+        poleConfiguration: 'double',
+        magneticArrangement: 'overhead'
+      }
+    }
   });
 
   const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [optimizeMode, setOptimizeMode] = useState(false);
+  const [targetEfficiency, setTargetEfficiency] = useState(95);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleCalculate = async () => {
     setIsCalculating(true);
     try {
       // Simulate calculation time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const calculationResults = performEnhancedCalculation(inputs);
+      const calculationResults = performEnhancedCalculation(inputs, false);
       setResults(calculationResults);
       
       // Show appropriate toast based on validation results
@@ -72,6 +94,57 @@ export function MagneticSeparatorCalculator() {
       toast({
         title: "Calculation Error",
         description: "An error occurred during calculation. Please check your inputs.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handleOptimize = async () => {
+    setIsCalculating(true);
+    
+    try {
+      // Simulate calculation time
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const calculationResults = performEnhancedCalculation(inputs, true, targetEfficiency / 100);
+      setResults(calculationResults);
+      
+      if (calculationResults.optimization?.success) {
+        // Apply optimized parameters to inputs
+        const optimized = calculationResults.optimization.optimizedParameters;
+        setInputs(prev => ({
+          ...prev,
+          magnet: {
+            ...prev.magnet,
+            gap: optimized.gap || prev.magnet.gap,
+            coreBeltRatio: optimized.coreBeltRatio || prev.magnet.coreBeltRatio
+          },
+          conveyor: {
+            ...prev.conveyor,
+            beltSpeed: optimized.beltSpeed || prev.conveyor.beltSpeed
+          },
+          burden: {
+            ...prev.burden,
+            feedDepth: optimized.feedDepth || prev.burden.feedDepth
+          }
+        }));
+        toast({
+          title: `Optimization Successful!`,
+          description: `Achieved ${(calculationResults.optimization.achievedEfficiency * 100).toFixed(1)}% efficiency`,
+        });
+      } else {
+        toast({
+          title: `Optimization Incomplete`,
+          description: `Reached ${(calculationResults.optimization?.achievedEfficiency || 0 * 100).toFixed(1)}% efficiency. Target ${targetEfficiency}% may not be achievable.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Optimization Error",
+        description: "Failed to perform optimization. Please check your inputs.",
         variant: "destructive",
       });
     } finally {
@@ -371,27 +444,250 @@ export function MagneticSeparatorCalculator() {
             </ParameterSection>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
-              <Button 
-                onClick={handleCalculate} 
-                disabled={isCalculating}
-                className="flex-1 h-12 text-lg font-semibold"
-              >
-                <Calculator className="w-5 h-5 mr-2" />
-                {isCalculating ? "Calculating..." : "Calculate Design"}
-              </Button>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="optimize-mode"
+                  checked={optimizeMode}
+                  onCheckedChange={setOptimizeMode}
+                />
+                <Label htmlFor="optimize-mode">Optimize for Target Efficiency</Label>
+              </div>
+              
+              {optimizeMode && (
+                <ParameterInput
+                  label="Target Efficiency"
+                  value={targetEfficiency}
+                  onChange={(value) => setTargetEfficiency(Number(value))}
+                  type="number"
+                  min={50}
+                  max={99}
+                  step={0.1}
+                  unit="%"
+                />
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  onClick={handleCalculate}
+                  disabled={isCalculating}
+                  className="w-full h-12 text-lg font-semibold"
+                >
+                  <Calculator className="w-5 h-5 mr-2" />
+                  {isCalculating ? "Calculating..." : "Calculate Design"}
+                </Button>
+                
+                <Button 
+                  onClick={handleOptimize}
+                  disabled={isCalculating || !optimizeMode}
+                  variant="outline"
+                  className="w-full h-12 text-lg font-semibold"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  {isCalculating ? "Optimizing..." : "Optimize Design"}
+                </Button>
+              </div>
               
               {results && (
                 <Button 
                   onClick={handleExport}
-                  variant="outline"
-                  className="h-12 px-6"
+                  variant="secondary"
+                  className="w-full h-12"
                 >
                   <Download className="w-5 h-5 mr-2" />
                   Export CSV
                 </Button>
               )}
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-advanced"
+                  checked={showAdvanced}
+                  onCheckedChange={setShowAdvanced}
+                />
+                <Label htmlFor="show-advanced">Show Advanced Parameters</Label>
+              </div>
             </div>
+            
+            {/* Advanced Parameters */}
+            {showAdvanced && inputs.advanced && (
+              <>
+                <ParameterSection title="Material Properties" icon={<Atom className="h-5 w-5" />}>
+                  <ParameterInput
+                    label="Magnetic Susceptibility"
+                    value={inputs.advanced.materialProperties.magneticSusceptibility}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        materialProperties: {
+                          ...prev.advanced!.materialProperties,
+                          magneticSusceptibility: Number(value)
+                        }
+                      }
+                    }))}
+                    type="number"
+                    step={0.001}
+                  />
+                  
+                  <ParameterSelect
+                    label="Particle Distribution"
+                    value={inputs.advanced.materialProperties.particleDistribution}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        materialProperties: {
+                          ...prev.advanced!.materialProperties,
+                          particleDistribution: value as 'uniform' | 'gaussian' | 'bimodal'
+                        }
+                      }
+                    }))}
+                    options={[
+                      { value: 'uniform', label: 'Uniform' },
+                      { value: 'gaussian', label: 'Gaussian' },
+                      { value: 'bimodal', label: 'Bimodal' }
+                    ]}
+                  />
+                  
+                  <ParameterInput
+                    label="Bulk Density"
+                    value={inputs.advanced.materialProperties.bulkDensity}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        materialProperties: {
+                          ...prev.advanced!.materialProperties,
+                          bulkDensity: Number(value)
+                        }
+                      }
+                    }))}
+                    type="number"
+                    step={0.1}
+                    unit="t/m³"
+                  />
+                </ParameterSection>
+                
+                <ParameterSection title="Environmental" icon={<Cloud className="h-5 w-5" />}>
+                  <ParameterInput
+                    label="Humidity"
+                    value={inputs.advanced.environmental.humidity}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        environmental: {
+                          ...prev.advanced!.environmental,
+                          humidity: Number(value)
+                        }
+                      }
+                    }))}
+                    type="number"
+                    min={0}
+                    max={100}
+                    unit="%"
+                  />
+                  
+                  <ParameterSelect
+                    label="Dust Exposure"
+                    value={inputs.advanced.environmental.dustExposure}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        environmental: {
+                          ...prev.advanced!.environmental,
+                          dustExposure: value as 'low' | 'medium' | 'high'
+                        }
+                      }
+                    }))}
+                    options={[
+                      { value: 'low', label: 'Low' },
+                      { value: 'medium', label: 'Medium' },
+                      { value: 'high', label: 'High' }
+                    ]}
+                  />
+                  
+                  <ParameterInput
+                    label="Vibration Level"
+                    value={inputs.advanced.environmental.vibrationLevel}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        environmental: {
+                          ...prev.advanced!.environmental,
+                          vibrationLevel: Number(value)
+                        }
+                      }
+                    }))}
+                    type="number"
+                    step={0.1}
+                    unit="g"
+                  />
+                </ParameterSection>
+                
+                <ParameterSection title="Magnetic System" icon={<Zap className="h-5 w-5" />}>
+                  <ParameterInput
+                    label="Ampere Turns"
+                    value={inputs.advanced.magneticSystem.ampereTurns}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        magneticSystem: {
+                          ...prev.advanced!.magneticSystem,
+                          ampereTurns: Number(value)
+                        }
+                      }
+                    }))}
+                    type="number"
+                    unit="AT"
+                  />
+                  
+                  <ParameterSelect
+                    label="Pole Configuration"
+                    value={inputs.advanced.magneticSystem.poleConfiguration}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        magneticSystem: {
+                          ...prev.advanced!.magneticSystem,
+                          poleConfiguration: value as 'single' | 'double' | 'multi'
+                        }
+                      }
+                    }))}
+                    options={[
+                      { value: 'single', label: 'Single Pole' },
+                      { value: 'double', label: 'Double Pole' },
+                      { value: 'multi', label: 'Multi Pole' }
+                    ]}
+                  />
+                  
+                  <ParameterSelect
+                    label="Magnetic Arrangement"
+                    value={inputs.advanced.magneticSystem.magneticArrangement}
+                    onChange={(value) => setInputs(prev => ({
+                      ...prev,
+                      advanced: {
+                        ...prev.advanced!,
+                        magneticSystem: {
+                          ...prev.advanced!.magneticSystem,
+                          magneticArrangement: value as 'inline' | 'crossbelt' | 'overhead'
+                        }
+                      }
+                    }))}
+                    options={[
+                      { value: 'inline', label: 'In-line' },
+                      { value: 'crossbelt', label: 'Cross-belt' },
+                      { value: 'overhead', label: 'Overhead' }
+                    ]}
+                  />
+                </ParameterSection>
+              </>
+            )}
           </div>
 
           {/* Results Display */}

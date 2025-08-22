@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award, TrendingUp, ArrowRight } from 'lucide-react';
 import { ValidationToolsRecommendation } from './ValidationToolsRecommendation';
 
 interface ResultsDisplayProps {
@@ -155,6 +155,71 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
 
       {/* Professional Validation Tools */}
       <ValidationToolsRecommendation results={results} />
+      
+      {/* Optimization Results */}
+      {results.optimization && (
+        <Card className="shadow-card">
+          <CardHeader className="bg-gradient-to-r from-engineering-primary to-engineering-secondary text-white">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp size={20} />
+              Optimization Results
+            </CardTitle>
+            <CardDescription className="text-white/90">
+              {results.optimization.success 
+                ? `Successfully achieved ${(results.optimization.achievedEfficiency * 100).toFixed(1)}% efficiency`
+                : `Reached ${(results.optimization.achievedEfficiency * 100).toFixed(1)}% efficiency in ${results.optimization.iterations} iterations`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground mb-1">Target</div>
+                <div className="text-3xl font-bold text-engineering-accent">
+                  {(results.optimization.targetEfficiency * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <ArrowRight className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                <div className="text-sm text-muted-foreground mb-1">Achieved</div>
+                <div className="text-3xl font-bold text-engineering-primary">
+                  {(results.optimization.achievedEfficiency * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground mb-1">Iterations</div>
+                <div className="text-3xl font-bold text-engineering-secondary">
+                  {results.optimization.iterations}
+                </div>
+              </div>
+            </div>
+            
+            {results.optimization.parameterChanges.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-4 text-foreground">Parameter Changes</h4>
+                <div className="space-y-3">
+                  {results.optimization.parameterChanges.map((change, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                      <span className="font-medium text-foreground">{change.parameter}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground">
+                          {change.originalValue.toFixed(2)} → {change.optimizedValue.toFixed(2)}
+                        </span>
+                        <Badge 
+                          variant={change.change > 0 ? "default" : "secondary"}
+                          className={change.change > 0 ? "bg-engineering-success text-white" : ""}
+                        >
+                          {change.change > 0 ? '+' : ''}{change.change.toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

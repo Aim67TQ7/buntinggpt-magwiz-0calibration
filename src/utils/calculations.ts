@@ -1,4 +1,4 @@
-import { CalculatorInputs, CalculationResults, EnhancedCalculationResults } from '@/types/calculator';
+import { CalculatorInputs, CalculationResults, EnhancedCalculationResults, OptimizationResult } from '@/types/calculator';
 import { validateCalculationResults, getRecommendedValidationTools } from '@/utils/validation';
 
 export function calculateMagneticField(inputs: CalculatorInputs): CalculationResults['magneticFieldStrength'] {
@@ -173,14 +173,138 @@ export function performCompleteCalculation(inputs: CalculatorInputs): Calculatio
   };
 }
 
-export function performEnhancedCalculation(inputs: CalculatorInputs): EnhancedCalculationResults {
+export function optimizeForEfficiency(
+  inputs: CalculatorInputs,
+  targetEfficiency: number = 0.95,
+  maxIterations: number = 100
+): OptimizationResult {
+  const originalInputs = { ...inputs };
+  let currentInputs = { ...inputs };
+  let bestInputs = { ...inputs };
+  let bestEfficiency = 0;
+  let iterations = 0;
+
+  // Define optimization bounds
+  const bounds = {
+    gap: { min: 50, max: 300, step: 5 },
+    coreBeltRatio: { min: 0.3, max: 0.9, step: 0.05 },
+    beltSpeed: { min: 0.5, max: 4.0, step: 0.1 },
+    feedDepth: { min: 10, max: 200, step: 10 }
+  };
+
+  while (iterations < maxIterations) {
+    const results = calculateTrampMetalRemoval(currentInputs);
+    const currentEfficiency = results.overallEfficiency;
+
+    if (currentEfficiency > bestEfficiency) {
+      bestEfficiency = currentEfficiency;
+      bestInputs = { ...currentInputs };
+    }
+
+    if (currentEfficiency >= targetEfficiency) {
+      break;
+    }
+
+    // Optimize parameters that most directly affect efficiency
+    if (currentEfficiency < targetEfficiency) {
+      // Reduce gap to improve magnetic field strength
+      if (currentInputs.magnet.gap > bounds.gap.min) {
+        currentInputs.magnet.gap = Math.max(
+          bounds.gap.min,
+          currentInputs.magnet.gap - bounds.gap.step
+        );
+      }
+      
+      // Increase core:belt ratio for stronger field
+      if (currentInputs.magnet.coreBeltRatio < bounds.coreBeltRatio.max) {
+        currentInputs.magnet.coreBeltRatio = Math.min(
+          bounds.coreBeltRatio.max,
+          currentInputs.magnet.coreBeltRatio + bounds.coreBeltRatio.step
+        );
+      }
+      
+      // Reduce belt speed for more collection time
+      if (currentInputs.conveyor.beltSpeed > bounds.beltSpeed.min) {
+        currentInputs.conveyor.beltSpeed = Math.max(
+          bounds.beltSpeed.min,
+          currentInputs.conveyor.beltSpeed - bounds.beltSpeed.step
+        );
+      }
+      
+      // Reduce feed depth for better accessibility
+      if (currentInputs.burden.feedDepth > bounds.feedDepth.min) {
+        currentInputs.burden.feedDepth = Math.max(
+          bounds.feedDepth.min,
+          currentInputs.burden.feedDepth - bounds.feedDepth.step
+        );
+      }
+    }
+
+    iterations++;
+  }
+
+  // Calculate parameter changes
+  const parameterChanges = [
+    {
+      parameter: 'Gap (mm)',
+      originalValue: originalInputs.magnet.gap,
+      optimizedValue: bestInputs.magnet.gap,
+      change: ((bestInputs.magnet.gap - originalInputs.magnet.gap) / originalInputs.magnet.gap) * 100
+    },
+    {
+      parameter: 'Core:Belt Ratio',
+      originalValue: originalInputs.magnet.coreBeltRatio,
+      optimizedValue: bestInputs.magnet.coreBeltRatio,
+      change: ((bestInputs.magnet.coreBeltRatio - originalInputs.magnet.coreBeltRatio) / originalInputs.magnet.coreBeltRatio) * 100
+    },
+    {
+      parameter: 'Belt Speed (m/s)',
+      originalValue: originalInputs.conveyor.beltSpeed,
+      optimizedValue: bestInputs.conveyor.beltSpeed,
+      change: ((bestInputs.conveyor.beltSpeed - originalInputs.conveyor.beltSpeed) / originalInputs.conveyor.beltSpeed) * 100
+    },
+    {
+      parameter: 'Feed Depth (mm)',
+      originalValue: originalInputs.burden.feedDepth,
+      optimizedValue: bestInputs.burden.feedDepth,
+      change: ((bestInputs.burden.feedDepth - originalInputs.burden.feedDepth) / originalInputs.burden.feedDepth) * 100
+    }
+  ].filter(change => Math.abs(change.change) > 0.1);
+
+  return {
+    success: bestEfficiency >= targetEfficiency,
+    iterations,
+    targetEfficiency,
+    achievedEfficiency: bestEfficiency,
+    optimizedParameters: {
+      gap: bestInputs.magnet.gap,
+      coreBeltRatio: bestInputs.magnet.coreBeltRatio,
+      beltSpeed: bestInputs.conveyor.beltSpeed,
+      feedDepth: bestInputs.burden.feedDepth
+    },
+    parameterChanges
+  };
+}
+
+export function performEnhancedCalculation(
+  inputs: CalculatorInputs, 
+  optimizeMode: boolean = false,
+  targetEfficiency?: number
+): EnhancedCalculationResults {
   const baseResults = performCompleteCalculation(inputs);
   const validation = validateCalculationResults(baseResults);
   const recommendedTools = getRecommendedValidationTools(baseResults);
+  
+  let optimization: OptimizationResult | undefined;
+  
+  if (optimizeMode && targetEfficiency) {
+    optimization = optimizeForEfficiency(inputs, targetEfficiency);
+  }
   
   return {
     ...baseResults,
     validation,
     recommendedTools,
+    optimization
   };
 }

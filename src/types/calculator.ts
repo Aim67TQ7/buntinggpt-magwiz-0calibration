@@ -161,9 +161,47 @@ export interface ValidationTools {
   };
 }
 
+export interface OptimizationResult {
+  success: boolean;
+  iterations: number;
+  targetEfficiency: number;
+  achievedEfficiency: number;
+  optimizedParameters: {
+    gap?: number;
+    coreBeltRatio?: number;
+    beltSpeed?: number;
+    feedDepth?: number;
+  };
+  parameterChanges: Array<{
+    parameter: string;
+    originalValue: number;
+    optimizedValue: number;
+    change: number;
+  }>;
+}
+
+export interface AdvancedParameters {
+  materialProperties: {
+    magneticSusceptibility: number;
+    particleDistribution: 'uniform' | 'gaussian' | 'bimodal';
+    bulkDensity: number;
+  };
+  environmental: {
+    humidity: number;
+    dustExposure: 'low' | 'medium' | 'high';
+    vibrationLevel: number;
+  };
+  magneticSystem: {
+    ampereTurns: number;
+    poleConfiguration: 'single' | 'double' | 'multi';
+    magneticArrangement: 'inline' | 'crossbelt' | 'overhead';
+  };
+}
+
 export interface EnhancedCalculationResults extends CalculationResults {
   validation: ValidationResult;
   recommendedTools: string[];
+  optimization?: OptimizationResult;
 }
 
 export interface CalculatorInputs {
@@ -172,4 +210,5 @@ export interface CalculatorInputs {
   shape: ShapeParameters;
   magnet: MagnetParameters;
   misc: MiscParameters;
+  advanced?: AdvancedParameters;
 }
