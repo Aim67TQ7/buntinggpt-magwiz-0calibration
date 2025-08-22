@@ -59,30 +59,30 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
             <div className="flex justify-between items-center">
               <span className="font-medium">Overall Efficiency</span>
               <Badge variant="secondary" className="bg-engineering-success text-white">
-                {results.trampMetalRemoval.overallEfficiency}%
+                {(results.trampMetalRemoval.overallEfficiency * 100).toFixed(1)}%
               </Badge>
             </div>
             <Progress 
-              value={results.trampMetalRemoval.overallEfficiency} 
+              value={results.trampMetalRemoval.overallEfficiency * 100} 
               className="h-3"
             />
             
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="text-center">
                 <div className="text-lg font-semibold text-engineering-primary">
-                  {results.trampMetalRemoval.fineParticles}%
+                  {(results.trampMetalRemoval.fineParticles * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Fine Particles</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-engineering-secondary">
-                  {results.trampMetalRemoval.mediumParticles}%
+                  {(results.trampMetalRemoval.mediumParticles * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Medium Particles</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-engineering-accent">
-                  {results.trampMetalRemoval.largeParticles}%
+                  {(results.trampMetalRemoval.largeParticles * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Large Particles</div>
               </div>
