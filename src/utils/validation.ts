@@ -21,13 +21,6 @@ export const SAFETY_THRESHOLDS: SafetyThresholds = {
 
 // Equipment rating database
 export const EQUIPMENT_RATINGS: Record<string, EquipmentRating> = {
-  'PCB (Permanent Magnet)': {
-    model: 'PCB (Permanent Magnet)',
-    maxPowerLoss: 0, // kW - No electrical power
-    maxOperatingTemp: 80, // °C - Limited by magnet temperature rating
-    maxMagneticField: 1.1, // Tesla - Typical permanent magnet limit
-    thermalRating: 0, // W/m² - No thermal generation
-  },
   'EMAX (Air Cooled)': {
     model: 'EMAX (Air Cooled)', 
     maxPowerLoss: 8, // kW - Realistic for air cooling

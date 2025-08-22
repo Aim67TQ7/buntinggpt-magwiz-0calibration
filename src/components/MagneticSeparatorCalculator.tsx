@@ -213,7 +213,6 @@ export function MagneticSeparatorCalculator() {
                   magnetic: { ...prev.magnetic, powerSourceType: value as any }
                 }))}
                 options={[
-                  { value: 'permanent', label: 'Permanent Magnet' },
                   { value: 'electromagnetic-air', label: 'Electromagnetic (Air Cooled)' },
                   { value: 'electromagnetic-oil', label: 'Electromagnetic (Oil Cooled)' }
                 ]}

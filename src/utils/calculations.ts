@@ -8,36 +8,23 @@ const STEEL_PERMEABILITY = 4000; // Typical for magnetic steel
 export function calculateMagneticField(inputs: CalculatorInputs): CalculationResults['magneticFieldStrength'] {
   const { magnetic, geometric } = inputs;
   
-  if (magnetic.powerSourceType === 'permanent') {
-    // Permanent magnet field calculation (simplified)
-    const magneticFluxDensity = 0.3 + (magnetic.ampereTurns / 10000) * 0.8; // Tesla, typical range 0.3-1.1T
-    const fieldStrengthGauss = magneticFluxDensity * 10000;
-    const penetrationDepth = Math.sqrt(magneticFluxDensity * 1000) * 15; // mm, empirical formula
-    
-    return {
-      tesla: parseFloat(magneticFluxDensity.toFixed(4)),
-      gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
-      penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
-    };
-  } else {
-    // Electromagnetic field calculation using reluctance circuit model
-    const airGapReluctance = (magnetic.magnetGap / 1000) / (MU_0 * (geometric.elementWidth * geometric.elementLength) / 1e6);
-    const coreLength = 2 * (geometric.elementWidth + geometric.elementLength + geometric.elementHeight) / 1000; // Estimate core path length
-    const coreReluctance = coreLength / (MU_0 * STEEL_PERMEABILITY * (geometric.elementWidth * geometric.elementHeight) / 1e6);
-    
-    const totalReluctance = airGapReluctance + coreReluctance;
-    const magneticFlux = (magnetic.numberOfTurns * magnetic.current) / totalReluctance;
-    const magneticFluxDensity = magneticFlux / ((geometric.elementWidth * geometric.elementLength) / 1e6);
-    
-    const fieldStrengthGauss = magneticFluxDensity * 10000;
-    const penetrationDepth = Math.sqrt(magneticFluxDensity * 1000) * 12; // mm, adjusted for electromagnets
-    
-    return {
-      tesla: parseFloat(magneticFluxDensity.toFixed(4)),
-      gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
-      penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
-    };
-  }
+  // Electromagnetic field calculation using reluctance circuit model
+  const airGapReluctance = (magnetic.magnetGap / 1000) / (MU_0 * (geometric.elementWidth * geometric.elementLength) / 1e6);
+  const coreLength = 2 * (geometric.elementWidth + geometric.elementLength + geometric.elementHeight) / 1000; // Estimate core path length
+  const coreReluctance = coreLength / (MU_0 * STEEL_PERMEABILITY * (geometric.elementWidth * geometric.elementHeight) / 1e6);
+  
+  const totalReluctance = airGapReluctance + coreReluctance;
+  const magneticFlux = (magnetic.numberOfTurns * magnetic.current) / totalReluctance;
+  const magneticFluxDensity = magneticFlux / ((geometric.elementWidth * geometric.elementLength) / 1e6);
+  
+  const fieldStrengthGauss = magneticFluxDensity * 10000;
+  const penetrationDepth = Math.sqrt(magneticFluxDensity * 1000) * 12; // mm, adjusted for electromagnets
+  
+  return {
+    tesla: parseFloat(magneticFluxDensity.toFixed(4)),
+    gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
+    penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
+  };
 }
 
 export function calculateTrampMetalRemoval(inputs: CalculatorInputs): CalculationResults['trampMetalRemoval'] {
@@ -86,14 +73,7 @@ export function calculateTrampMetalRemoval(inputs: CalculatorInputs): Calculatio
 export function calculateThermalPerformance(inputs: CalculatorInputs): CalculationResults['thermalPerformance'] {
   const { magnetic, environmental, geometric } = inputs;
   
-  if (magnetic.powerSourceType === 'permanent') {
-    // Permanent magnets have no electrical losses
-    return {
-      totalPowerLoss: 0,
-      temperatureRise: environmental.operatingTemperature - 20, // Ambient rise only
-      coolingEfficiency: 1.0
-    };
-  }
+  // All systems are now electromagnetic, so calculate power losses
   
   // Copper loss calculation: P = I²R
   const wireLength = magnetic.numberOfTurns * 2 * (geometric.elementWidth + geometric.elementHeight) / 1000; // meters
@@ -141,16 +121,6 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
   
   // Normalized scoring factors (0-100 scale)
   const models = {
-    'PCB (Permanent Magnet)': {
-      score: 0,
-      factors: {
-        efficiency: efficiency.overallEfficiency, // Already in %
-        powerEfficiency: Math.max(0, 100 - thermal.totalPowerLoss), // Inverse of power loss
-        maintenance: 95, // Low maintenance score
-        reliability: 90, // High reliability
-        cost: 75 // Higher initial cost but lower operating cost
-      }
-    },
     'EMAX (Air Cooled)': {
       score: 0,
       factors: {
