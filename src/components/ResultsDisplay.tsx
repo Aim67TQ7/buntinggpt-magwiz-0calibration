@@ -1,11 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { CalculationResults } from "@/types/calculator";
-import { Zap, Thermometer, Target, Award } from "lucide-react";
+import { EnhancedCalculationResults } from '@/types/calculator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award } from 'lucide-react';
+import { ValidationToolsRecommendation } from './ValidationToolsRecommendation';
 
 interface ResultsDisplayProps {
-  results: CalculationResults;
+  results: EnhancedCalculationResults;
 }
 
 export function ResultsDisplay({ results }: ResultsDisplayProps) {
@@ -149,6 +152,9 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Professional Validation Tools */}
+      <ValidationToolsRecommendation results={results} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { CalculatorInputs, CalculationResults } from '@/types/calculator';
+import { CalculatorInputs, CalculationResults, EnhancedCalculationResults } from '@/types/calculator';
+import { validateCalculationResults, getRecommendedValidationTools } from '@/utils/validation';
 
 const MU_0 = 4 * Math.PI * 1e-7; // Permeability of free space
 
@@ -133,5 +134,17 @@ export function performCompleteCalculation(inputs: CalculatorInputs): Calculatio
     trampMetalRemoval: calculateTrampMetalRemoval(inputs),
     thermalPerformance: calculateThermalPerformance(inputs),
     recommendedModel: recommendSeparatorModel(inputs)
+  };
+}
+
+export function performEnhancedCalculation(inputs: CalculatorInputs): EnhancedCalculationResults {
+  const baseResults = performCompleteCalculation(inputs);
+  const validation = validateCalculationResults(baseResults);
+  const recommendedTools = getRecommendedValidationTools(baseResults);
+  
+  return {
+    ...baseResults,
+    validation,
+    recommendedTools,
   };
 }

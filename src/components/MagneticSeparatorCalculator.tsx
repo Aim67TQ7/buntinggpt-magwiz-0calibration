@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ParameterSection, ParameterInput, ParameterSelect } from "./ParameterSection";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { CalculatorInputs, CalculationResults } from "@/types/calculator";
-import { performCompleteCalculation } from "@/utils/calculations";
+import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
+import { performEnhancedCalculation } from '@/utils/calculations';
+import { generateValidationExportData } from '@/utils/validation';
 import { Calculator, Settings, Thermometer, Globe, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,7 +43,7 @@ export function MagneticSeparatorCalculator() {
     }
   });
 
-  const [results, setResults] = useState<CalculationResults | null>(null);
+  const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
   const handleCalculate = async () => {
@@ -50,12 +51,27 @@ export function MagneticSeparatorCalculator() {
     try {
       // Simulate calculation time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const calculationResults = performCompleteCalculation(inputs);
+      const calculationResults = performEnhancedCalculation(inputs);
       setResults(calculationResults);
-      toast({
-        title: "Calculation Complete",
-        description: "Magnetic separator analysis has been generated successfully.",
-      });
+      
+      // Show appropriate toast based on validation results
+      if (calculationResults.validation.severity === 'critical') {
+        toast({
+          title: "Calculation Complete - Critical Issues Detected",
+          description: "Review validation errors before proceeding with this design.",
+          variant: "destructive",
+        });
+      } else if (calculationResults.validation.severity === 'warning') {
+        toast({
+          title: "Calculation Complete - Warnings Present",
+          description: "Design is feasible but please review recommendations.",
+        });
+      } else {
+        toast({
+          title: "Calculation Complete - Design Validated",
+          description: "Your magnetic separator design passes all safety checks.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Calculation Error",
@@ -69,44 +85,47 @@ export function MagneticSeparatorCalculator() {
 
   const handleExport = () => {
     if (!results) return;
+
+    const exportData = generateValidationExportData(results, results.validation);
     
-    // Generate CSV content
-    const csvContent = `
-Magnetic Separator Design Calculator Results
-Generated: ${new Date().toLocaleString()}
+    const csvData = [
+      ['Parameter', 'Value', 'Unit', 'Status'],
+      ['Validation Status', exportData.validation.status, '', ''],
+      ['Severity Level', exportData.validation.severity, '', ''],
+      ['Equipment Compliance', exportData.validation.equipmentCompliance, '', ''],
+      ['Error Count', exportData.validation.errorCount.toString(), '', ''],
+      ['Warning Count', exportData.validation.warningCount.toString(), '', ''],
+      [''],
+      ['CALCULATION RESULTS'],
+      ['Magnetic Field Strength (Tesla)', results.magneticFieldStrength.tesla.toString(), 'T', exportData.safetyChecks.magneticFieldCheck ? 'SAFE' : 'UNSAFE'],
+      ['Magnetic Field Strength (Gauss)', results.magneticFieldStrength.gauss.toString(), 'G', ''],
+      ['Penetration Depth', results.magneticFieldStrength.penetrationDepth.toString(), 'mm', ''],
+      ['Overall Removal Efficiency', results.trampMetalRemoval.overallEfficiency.toString(), '%', exportData.safetyChecks.efficiencyCheck ? 'SAFE' : 'UNSAFE'],
+      ['Fine Particles Removal', results.trampMetalRemoval.fineParticles.toString(), '%', ''],
+      ['Medium Particles Removal', results.trampMetalRemoval.mediumParticles.toString(), '%', ''],
+      ['Large Particles Removal', results.trampMetalRemoval.largeParticles.toString(), '%', ''],
+      ['Total Power Loss', results.thermalPerformance.totalPowerLoss.toString(), 'W', ''],
+      ['Temperature Rise', results.thermalPerformance.temperatureRise.toString(), '°C', exportData.safetyChecks.temperatureCheck ? 'SAFE' : 'UNSAFE'],
+      ['Cooling Efficiency', results.thermalPerformance.coolingEfficiency.toString(), '', ''],
+      ['Recommended Model', results.recommendedModel.model, '', ''],
+      ['Model Score', results.recommendedModel.score.toString(), '', ''],
+      [''],
+      ['VALIDATION RECOMMENDATIONS'],
+      ...exportData.recommendations.map((rec, index) => [`Recommendation ${index + 1}`, rec, '', '']),
+    ];
 
-Magnetic Field Analysis:
-Tesla Strength,${results.magneticFieldStrength.tesla}
-Gauss Strength,${results.magneticFieldStrength.gauss}
-Penetration Depth (mm),${results.magneticFieldStrength.penetrationDepth}
-
-Removal Efficiency:
-Overall Efficiency (%),${results.trampMetalRemoval.overallEfficiency}
-Fine Particles (%),${results.trampMetalRemoval.fineParticles}
-Medium Particles (%),${results.trampMetalRemoval.mediumParticles}
-Large Particles (%),${results.trampMetalRemoval.largeParticles}
-
-Thermal Performance:
-Total Power Loss (W),${results.thermalPerformance.totalPowerLoss}
-Temperature Rise (°C),${results.thermalPerformance.temperatureRise}
-Cooling Efficiency,${results.thermalPerformance.coolingEfficiency}
-
-Recommended Model:
-Model,${results.recommendedModel.model}
-Score,${results.recommendedModel.score}
-    `.trim();
-
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `separator-calculation-${Date.now()}.csv`;
+    a.download = `magnetic-separator-design-validated-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
     toast({
       title: "Export Complete",
-      description: "Calculation results have been exported to CSV.",
+      description: "Your validated calculation results have been exported to CSV.",
     });
   };
 
