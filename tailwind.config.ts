@@ -52,6 +52,15 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				engineering: {
+					primary: 'hsl(var(--engineering-primary))',
+					'primary-light': 'hsl(var(--engineering-primary-light))',
+					secondary: 'hsl(var(--engineering-secondary))',
+					accent: 'hsl(var(--engineering-accent))',
+					success: 'hsl(var(--engineering-success))',
+					warning: 'hsl(var(--engineering-warning))',
+					error: 'hsl(var(--engineering-error))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

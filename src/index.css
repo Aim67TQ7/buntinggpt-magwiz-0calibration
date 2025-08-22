@@ -8,33 +8,52 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 215 25% 96%;
+    --foreground: 215 20% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 20% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 215 40% 25%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 215 15% 88%;
+    --secondary-foreground: 215 25% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 215 15% 92%;
+    --muted-foreground: 215 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 65% 55%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 215 20% 85%;
+    --input: 215 20% 92%;
+    --ring: 215 40% 25%;
+
+    /* Engineering Design Tokens */
+    --engineering-primary: 215 45% 30%;
+    --engineering-primary-light: 215 40% 45%;
+    --engineering-secondary: 210 60% 50%;
+    --engineering-accent: 185 70% 45%;
+    --engineering-success: 145 65% 45%;
+    --engineering-warning: 45 85% 55%;
+    --engineering-error: 0 75% 55%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--engineering-primary)), hsl(var(--engineering-primary-light)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--engineering-secondary)), hsl(var(--engineering-accent)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    
+    /* Shadows */
+    --shadow-engineering: 0 4px 24px hsl(var(--engineering-primary) / 0.12);
+    --shadow-card: 0 2px 12px hsl(var(--foreground) / 0.08);
+    --shadow-elevation: 0 8px 32px hsl(var(--engineering-primary) / 0.15);
 
     --radius: 0.5rem;
 
