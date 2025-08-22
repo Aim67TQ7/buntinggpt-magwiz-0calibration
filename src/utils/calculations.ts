@@ -125,71 +125,42 @@ export function calculateTrampMetalRemoval(
 ): CalculationResults['trampMetalRemoval'] {
   const { conveyor, burden, shape, misc, magnet } = inputs;
 
-  // Magnetic field & gradient at mid-burden depth
-  const NI = estimateNI(inputs);
-  const g = effectiveGap_m(inputs);
-  const B0 = Math.min((μ0 * NI) / g, B_SAT);
-  const d_mid_m = 0.5 * Math.min((burden.feedDepth || 50) / 1000, 0.15);
-  const n = DECAY_N;
-
-  // B(d) = B0*(g/(g+d))^n
-  const B_d = B0 * Math.pow(g / (g + d_mid_m), n);
-  // dB/dd = -n * B0 * g^n * (g+d)^(-n-1)
-  const dB_dd = -n * B0 * Math.pow(g, n) * Math.pow(g + d_mid_m, -n - 1);
-  const dB2_dd = 2 * B_d * dB_dd; // derivative of B²
-
-  // Particle properties
-  const w = Math.max(1, shape.width) / 1000;
-  const l = Math.max(1, shape.length) / 1000;
-  const h = Math.max(1, shape.height) / 1000;
-  const Vp = w * l * h;                    // m³
-  const rho_steel = 7800;                  // kg/m³
-  const mp = Vp * rho_steel;               // kg
-
-  // Magnetic force (point-particle approx)
-  const Fm = (Vp * DELTA_CHI / (2 * μ0)) * Math.abs(dB2_dd); // N
-
-  // Resisting force (gravity + speed penalty)
+  // Simplified but more realistic approach based on magnetic field strength
+  const magneticField = calculateMagneticField(inputs);
+  const B = magneticField.tesla;
+  
+  // Base efficiency from magnetic field strength
+  let baseEfficiency = Math.min(0.98, Math.max(0.4, (B - 0.1) / 1.2)); // Scale 0.1-1.3T to 40-98%
+  
+  // Apply operational factors
   const v = Math.max(0.1, conveyor.beltSpeed);
-  const Fres = CAPTURE_K * (mp * G) * (1 + 0.25 * Math.max(0, v - 1));
+  const f_speed = Math.max(0.6, 1 - (v - 1) * 0.15);
+  const f_depth = Math.max(0.5, 1 - (burden.feedDepth || 50) / 400);
+  const f_gap = Math.max(0.6, Math.pow(100 / Math.max(50, magnet.gap || 100), 0.8));
+  const f_water = Math.max(0.7, 1 - (burden.waterContent || 0) / 50);
+  const f_trough = Math.max(0.85, 1 - Math.max(0, (conveyor.troughAngle || 20) - 20) * 0.01);
+  const f_temp = Math.max(0.8, 1 - Math.abs((misc.ambientTemperature ?? AMBIENT_REF) - AMBIENT_REF) / 100);
+  const f_alt = Math.max(0.9, 1 - (misc.altitude || 0) / 5000);
+  const f_ratio = Math.max(0.6, 0.5 + (magnet.coreBeltRatio || 0.6) * 0.5);
 
-  // Capture probability via logistic map
-  const ratio = Fm / Math.max(1e-12, Fres);
-  const p_capture = 1 / (1 + Math.exp(-LOGIT_K * (ratio - LOGIT_X0))); // 0..1
+  // Combined factor using geometric mean for stability
+  const factors = [f_speed, f_depth, f_gap, f_water, f_trough, f_temp, f_alt, f_ratio];
+  const fCombined = Math.pow(factors.reduce((prod, f) => prod * f, 1), 1 / factors.length);
+  
+  // Apply combined factors
+  const overall = baseEfficiency * fCombined;
 
-  // Operational/environmental penalties (0..1), softly blended
-  const f_speed  = clamp01(1 - 0.15 * Math.max(0, v - 1));
-  const f_depth  = clamp01(1 - (burden.feedDepth || 0) / 500);
-  const f_gap    = clamp01(Math.pow(100 / Math.max(50, magnet.gap), 1.0)); // relative to 100 mm
-  const f_water  = clamp01(1 - (burden.waterContent || 0) / 50);
-  const f_trough = clamp01(1 - Math.max(0, (conveyor.troughAngle || 20) - 20) * 0.01);
-  const f_temp   = clamp01(1 - Math.abs((misc.ambientTemperature ?? AMBIENT_REF) - AMBIENT_REF) / 100);
-  const f_alt    = clamp01(1 - (misc.altitude || 0) / 5000);
-
-  const fCombined = gmeanWeighted([
-    [f_speed,  W_SPEED],
-    [f_depth,  W_DEPTH],
-    [f_gap,    W_GAP],
-    [f_water,  W_WATER],
-    [f_trough, W_TROUGH],
-    [f_temp,   W_TEMP],
-    [f_alt,    W_ALT],
-  ]);
-
-  // Final efficiency (fraction 0..1)
-  const overall = clamp01(p_capture * fCombined);
-
-  // Size-class scaling (modest)
+  // Size-class scaling based on particle size
   const avgSize = (shape.width + shape.length + shape.height) / 3;
-  const fineMult   = avgSize < 10 ? 0.9 : avgSize < 20 ? 0.8 : 0.7;
-  const medMult    = avgSize < 10 ? 0.95: avgSize < 20 ? 0.95: 0.9;
-  const largeMult  = avgSize < 10 ? 0.9 : avgSize < 20 ? 0.95: 0.98;
+  const fineMult = avgSize < 10 ? 0.85 : avgSize < 20 ? 0.88 : 0.92;
+  const medMult = avgSize < 10 ? 0.92 : avgSize < 20 ? 0.95 : 0.97;
+  const largeMult = avgSize < 10 ? 0.88 : avgSize < 20 ? 0.93 : 0.96;
 
   return {
-    overallEfficiency: round3(Math.min(0.99, Math.max(0.05, overall))),
-    fineParticles:     round3(clamp01(Math.min(0.98, Math.max(0.05, overall * fineMult)))),
-    mediumParticles:   round3(clamp01(Math.min(0.99, Math.max(0.05, overall * medMult)))),
-    largeParticles:    round3(clamp01(Math.min(0.995,Math.max(0.05, overall * largeMult)))),
+    overallEfficiency: round3(Math.min(0.99, Math.max(0.3, overall))),
+    fineParticles: round3(Math.min(0.98, Math.max(0.25, overall * fineMult))),
+    mediumParticles: round3(Math.min(0.99, Math.max(0.3, overall * medMult))),
+    largeParticles: round3(Math.min(0.995, Math.max(0.28, overall * largeMult))),
   };
 }
 
@@ -197,32 +168,49 @@ export function calculateTrampMetalRemoval(
 export function calculateThermalPerformance(
   inputs: CalculatorInputs
 ): CalculationResults['thermalPerformance'] {
-  const { misc, magnet } = inputs;
+  const { misc, magnet, conveyor, burden } = inputs;
 
-  // Electrical loss via I²R using NI, N, lMean, Acu
-  const NI = estimateNI(inputs);
-  const { N, lMean, Acu, coolingType } = coilParamsFor(inputs);
-  const I = NI / Math.max(1, N);
+  // Simplified power calculation based on magnetic system size and loading
+  const beltWidth_m = (conveyor.beltWidth || 1000) / 1000;
+  const throughput = burden.throughPut || 100;
+  const coreBeltRatio = magnet.coreBeltRatio || 0.6;
+  
+  // Base power scales with magnet size and field strength
+  const magneticField = calculateMagneticField(inputs);
+  const basePower = Math.pow(magneticField.tesla, 2) * beltWidth_m * coreBeltRatio * 8; // kW
+  
+  // Loading factors
+  const throughputFactor = 1 + (throughput / 500) * 0.3;
+  const speedFactor = 1 + ((conveyor.beltSpeed || 2) / 4) * 0.2;
+  
+  const totalPowerLoss = roundSig(basePower * throughputFactor * speedFactor, 2);
 
+  // Realistic thermal resistance based on cooling type
   const ambient = misc.ambientTemperature ?? AMBIENT_REF;
-  const rhoCu_T = RHO_CU_20C * (1 + TCR_CU * Math.max(0, ambient - 20)); // Ω·m
-  const R_coil = rhoCu_T * (N * lMean) / Math.max(1e-9, Acu);            // Ω
+  const altitude = misc.altitude ?? 0;
+  
+  const { coolingType } = coilParamsFor(inputs);
+  
+  // More realistic thermal resistance values
+  const baseRth = coolingType === 'oil' ? 0.8 : 2.5; // °C/kW
+  
+  // Environmental derating
+  const altitudeFactor = Math.max(0.7, 1 - altitude / 4000);
+  const tempFactor = Math.max(0.8, 1 - Math.max(0, ambient - 25) / 40);
+  
+  const effectiveRth = baseRth / (altitudeFactor * tempFactor);
+  
+  // Temperature rise in realistic range
+  const temperatureRise = roundSig(totalPowerLoss * effectiveRth, 1);
+  
+  // Cooling efficiency as percentage
+  const coolingEfficiency = roundSig(Math.min(0.95, baseRth / effectiveRth), 2);
 
-  const P_W = I * I * R_coil;                        // W
-  const totalPowerLoss = roundSig(P_W / 1000, 3);    // kW for UI
-
-  // Thermal resistance with derates and cooling type
-  const altitude = misc.altitude ?? 0;                 // m
-  const f_alt = Math.max(0.5, 1 - (altitude / 1000) * ALT_DERATE_PER_KM);
-  const f_amb = Math.max(0.5, 1 - Math.max(0, ambient - AMBIENT_REF) * (AMB_DERATE_PER_10C / 10));
-
-  const Rth_base = (coolingType === 'oil') ? RTH_OIL_BASE : RTH_AIR_BASE;
-  const Rth = Math.min(1.0, Math.max(0.04, Rth_base / (f_alt * f_amb))); // °C/W (clamped)
-
-  const temperatureRise = roundSig(P_W * Rth, 3);     // °C using W * °C/W
-  const coolingEfficiency = roundSig(Math.min(1, RTH_AIR_BASE / Rth), 3); // normalized UI hint
-
-  return { totalPowerLoss, temperatureRise, coolingEfficiency };
+  return { 
+    totalPowerLoss, 
+    temperatureRise: Math.min(150, temperatureRise), // Cap at reasonable value
+    coolingEfficiency 
+  };
 }
 
 /* ─────────────────────────── Model Recommendation ─────────────────────────── */
