@@ -9,35 +9,40 @@ import {
   ValidationTools
 } from '@/types/calculator';
 
-// Safety thresholds configuration
+/* -------------------------- Global assumptions --------------------------- */
+// Use the same ambient reference as the calc layer when inputs aren't available.
+const AMBIENT_REF_C = 25; // °C
+
+/* --------------------------- Safety thresholds --------------------------- */
+/** NOTE: efficiencies are FRACTIONS (0..1), not percentages */
 export const SAFETY_THRESHOLDS: SafetyThresholds = {
-  maxTemperature: 180, // °C - Realistic limit for magnetic separators
-  maxMagneticField: 1.5, // Tesla - Practical limit for industrial separators
-  maxRemovalEfficiency: 98, // % - Realistic maximum efficiency
-  warningTemperature: 120, // °C - Warning threshold  
-  warningMagneticField: 1.2, // Tesla - Warning threshold
-  warningRemovalEfficiency: 90, // % - Warning for low efficiency
+  maxTemperature: 180,       // °C absolute operating limit
+  maxMagneticField: 1.5,     // Tesla
+  maxRemovalEfficiency: 0.98,// fraction
+  warningTemperature: 120,   // °C absolute
+  warningMagneticField: 1.2, // Tesla
+  warningRemovalEfficiency: 0.90 // fraction
 };
 
-// Equipment rating database
+/* -------------------------- Equipment ratings --------------------------- */
 export const EQUIPMENT_RATINGS: Record<string, EquipmentRating> = {
   'EMAX (Air Cooled)': {
     model: 'EMAX (Air Cooled)', 
-    maxPowerLoss: 8, // kW - Realistic for air cooling
-    maxOperatingTemp: 120, // °C - Air cooling limit
-    maxMagneticField: 1.4, // Tesla - Air core practical limit
-    thermalRating: 800, // W/m² - Air cooling capacity
+    maxPowerLoss: 8,      // kW (air-cooled envelope)
+    maxOperatingTemp: 120,// °C absolute
+    maxMagneticField: 1.4,// Tesla
+    thermalRating: 800,   // W/m² (informational)
   },
   'OCW (Oil Cooled)': {
     model: 'OCW (Oil Cooled)',
-    maxPowerLoss: 25, // kW - Oil cooling allows higher power
-    maxOperatingTemp: 150, // °C - Oil cooling limit
-    maxMagneticField: 1.6, // Tesla - Oil cooled practical limit
-    thermalRating: 2500, // W/m² - Oil cooling capacity
+    maxPowerLoss: 25,     // kW
+    maxOperatingTemp: 150,// °C absolute
+    maxMagneticField: 1.6,// Tesla
+    thermalRating: 2500,  // W/m²
   },
 };
 
-// Professional validation tools
+/* ------------------------- Professional tools list ---------------------- */
 export const VALIDATION_TOOLS: ValidationTools = {
   comsol: {
     name: 'COMSOL Multiphysics',
@@ -59,21 +64,25 @@ export const VALIDATION_TOOLS: ValidationTools = {
   },
 };
 
+/* ------------------------------ Utilities -------------------------------- */
+function pct(x: number) { return (x * 100).toFixed(1) + '%'; }
+function fmt(x: number, digits = 2) { return Number.isFinite(x) ? x.toFixed(digits) : String(x); }
+
+/* ----------------------------- Validation -------------------------------- */
 export function validateCalculationResults(results: CalculationResults): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
-  
-  // Get equipment rating for recommended model
+
+  // Equipment rating for recommended model
   const equipmentRating = EQUIPMENT_RATINGS[results.recommendedModel.model];
-  
-  // Check if equipment rating exists
+
   if (!equipmentRating) {
     errors.push({
       field: 'recommendedModel',
       message: 'CRITICAL: Equipment rating not found for recommended model',
       value: 0,
       threshold: 0,
-      recommendation: 'Check equipment database configuration',
+      recommendation: 'Check equipment database configuration for the selected model.',
     });
     return {
       isValid: false,
@@ -95,97 +104,104 @@ export function validateCalculationResults(results: CalculationResults): Validat
       },
     };
   }
-  
-  // Critical error checks
-  if (results.thermalPerformance.temperatureRise > SAFETY_THRESHOLDS.maxTemperature) {
+
+  /* ---------- Derived values (use ambient reference if not provided) -------- */
+  const deltaT = results.thermalPerformance.temperatureRise;       // °C
+  const totalPowerLoss_kW = results.thermalPerformance.totalPowerLoss; // kW
+  const B_T = results.magneticFieldStrength.tesla;                 // Tesla
+  const eta = results.trampMetalRemoval.overallEfficiency;         // fraction 0..1
+
+  // Absolute operating temperature assumed = ambient_ref + ΔT
+  const operatingTemp_C = AMBIENT_REF_C + deltaT;
+
+  /* ------------------------------ Criticals -------------------------------- */
+  if (operatingTemp_C > SAFETY_THRESHOLDS.maxTemperature) {
     errors.push({
-      field: 'temperatureRise',
-      message: 'CRITICAL: Temperature exceeds safe operating limit',
-      value: results.thermalPerformance.temperatureRise,
+      field: 'temperature',
+      message: 'CRITICAL: Operating temperature exceeds safe limit',
+      value: operatingTemp_C,
       threshold: SAFETY_THRESHOLDS.maxTemperature,
-      recommendation: 'Reduce current, increase cooling, or select different magnet configuration',
+      recommendation: 'Reduce ampere-turns, enhance cooling (higher airflow or oil), or change configuration.',
     });
   }
-  
-  if (results.magneticFieldStrength.tesla > SAFETY_THRESHOLDS.maxMagneticField) {
+
+  if (B_T > SAFETY_THRESHOLDS.maxMagneticField) {
     errors.push({
       field: 'magneticField',
       message: 'CRITICAL: Magnetic field exceeds design limit',
-      value: results.magneticFieldStrength.tesla,
+      value: B_T,
       threshold: SAFETY_THRESHOLDS.maxMagneticField,
-      recommendation: 'Reduce ampere-turns or increase magnet gap',
+      recommendation: 'Reduce NI (current/turns) or increase effective gap.',
     });
   }
-  
-  if (results.trampMetalRemoval.overallEfficiency > SAFETY_THRESHOLDS.maxRemovalEfficiency) {
+
+  if (eta > SAFETY_THRESHOLDS.maxRemovalEfficiency) {
     errors.push({
       field: 'removalEfficiency',
       message: 'CRITICAL: Calculated efficiency exceeds physical limit',
-      value: results.trampMetalRemoval.overallEfficiency,
+      value: eta,
       threshold: SAFETY_THRESHOLDS.maxRemovalEfficiency,
-      recommendation: 'Review input parameters - calculation may be invalid',
+      recommendation: 'Recheck inputs; cross-validate with test data. Clamp η to ≤98%.',
     });
   }
-  
-  // Equipment rating violations
-  if (results.thermalPerformance.totalPowerLoss > equipmentRating.maxPowerLoss) {
+
+  if (totalPowerLoss_kW > equipmentRating.maxPowerLoss) {
     errors.push({
       field: 'powerLoss',
       message: 'CRITICAL: Power loss exceeds equipment rating',
-      value: results.thermalPerformance.totalPowerLoss,
+      value: totalPowerLoss_kW,
       threshold: equipmentRating.maxPowerLoss,
-      recommendation: `Select higher rated equipment or reduce power requirements`,
+      recommendation: 'Select higher-rated equipment or reduce NI / duty cycle.',
     });
   }
-  
-  // Warning checks
-  if (results.thermalPerformance.temperatureRise > SAFETY_THRESHOLDS.warningTemperature) {
+
+  /* -------------------------------- Warnings ------------------------------- */
+  if (operatingTemp_C > SAFETY_THRESHOLDS.warningTemperature && operatingTemp_C <= SAFETY_THRESHOLDS.maxTemperature) {
     warnings.push({
-      field: 'temperatureRise',
-      message: 'WARNING: Temperature approaching safe limit',
-      value: results.thermalPerformance.temperatureRise,
+      field: 'temperature',
+      message: 'WARNING: Operating temperature nearing limit',
+      value: operatingTemp_C,
       threshold: SAFETY_THRESHOLDS.warningTemperature,
-      suggestion: 'Consider enhanced cooling or reduced operating parameters',
+      suggestion: 'Consider improved cooling, verify ambient assumptions, or derate throughput.',
     });
   }
-  
-  if (results.magneticFieldStrength.tesla > SAFETY_THRESHOLDS.warningMagneticField) {
+
+  if (B_T > SAFETY_THRESHOLDS.warningMagneticField && B_T <= SAFETY_THRESHOLDS.maxMagneticField) {
     warnings.push({
       field: 'magneticField',
-      message: 'WARNING: Magnetic field approaching design limit',
-      value: results.magneticFieldStrength.tesla,
+      message: 'WARNING: Magnetic field approaching limit',
+      value: B_T,
       threshold: SAFETY_THRESHOLDS.warningMagneticField,
-      suggestion: 'Monitor field strength and consider safety margins',
+      suggestion: 'Maintain margin; validate against pole material saturation.',
     });
   }
-  
-  if (results.trampMetalRemoval.overallEfficiency > SAFETY_THRESHOLDS.warningRemovalEfficiency) {
+
+  if (eta > SAFETY_THRESHOLDS.warningRemovalEfficiency && eta <= SAFETY_THRESHOLDS.maxRemovalEfficiency) {
     warnings.push({
       field: 'removalEfficiency',
-      message: 'WARNING: High efficiency - verify calculation accuracy',
-      value: results.trampMetalRemoval.overallEfficiency,
+      message: 'WARNING: Very high efficiency — verify realism',
+      value: eta,
       threshold: SAFETY_THRESHOLDS.warningRemovalEfficiency,
-      suggestion: 'Cross-validate with empirical data or field testing',
+      suggestion: 'Cross-check with historical capture data or a pilot run.',
     });
   }
-  
-  // Equipment compliance status
+
+  /* --------------------------- Compliance matrix --------------------------- */
   const equipmentCompliance: EquipmentComplianceStatus = {
-    powerCompliance: results.thermalPerformance.totalPowerLoss <= equipmentRating.maxPowerLoss,
-    thermalCompliance: results.thermalPerformance.temperatureRise <= equipmentRating.maxOperatingTemp,
-    magneticCompliance: results.magneticFieldStrength.tesla <= equipmentRating.maxMagneticField,
+    powerCompliance: totalPowerLoss_kW <= equipmentRating.maxPowerLoss,
+    thermalCompliance: operatingTemp_C <= equipmentRating.maxOperatingTemp,
+    magneticCompliance: B_T <= equipmentRating.maxMagneticField,
     overallCompliance: true,
     rating: equipmentRating,
   };
-  
-  equipmentCompliance.overallCompliance = 
-    equipmentCompliance.powerCompliance && 
-    equipmentCompliance.thermalCompliance && 
+  equipmentCompliance.overallCompliance =
+    equipmentCompliance.powerCompliance &&
+    equipmentCompliance.thermalCompliance &&
     equipmentCompliance.magneticCompliance;
-  
-  // Determine severity
-  const severity = errors.length > 0 ? 'critical' : warnings.length > 0 ? 'warning' : 'info';
-  
+
+  /* -------------------------------- Severity -------------------------------- */
+  const severity = errors.length > 0 ? 'critical' : (warnings.length > 0 ? 'warning' : 'info');
+
   return {
     isValid: errors.length === 0,
     severity,
@@ -195,27 +211,31 @@ export function validateCalculationResults(results: CalculationResults): Validat
   };
 }
 
+/* -------------------- Tool suggestions based on results ------------------- */
 export function getRecommendedValidationTools(results: CalculationResults): string[] {
   const tools: string[] = [];
-  
-  // Always recommend COMSOL for comprehensive analysis
+
+  // Always recommend COMSOL for full-stack EM + thermal correlation
   tools.push('comsol');
-  
-  // Recommend ANSYS for high magnetic field applications
-  if (results.magneticFieldStrength.tesla > 1.5) {
+
+  // Near/over magnetic limits → ANSYS/Maxwell beneficial
+  if (results.magneticFieldStrength.tesla >= SAFETY_THRESHOLDS.warningMagneticField) {
     tools.push('ansys');
   }
-  
-  // Recommend MATLAB for complex calculations or unusual parameters
-  if (results.trampMetalRemoval.overallEfficiency > 90 || 
-      results.thermalPerformance.temperatureRise > 200) {
+
+  // Complex or extreme scenarios → MATLAB for algorithm sanity checks
+  if (results.trampMetalRemoval.overallEfficiency >= SAFETY_THRESHOLDS.warningRemovalEfficiency ||
+      (AMBIENT_REF_C + results.thermalPerformance.temperatureRise) >= SAFETY_THRESHOLDS.warningTemperature) {
     tools.push('matlab');
   }
-  
+
   return tools;
 }
 
+/* ---------------------- Structured export for reports --------------------- */
 export function generateValidationExportData(results: CalculationResults, validation: ValidationResult) {
+  const operatingTemp_C = AMBIENT_REF_C + results.thermalPerformance.temperatureRise;
+
   return {
     calculationResults: results,
     validation: {
@@ -226,13 +246,19 @@ export function generateValidationExportData(results: CalculationResults, valida
       equipmentCompliance: validation.equipmentCompliance.overallCompliance ? 'COMPLIANT' : 'NON-COMPLIANT',
     },
     safetyChecks: {
-      temperatureCheck: results.thermalPerformance.temperatureRise <= SAFETY_THRESHOLDS.maxTemperature,
+      temperatureCheck: operatingTemp_C <= SAFETY_THRESHOLDS.maxTemperature,
       magneticFieldCheck: results.magneticFieldStrength.tesla <= SAFETY_THRESHOLDS.maxMagneticField,
       efficiencyCheck: results.trampMetalRemoval.overallEfficiency <= SAFETY_THRESHOLDS.maxRemovalEfficiency,
+    },
+    keyNumbers: {
+      operatingTemperature: fmt(operatingTemp_C, 1) + ' °C',
+      magneticField: fmt(results.magneticFieldStrength.tesla, 3) + ' T',
+      overallEfficiency: pct(results.trampMetalRemoval.overallEfficiency),
+      powerLoss: fmt(results.thermalPerformance.totalPowerLoss, 2) + ' kW',
     },
     recommendations: [
       ...validation.errors.map(e => e.recommendation),
       ...validation.warnings.map(w => w.suggestion),
-    ],
+    ].filter(Boolean),
   };
 }
