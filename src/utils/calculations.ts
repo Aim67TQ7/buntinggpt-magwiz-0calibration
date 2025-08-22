@@ -1,71 +1,131 @@
 import { CalculatorInputs, CalculationResults, EnhancedCalculationResults } from '@/types/calculator';
 import { validateCalculationResults, getRecommendedValidationTools } from '@/utils/validation';
 
-const MU_0 = 4 * Math.PI * 1e-7; // Permeability of free space
+const MU_0 = 4 * Math.PI * 1e-7; // Permeability of free space (H/m)
+const COPPER_RESISTIVITY = 1.7e-8; // Ohm·m at 20°C
+const STEEL_PERMEABILITY = 4000; // Typical for magnetic steel
 
 export function calculateMagneticField(inputs: CalculatorInputs): CalculationResults['magneticFieldStrength'] {
-  const { magnetic } = inputs;
+  const { magnetic, geometric } = inputs;
   
-  // Relative permeability based on power source type
-  const muR = magnetic.powerSourceType === 'permanent' ? 1.05 : 
-              magnetic.powerSourceType === 'electromagnetic-air' ? 2000 : 3000;
-  
-  // Magnetic field strength calculation
-  const B = (MU_0 * muR * magnetic.numberOfTurns * magnetic.current) / (magnetic.magnetGap / 1000);
-  const fieldStrengthGauss = B * 10000;
-  
-  // Penetration depth estimation (simplified model)
-  const penetrationDepth = Math.sqrt(B * 100) * 50; // mm
-  
-  return {
-    tesla: parseFloat(B.toFixed(4)),
-    gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
-    penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
-  };
+  if (magnetic.powerSourceType === 'permanent') {
+    // Permanent magnet field calculation (simplified)
+    const magneticFluxDensity = 0.3 + (magnetic.ampereTurns / 10000) * 0.8; // Tesla, typical range 0.3-1.1T
+    const fieldStrengthGauss = magneticFluxDensity * 10000;
+    const penetrationDepth = Math.sqrt(magneticFluxDensity * 1000) * 15; // mm, empirical formula
+    
+    return {
+      tesla: parseFloat(magneticFluxDensity.toFixed(4)),
+      gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
+      penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
+    };
+  } else {
+    // Electromagnetic field calculation using reluctance circuit model
+    const airGapReluctance = (magnetic.magnetGap / 1000) / (MU_0 * (geometric.elementWidth * geometric.elementLength) / 1e6);
+    const coreLength = 2 * (geometric.elementWidth + geometric.elementLength + geometric.elementHeight) / 1000; // Estimate core path length
+    const coreReluctance = coreLength / (MU_0 * STEEL_PERMEABILITY * (geometric.elementWidth * geometric.elementHeight) / 1e6);
+    
+    const totalReluctance = airGapReluctance + coreReluctance;
+    const magneticFlux = (magnetic.numberOfTurns * magnetic.current) / totalReluctance;
+    const magneticFluxDensity = magneticFlux / ((geometric.elementWidth * geometric.elementLength) / 1e6);
+    
+    const fieldStrengthGauss = magneticFluxDensity * 10000;
+    const penetrationDepth = Math.sqrt(magneticFluxDensity * 1000) * 12; // mm, adjusted for electromagnets
+    
+    return {
+      tesla: parseFloat(magneticFluxDensity.toFixed(4)),
+      gauss: parseFloat(fieldStrengthGauss.toFixed(2)),
+      penetrationDepth: parseFloat(penetrationDepth.toFixed(2))
+    };
+  }
 }
 
 export function calculateTrampMetalRemoval(inputs: CalculatorInputs): CalculationResults['trampMetalRemoval'] {
-  const { magnetic, material } = inputs;
+  const { magnetic, material, geometric } = inputs;
   const fieldStrength = calculateMagneticField(inputs);
   
-  // Base efficiency factors
-  const magneticFieldFactor = Math.min(fieldStrength.tesla / 0.5, 1.0);
-  const particleSizeFactor = (material.trampMetalSize.max - material.trampMetalSize.min) / 100;
-  const materialCompositionFactor = material.magneticSusceptibility / 1000;
-  const waterContentPenalty = 1 - (material.waterContent / 100) * 0.3;
+  // Physics-based efficiency calculation
+  // Magnetic force factor: F ∝ χ × ∇(B²)
+  const fieldGradient = fieldStrength.tesla / (magnetic.magnetGap / 1000); // T/m
+  const magneticForceFactor = (material.magneticSusceptibility / 1000) * fieldGradient * fieldStrength.tesla;
   
-  const baseEfficiency = 0.85;
-  const overallEfficiency = baseEfficiency * magneticFieldFactor * 
-                           Math.min(particleSizeFactor, 1.0) * 
-                           Math.min(materialCompositionFactor, 1.0) * 
-                           waterContentPenalty;
+  // Particle size efficiency (larger particles easier to capture)
+  const avgParticleSize = (material.trampMetalSize.min + material.trampMetalSize.max) / 2;
+  const particleSizeEfficiency = Math.min(1.0, avgParticleSize / 10); // Normalized to 10mm reference
+  
+  // Belt speed effect (suspension height affects residence time)
+  const residenceTimeFactor = Math.max(0.3, 1 - (geometric.suspensionHeight / 800)); // Normalized to max height
+  
+  // Material property factors
+  const bulkDensityFactor = Math.min(1.0, material.bulkDensity / 3.0); // Normalized to 3 t/m³
+  const moisturePenalty = Math.max(0.5, 1 - (material.waterContent / 100) * 0.4);
+  
+  // Base efficiency from empirical data for magnetic separators
+  const baseEfficiency = 0.78; // Realistic base efficiency
+  
+  const overallEfficiency = Math.min(0.98, baseEfficiency * 
+    Math.min(1.2, magneticForceFactor) * 
+    particleSizeEfficiency * 
+    residenceTimeFactor * 
+    bulkDensityFactor * 
+    moisturePenalty);
+  
+  // Size-specific efficiencies (fine particles are harder to capture)
+  const fineEfficiency = overallEfficiency * 0.65; // < 5mm
+  const mediumEfficiency = overallEfficiency * 0.85; // 5-15mm  
+  const largeEfficiency = overallEfficiency * 0.95; // > 15mm
   
   return {
     overallEfficiency: parseFloat((overallEfficiency * 100).toFixed(2)),
-    fineParticles: parseFloat((overallEfficiency * 0.6 * 100).toFixed(2)),
-    mediumParticles: parseFloat((overallEfficiency * 0.8 * 100).toFixed(2)),
-    largeParticles: parseFloat((overallEfficiency * 1.0 * 100).toFixed(2))
+    fineParticles: parseFloat((fineEfficiency * 100).toFixed(2)),
+    mediumParticles: parseFloat((mediumEfficiency * 100).toFixed(2)),
+    largeParticles: parseFloat((largeEfficiency * 100).toFixed(2))
   };
 }
 
 export function calculateThermalPerformance(inputs: CalculatorInputs): CalculationResults['thermalPerformance'] {
-  const { magnetic, environmental } = inputs;
+  const { magnetic, environmental, geometric } = inputs;
   
-  // Power loss calculations
-  const copperLosses = Math.pow(magnetic.current, 2) * 0.02 * magnetic.numberOfTurns; // Simplified resistance
-  const coreLosses = magnetic.powerSourceType === 'permanent' ? 0 : 
-                     magnetic.ampereTurns * 0.001; // Simplified core losses
+  if (magnetic.powerSourceType === 'permanent') {
+    // Permanent magnets have no electrical losses
+    return {
+      totalPowerLoss: 0,
+      temperatureRise: environmental.operatingTemperature - 20, // Ambient rise only
+      coolingEfficiency: 1.0
+    };
+  }
+  
+  // Copper loss calculation: P = I²R
+  const wireLength = magnetic.numberOfTurns * 2 * (geometric.elementWidth + geometric.elementHeight) / 1000; // meters
+  const wireCrossSection = 2.5e-6; // 2.5 mm² typical magnet wire cross-section
+  const resistance = COPPER_RESISTIVITY * wireLength / wireCrossSection; // Ohms
+  const copperLosses = Math.pow(magnetic.current, 2) * resistance; // Watts
+  
+  // Core losses (hysteresis and eddy current) - Steinmetz equation approximation
+  const fieldStrength = calculateMagneticField(inputs);
+  const coreVolume = (geometric.elementWidth * geometric.elementLength * geometric.elementHeight) / 1e9; // m³
+  const coreLosses = magnetic.powerSourceType === 'electromagnetic-oil' ? 
+    coreVolume * 1000 * Math.pow(fieldStrength.tesla, 1.6) : // W/m³ for laminated core
+    coreVolume * 2000 * Math.pow(fieldStrength.tesla, 1.6); // Higher losses for air-cooled
   
   const totalPowerLoss = copperLosses + coreLosses;
   
-  // Cooling efficiency
-  const coolingEfficiency = magnetic.powerSourceType === 'permanent' ? 1.0 :
-                           magnetic.powerSourceType === 'electromagnetic-air' ? 0.7 : 0.9;
+  // Thermal resistance calculation
+  const surfaceArea = 2 * (geometric.elementWidth * geometric.elementLength + 
+                          geometric.elementWidth * geometric.elementHeight + 
+                          geometric.elementLength * geometric.elementHeight) / 1e6; // m²
+  
+  const thermalResistance = magnetic.powerSourceType === 'electromagnetic-oil' ? 
+    0.1 / surfaceArea : // Oil cooling: 0.1 K·m²/W
+    0.05 / surfaceArea; // Air cooling: 0.05 K·m²/W (forced convection)
   
   // Temperature rise calculation
-  const ambientTempFactor = environmental.operatingTemperature / 25;
-  const altitudeFactor = 1 + (environmental.altitude / 10000) * 0.1;
-  const temperatureRise = (totalPowerLoss / coolingEfficiency) * ambientTempFactor * altitudeFactor;
+  const altitudeDeratingFactor = 1 + (environmental.altitude / 1000) * 0.02; // 2% per 1000m
+  const ambientTempFactor = 1 + (environmental.operatingTemperature - 25) / 100;
+  
+  const temperatureRise = totalPowerLoss * thermalResistance * altitudeDeratingFactor * ambientTempFactor;
+  
+  const coolingEfficiency = magnetic.powerSourceType === 'electromagnetic-oil' ? 0.92 : 0.78;
   
   return {
     totalPowerLoss: parseFloat(totalPowerLoss.toFixed(2)),
@@ -79,41 +139,49 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
   const efficiency = calculateTrampMetalRemoval(inputs);
   const thermal = calculateThermalPerformance(inputs);
   
-  // Model scoring algorithm
+  // Normalized scoring factors (0-100 scale)
   const models = {
     'PCB (Permanent Magnet)': {
       score: 0,
       factors: {
-        efficiency: efficiency.overallEfficiency * 0.4,
-        powerEfficiency: (100 - thermal.totalPowerLoss) * 0.3,
-        maintenance: 95 * 0.2, // Low maintenance
-        cost: 70 * 0.1 // Higher initial cost
+        efficiency: efficiency.overallEfficiency, // Already in %
+        powerEfficiency: Math.max(0, 100 - thermal.totalPowerLoss), // Inverse of power loss
+        maintenance: 95, // Low maintenance score
+        reliability: 90, // High reliability
+        cost: 75 // Higher initial cost but lower operating cost
       }
     },
     'EMAX (Air Cooled)': {
       score: 0,
       factors: {
-        efficiency: efficiency.overallEfficiency * 0.4,
-        powerEfficiency: (100 - thermal.totalPowerLoss * 0.8) * 0.3,
-        maintenance: 80 * 0.2,
-        cost: 85 * 0.1
+        efficiency: efficiency.overallEfficiency * 1.05, // Slightly better magnetic circuit
+        powerEfficiency: Math.max(0, 100 - thermal.totalPowerLoss * 0.1), // Better power efficiency than oil
+        maintenance: 80, // Moderate maintenance
+        reliability: 85, // Good reliability  
+        cost: 85 // Moderate cost
       }
     },
     'OCW (Oil Cooled)': {
       score: 0,
       factors: {
-        efficiency: efficiency.overallEfficiency * 1.1 * 0.4, // Better cooling allows higher field
-        powerEfficiency: (100 - thermal.totalPowerLoss * 0.6) * 0.3,
-        maintenance: 70 * 0.2, // Higher maintenance
-        cost: 60 * 0.1 // Highest initial cost
+        efficiency: efficiency.overallEfficiency * 1.15, // Best magnetic performance due to cooling
+        powerEfficiency: Math.max(0, 100 - thermal.totalPowerLoss * 0.05), // Best thermal management
+        maintenance: 70, // Higher maintenance due to oil system
+        reliability: 75, // More complex system
+        cost: 65 // Highest initial and operating cost
       }
     }
   };
   
-  // Calculate total scores
+  // Calculate weighted scores (efficiency 40%, power 25%, maintenance 20%, reliability 10%, cost 5%)
+  const weights = { efficiency: 0.4, powerEfficiency: 0.25, maintenance: 0.2, reliability: 0.1, cost: 0.05 };
+  
   Object.keys(models).forEach(modelName => {
     const model = models[modelName as keyof typeof models];
-    model.score = Object.values(model.factors).reduce((sum, factor) => sum + factor, 0);
+    model.score = Object.entries(model.factors).reduce((sum, [factor, value]) => {
+      const weight = weights[factor as keyof typeof weights] || 0;
+      return sum + (value * weight);
+    }, 0);
   });
   
   // Find best model

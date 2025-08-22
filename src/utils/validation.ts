@@ -11,36 +11,36 @@ import {
 
 // Safety thresholds configuration
 export const SAFETY_THRESHOLDS: SafetyThresholds = {
-  maxTemperature: 300, // °C
-  maxMagneticField: 2.0, // Tesla
-  maxRemovalEfficiency: 100, // %
-  warningTemperature: 250, // °C
-  warningMagneticField: 1.8, // Tesla
-  warningRemovalEfficiency: 95, // %
+  maxTemperature: 180, // °C - Realistic limit for magnetic separators
+  maxMagneticField: 1.5, // Tesla - Practical limit for industrial separators
+  maxRemovalEfficiency: 98, // % - Realistic maximum efficiency
+  warningTemperature: 120, // °C - Warning threshold  
+  warningMagneticField: 1.2, // Tesla - Warning threshold
+  warningRemovalEfficiency: 90, // % - Warning for low efficiency
 };
 
 // Equipment rating database
 export const EQUIPMENT_RATINGS: Record<string, EquipmentRating> = {
   'PCB (Permanent Magnet)': {
-    model: 'PCB',
-    maxPowerLoss: 5.0, // kW
-    maxOperatingTemp: 200, // °C
-    maxMagneticField: 1.5, // Tesla
-    thermalRating: 500, // W/m²
+    model: 'PCB (Permanent Magnet)',
+    maxPowerLoss: 0, // kW - No electrical power
+    maxOperatingTemp: 80, // °C - Limited by magnet temperature rating
+    maxMagneticField: 1.1, // Tesla - Typical permanent magnet limit
+    thermalRating: 0, // W/m² - No thermal generation
   },
   'EMAX (Air Cooled)': {
-    model: 'EMAX',
-    maxPowerLoss: 15.0, // kW
-    maxOperatingTemp: 150, // °C
-    maxMagneticField: 2.2, // Tesla
-    thermalRating: 800, // W/m²
+    model: 'EMAX (Air Cooled)', 
+    maxPowerLoss: 8, // kW - Realistic for air cooling
+    maxOperatingTemp: 120, // °C - Air cooling limit
+    maxMagneticField: 1.4, // Tesla - Air core practical limit
+    thermalRating: 800, // W/m² - Air cooling capacity
   },
   'OCW (Oil Cooled)': {
-    model: 'OCW',
-    maxPowerLoss: 25.0, // kW
-    maxOperatingTemp: 120, // °C
-    maxMagneticField: 2.5, // Tesla
-    thermalRating: 1200, // W/m²
+    model: 'OCW (Oil Cooled)',
+    maxPowerLoss: 25, // kW - Oil cooling allows higher power
+    maxOperatingTemp: 150, // °C - Oil cooling limit
+    maxMagneticField: 1.6, // Tesla - Oil cooled practical limit
+    thermalRating: 2500, // W/m² - Oil cooling capacity
   },
 };
 
