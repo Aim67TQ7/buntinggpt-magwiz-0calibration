@@ -120,7 +120,7 @@ export function calculateTrampMetalRemoval(inputs: CalculatorInputs): Calculatio
   const medMult    = avgSize_mm < 10 ? 0.90 : avgSize_mm < 20 ? 0.92 : 0.85;
   const largeMult  = avgSize_mm < 10 ? 0.88 : avgSize_mm < 20 ? 0.90 : 0.92;
 
-  const overall = clamp01(η_base);
+  const overall = clamp01(p_capture * f_speed * f_depth * f_trough * f_env * f_gap);
   const fine = clamp01(overall * fineMult);
   const medium = clamp01(overall * medMult);
   const large = clamp01(overall * largeMult);
@@ -140,8 +140,9 @@ export function calculateThermalPerformance(inputs: CalculatorInputs): Calculati
   const NI = estimateNI(inputs);
 
   // Electrical copper loss proxy (covers I^2R without needing coil geometry)
-  const totalPowerLoss_W = (NI * NI) * CAL_KP_W_PER_AT2;
-  const totalPowerLoss = roundSig(totalPowerLoss_W / 1000, 3); // kW
+  const totalPowerLoss_W = (NI*NI) * CAL_KP_W_PER_AT2;
+  const totalPowerLoss_kW = totalPowerLoss_W / 1000;
+  const ΔT = totalPowerLoss_W * Rth;  // use W not kW
 
   // Thermal resistance (air-cooled baseline, derated by ambient & altitude)
   const altitude_km = (misc.altitude || 0) / 1000;
