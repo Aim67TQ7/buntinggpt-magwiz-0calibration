@@ -6,70 +6,37 @@ import { ResultsDisplay } from "./ResultsDisplay";
 import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
 import { performEnhancedCalculation } from '@/utils/calculations';
 import { generateValidationExportData } from '@/utils/validation';
-import { Calculator, Settings, Thermometer, Globe, Download } from "lucide-react";
+import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Material database with bulk densities and magnetic properties
-const MATERIAL_DATABASE: Record<string, { bulkDensity: number; magneticSusceptibility: number }> = {
-  'Iron': { bulkDensity: 7.87, magneticSusceptibility: 2000 },
-  'Steel (Mild)': { bulkDensity: 7.85, magneticSusceptibility: 1800 },
-  'Copper': { bulkDensity: 8.96, magneticSusceptibility: -9.6 }, // Diamagnetic
-  'Cobalt': { bulkDensity: 8.9, magneticSusceptibility: 1100 },
-  'Nickel': { bulkDensity: 8.9, magneticSusceptibility: 600 },
-  'Lead': { bulkDensity: 11.34, magneticSusceptibility: -27 }, // Diamagnetic
-  'Aluminum': { bulkDensity: 2.70, magneticSusceptibility: 22 }, // Paramagnetic
-  'Zinc': { bulkDensity: 7.13, magneticSusceptibility: -11 }, // Diamagnetic
-  'Brass': { bulkDensity: 8.44, magneticSusceptibility: -9 }, // Diamagnetic
-  'Shredded Steel Scrap': { bulkDensity: 0.9, magneticSusceptibility: 1500 },
-  'High-Density Shredded Scrap': { bulkDensity: 2.0, magneticSusceptibility: 1600 },
-  'Iron Powder': { bulkDensity: 2.38, magneticSusceptibility: 1200 },
-  'Aluminum Powder': { bulkDensity: 1.0, magneticSusceptibility: 20 }, // Average of range
-  'Aluminum Shavings': { bulkDensity: 0.175, magneticSusceptibility: 18 }, // Average of range
-  'Custom': { bulkDensity: 2.5, magneticSusceptibility: 500 }
-};
 
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
   const [inputs, setInputs] = useState<CalculatorInputs>({
-    geometric: {
+    conveyor: {
+      beltSpeed: 2.5,
+      troughAngle: 20,
       beltWidth: 1200,
-      suspensionHeight: 300,
-      elementLength: 1000,
-      elementWidth: 800,
-      elementHeight: 400,
-      beltSpeed: 1.5,
-      feedRate: 100,
-      materialLayerThickness: 25
     },
-    magnetic: {
-      powerSourceType: 'electromagnetic-air',
-      ampereTurns: 5000,
-      numberOfTurns: 100,
-      current: 50,
-      magnetGap: 150,
-      numberOfPoles: 4,
-      poleConfiguration: 'alternating',
-      magnetArrangement: 'cross-belt'
-    },
-    material: {
-      materialType: 'Iron',
-      bulkDensity: 7.87,
+    burden: {
+      feedDepth: 100,
+      throughPut: 100,
+      density: 2.5,
       waterContent: 8,
-      trampMetalSize: { min: 5, max: 150 },
-      magneticSusceptibility: 2000,
-      particleDistribution: 'mixed',
-      flowCharacteristics: 'free-flowing',
-      contaminationLevel: 2
     },
-    environmental: {
-      operatingTemperature: 25,
-      altitude: 500,
-      dustExposure: 'medium',
-      humidity: 65,
-      vibrationLevel: 'low',
-      airCurrents: 'none',
-      materialPreConditioning: 'screening'
-    }
+    shape: {
+      width: 15,
+      length: 25,
+      height: 8,
+    },
+    magnet: {
+      gap: 150,
+      coreBeltRatio: 0.6,
+      position: 300,
+    },
+    misc: {
+      altitude: 1000,
+      ambientTemperature: 25,
+    },
   });
 
   const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
@@ -175,395 +142,230 @@ export function MagneticSeparatorCalculator() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Parameters */}
           <div className="space-y-6">
-            {/* Geometric Parameters */}
-            <ParameterSection title="Geometric Parameters" icon={<Settings size={20} />}>
-              <div className="grid grid-cols-3 gap-4">
-                <ParameterInput
-                  label="Belt Width"
-                  value={inputs.geometric.beltWidth}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    geometric: { ...prev.geometric, beltWidth: Number(value) }
-                  }))}
-                  unit="mm"
-                />
+            {/* Conveyor Parameters */}
+            <ParameterSection 
+              title="Conveyor" 
+              icon={<Settings className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <ParameterInput
                   label="Belt Speed"
-                  value={inputs.geometric.beltSpeed}
+                  value={inputs.conveyor.beltSpeed}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    geometric: { ...prev.geometric, beltSpeed: Number(value) }
+                    conveyor: { ...prev.conveyor, beltSpeed: Number(value) }
                   }))}
-                  unit="m/s"
+                  type="number"
+                  min={0.5}
+                  max={8}
                   step={0.1}
+                  unit="m/s"
                 />
                 <ParameterInput
-                  label="Feed Rate"
-                  value={inputs.geometric.feedRate}
+                  label="Trough Angle"
+                  value={inputs.conveyor.troughAngle}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    geometric: { ...prev.geometric, feedRate: Number(value) }
+                    conveyor: { ...prev.conveyor, troughAngle: Number(value) }
                   }))}
+                  type="number"
+                  min={0}
+                  max={45}
+                  unit="°"
+                />
+                <ParameterInput
+                  label="Belt Width"
+                  value={inputs.conveyor.beltWidth}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    conveyor: { ...prev.conveyor, beltWidth: Number(value) }
+                  }))}
+                  type="number"
+                  min={450}
+                  max={2400}
+                  unit="mm"
+                />
+              </div>
+            </ParameterSection>
+
+            {/* Burden Parameters */}
+            <ParameterSection 
+              title="Burden" 
+              icon={<Package className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <ParameterInput
+                  label="Feed Depth"
+                  value={inputs.burden.feedDepth}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    burden: { ...prev.burden, feedDepth: Number(value) }
+                  }))}
+                  type="number"
+                  min={10}
+                  max={500}
+                  unit="mm"
+                />
+                <ParameterInput
+                  label="Through Put"
+                  value={inputs.burden.throughPut}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    burden: { ...prev.burden, throughPut: Number(value) }
+                  }))}
+                  type="number"
+                  min={10}
+                  max={1000}
                   unit="t/h"
                 />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
-                  label="Suspension Height"
-                  value={inputs.geometric.suspensionHeight}
+                  label="Density"
+                  value={inputs.burden.density}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    geometric: { ...prev.geometric, suspensionHeight: Number(value) }
+                    burden: { ...prev.burden, density: Number(value) }
                   }))}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Material Layer Thickness"
-                  value={inputs.geometric.materialLayerThickness}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    geometric: { ...prev.geometric, materialLayerThickness: Number(value) }
-                  }))}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Element Length"
-                  value={inputs.geometric.elementLength}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    geometric: { ...prev.geometric, elementLength: Number(value) }
-                  }))}
-                  unit="mm"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <ParameterInput
-                  label="Element Width"
-                  value={inputs.geometric.elementWidth}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    geometric: { ...prev.geometric, elementWidth: Number(value) }
-                  }))}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Element Height"
-                  value={inputs.geometric.elementHeight}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    geometric: { ...prev.geometric, elementHeight: Number(value) }
-                  }))}
-                  unit="mm"
-                />
-              </div>
-            </ParameterSection>
-
-            {/* Magnetic System Inputs */}
-            <ParameterSection title="Magnetic System" icon={<Calculator size={20} />}>
-              <ParameterSelect
-                label="Power Source Type"
-                value={inputs.magnetic.powerSourceType}
-                onChange={(value) => setInputs(prev => ({
-                  ...prev,
-                  magnetic: { ...prev.magnetic, powerSourceType: value as any }
-                }))}
-                options={[
-                  { value: 'electromagnetic-air', label: 'Electromagnetic (Air Cooled)' },
-                  { value: 'electromagnetic-oil', label: 'Electromagnetic (Oil Cooled)' }
-                ]}
-              />
-              <div className="grid grid-cols-3 gap-4">
-                <ParameterSelect
-                  label="Pole Configuration"
-                  value={inputs.magnetic.poleConfiguration}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, poleConfiguration: value as any }
-                  }))}
-                  options={[
-                    { value: 'alternating', label: 'Alternating Poles' },
-                    { value: 'single', label: 'Single Polarity' },
-                    { value: 'focused', label: 'Focused Field' }
-                  ]}
-                />
-                <ParameterSelect
-                  label="Magnet Arrangement"
-                  value={inputs.magnetic.magnetArrangement}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, magnetArrangement: value as any }
-                  }))}
-                  options={[
-                    { value: 'cross-belt', label: 'Cross-Belt' },
-                    { value: 'drum', label: 'Drum Type' },
-                    { value: 'linear', label: 'Linear' }
-                  ]}
-                />
-                <ParameterInput
-                  label="Number of Poles"
-                  value={inputs.magnetic.numberOfPoles}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, numberOfPoles: Number(value) }
-                  }))}
-                  min={2}
-                  max={20}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <ParameterInput
-                  label="Ampere-turns (NI)"
-                  value={inputs.magnetic.ampereTurns}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, ampereTurns: Number(value) }
-                  }))}
-                />
-                <ParameterInput
-                  label="Number of Turns"
-                  value={inputs.magnetic.numberOfTurns}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, numberOfTurns: Number(value) }
-                  }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <ParameterInput
-                  label="Current"
-                  value={inputs.magnetic.current}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, current: Number(value) }
-                  }))}
-                  unit="A"
-                />
-                <ParameterInput
-                  label="Magnet Gap"
-                  value={inputs.magnetic.magnetGap}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnetic: { ...prev.magnetic, magnetGap: Number(value) }
-                  }))}
-                  unit="mm"
-                />
-              </div>
-            </ParameterSection>
-
-            {/* Material Parameters */}
-            <ParameterSection title="Material Properties" icon={<Globe size={20} />}>
-              <div className="grid grid-cols-2 gap-4">
-                <ParameterSelect
-                  label="Material Type"
-                  value={inputs.material.materialType}
-                  onChange={(value) => {
-                    const materialData = MATERIAL_DATABASE[value];
-                    setInputs(prev => ({
-                      ...prev,
-                      material: { 
-                        ...prev.material, 
-                        materialType: value,
-                        bulkDensity: materialData?.bulkDensity || prev.material.bulkDensity,
-                        magneticSusceptibility: materialData?.magneticSusceptibility || prev.material.magneticSusceptibility
-                      }
-                    }));
-                  }}
-                  options={[
-                    { value: 'Iron', label: 'Iron' },
-                    { value: 'Steel (Mild)', label: 'Steel (Mild)' },
-                    { value: 'Copper', label: 'Copper' },
-                    { value: 'Cobalt', label: 'Cobalt' },
-                    { value: 'Nickel', label: 'Nickel' },
-                    { value: 'Lead', label: 'Lead' },
-                    { value: 'Aluminum', label: 'Aluminum' },
-                    { value: 'Zinc', label: 'Zinc' },
-                    { value: 'Brass', label: 'Brass' },
-                    { value: 'Shredded Steel Scrap', label: 'Shredded Steel Scrap' },
-                    { value: 'High-Density Shredded Scrap', label: 'High-Density Shredded Scrap' },
-                    { value: 'Iron Powder', label: 'Iron Powder' },
-                    { value: 'Aluminum Powder', label: 'Aluminum Powder' },
-                    { value: 'Aluminum Shavings', label: 'Aluminum Shavings' },
-                    { value: 'Custom', label: 'Custom Material' }
-                  ]}
-                />
-                <ParameterInput
-                  label="Bulk Density"
-                  value={inputs.material.bulkDensity}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    material: { ...prev.material, bulkDensity: Number(value) }
-                  }))}
+                  type="number"
+                  min={0.5}
+                  max={8}
+                  step={0.1}
                   unit="t/m³"
-                  step={0.1}
                 />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <ParameterSelect
-                  label="Particle Distribution"
-                  value={inputs.material.particleDistribution}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    material: { ...prev.material, particleDistribution: value as any }
-                  }))}
-                  options={[
-                    { value: 'fine', label: 'Fine Particles' },
-                    { value: 'mixed', label: 'Mixed Distribution' },
-                    { value: 'coarse', label: 'Coarse Particles' }
-                  ]}
-                />
-                <ParameterSelect
-                  label="Flow Characteristics"
-                  value={inputs.material.flowCharacteristics}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    material: { ...prev.material, flowCharacteristics: value as any }
-                  }))}
-                  options={[
-                    { value: 'free-flowing', label: 'Free Flowing' },
-                    { value: 'cohesive', label: 'Cohesive' },
-                    { value: 'sticky', label: 'Sticky' }
-                  ]}
-                />
-                <ParameterInput
-                  label="Contamination Level"
-                  value={inputs.material.contaminationLevel}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    material: { ...prev.material, contaminationLevel: Number(value) }
-                  }))}
-                  unit="%"
-                  min={0}
-                  max={50}
-                  step={0.1}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
                   label="Water Content"
-                  value={inputs.material.waterContent}
+                  value={inputs.burden.waterContent}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    material: { ...prev.material, waterContent: Number(value) }
+                    burden: { ...prev.burden, waterContent: Number(value) }
                   }))}
-                  unit="%"
+                  type="number"
                   min={0}
-                  max={100}
+                  max={25}
+                  step={0.1}
+                  unit="%"
                 />
+              </div>
+            </ParameterSection>
+
+            {/* Shape Parameters */}
+            <ParameterSection 
+              title="Shape" 
+              icon={<Box className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <ParameterInput
-                  label="Min Tramp Size"
-                  value={inputs.material.trampMetalSize.min}
+                  label="Width"
+                  value={inputs.shape.width}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    material: { 
-                      ...prev.material, 
-                      trampMetalSize: { ...prev.material.trampMetalSize, min: Number(value) }
-                    }
+                    shape: { ...prev.shape, width: Number(value) }
                   }))}
+                  type="number"
+                  min={1}
+                  max={100}
                   unit="mm"
                 />
                 <ParameterInput
-                  label="Max Tramp Size"
-                  value={inputs.material.trampMetalSize.max}
+                  label="Length"
+                  value={inputs.shape.length}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    material: { 
-                      ...prev.material, 
-                      trampMetalSize: { ...prev.material.trampMetalSize, max: Number(value) }
-                    }
+                    shape: { ...prev.shape, length: Number(value) }
                   }))}
+                  type="number"
+                  min={1}
+                  max={100}
+                  unit="mm"
+                />
+                <ParameterInput
+                  label="Height"
+                  value={inputs.shape.height}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    shape: { ...prev.shape, height: Number(value) }
+                  }))}
+                  type="number"
+                  min={1}
+                  max={50}
                   unit="mm"
                 />
               </div>
             </ParameterSection>
 
-            {/* Environmental Constraints */}
-            <ParameterSection title="Environmental Conditions" icon={<Thermometer size={20} />}>
-              <div className="grid grid-cols-2 gap-4">
+            {/* Magnet Parameters */}
+            <ParameterSection 
+              title="Magnet" 
+              icon={<Magnet className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <ParameterInput
-                  label="Operating Temperature"
-                  value={inputs.environmental.operatingTemperature}
+                  label="Gap"
+                  value={inputs.magnet.gap}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    environmental: { ...prev.environmental, operatingTemperature: Number(value) }
+                    magnet: { ...prev.magnet, gap: Number(value) }
                   }))}
-                  unit="°C"
+                  type="number"
+                  min={50}
+                  max={500}
+                  unit="mm"
                 />
+                <ParameterInput
+                  label="Core:Belt Ratio"
+                  value={inputs.magnet.coreBeltRatio}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    magnet: { ...prev.magnet, coreBeltRatio: Number(value) }
+                  }))}
+                  type="number"
+                  min={0.1}
+                  max={0.9}
+                  step={0.1}
+                />
+                <ParameterInput
+                  label="Position"
+                  value={inputs.magnet.position}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    magnet: { ...prev.magnet, position: Number(value) }
+                  }))}
+                  type="number"
+                  min={0}
+                  max={1000}
+                  unit="mm"
+                />
+              </div>
+            </ParameterSection>
+
+            {/* Misc Parameters */}
+            <ParameterSection 
+              title="Misc" 
+              icon={<Thermometer className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ParameterInput
                   label="Altitude"
-                  value={inputs.environmental.altitude}
+                  value={inputs.misc.altitude}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    environmental: { ...prev.environmental, altitude: Number(value) }
+                    misc: { ...prev.misc, altitude: Number(value) }
                   }))}
+                  type="number"
+                  min={0}
+                  max={4000}
                   unit="m"
                 />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <ParameterSelect
-                  label="Dust Exposure"
-                  value={inputs.environmental.dustExposure}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    environmental: { ...prev.environmental, dustExposure: value as any }
-                  }))}
-                  options={[
-                    { value: 'low', label: 'Low' },
-                    { value: 'medium', label: 'Medium' },
-                    { value: 'high', label: 'High' }
-                  ]}
-                />
-                <ParameterSelect
-                  label="Vibration Level"
-                  value={inputs.environmental.vibrationLevel}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    environmental: { ...prev.environmental, vibrationLevel: value as any }
-                  }))}
-                  options={[
-                    { value: 'low', label: 'Low' },
-                    { value: 'medium', label: 'Medium' },
-                    { value: 'high', label: 'High' }
-                  ]}
-                />
                 <ParameterInput
-                  label="Humidity"
-                  value={inputs.environmental.humidity}
+                  label="Ambient Temperature"
+                  value={inputs.misc.ambientTemperature}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
-                    environmental: { ...prev.environmental, humidity: Number(value) }
+                    misc: { ...prev.misc, ambientTemperature: Number(value) }
                   }))}
-                  unit="%"
-                  min={0}
-                  max={100}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <ParameterSelect
-                  label="Air Currents"
-                  value={inputs.environmental.airCurrents}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    environmental: { ...prev.environmental, airCurrents: value as any }
-                  }))}
-                  options={[
-                    { value: 'none', label: 'None' },
-                    { value: 'mild', label: 'Mild' },
-                    { value: 'strong', label: 'Strong' }
-                  ]}
-                />
-                <ParameterSelect
-                  label="Material Pre-Conditioning"
-                  value={inputs.environmental.materialPreConditioning}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    environmental: { ...prev.environmental, materialPreConditioning: value as any }
-                  }))}
-                  options={[
-                    { value: 'none', label: 'None' },
-                    { value: 'screening', label: 'Screening' },
-                    { value: 'drying', label: 'Drying' },
-                    { value: 'both', label: 'Screening + Drying' }
-                  ]}
+                  type="number"
+                  min={-20}
+                  max={60}
+                  unit="°C"
                 />
               </div>
             </ParameterSection>
@@ -571,19 +373,21 @@ export function MagneticSeparatorCalculator() {
             {/* Action Buttons */}
             <div className="flex gap-4">
               <Button 
-                onClick={handleCalculate}
+                onClick={handleCalculate} 
                 disabled={isCalculating}
-                className="flex-1 bg-gradient-to-r from-engineering-primary to-engineering-primary-light hover:from-engineering-primary-light hover:to-engineering-primary text-white"
+                className="flex-1 h-12 text-lg font-semibold"
               >
+                <Calculator className="w-5 h-5 mr-2" />
                 {isCalculating ? "Calculating..." : "Calculate Design"}
               </Button>
+              
               {results && (
                 <Button 
                   onClick={handleExport}
                   variant="outline"
-                  className="border-engineering-primary text-engineering-primary hover:bg-engineering-primary hover:text-white"
+                  className="h-12 px-6"
                 >
-                  <Download size={16} className="mr-2" />
+                  <Download className="w-5 h-5 mr-2" />
                   Export CSV
                 </Button>
               )}
@@ -591,15 +395,16 @@ export function MagneticSeparatorCalculator() {
           </div>
 
           {/* Results Display */}
-          <div>
+          <div className="lg:sticky lg:top-8 lg:h-fit">
             {results ? (
               <ResultsDisplay results={results} />
             ) : (
-              <Card className="shadow-card h-96 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <Calculator size={64} className="mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">Enter parameters and click "Calculate Design" to see results</p>
-                </div>
+              <Card className="p-8 text-center">
+                <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-xl font-semibold mb-2">Ready to Calculate</h3>
+                <p className="text-muted-foreground">
+                  Enter your parameters and click "Calculate Design" to see the results.
+                </p>
               </Card>
             )}
           </div>

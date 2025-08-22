@@ -63,7 +63,7 @@ export function ParameterInput({
         max={max}
         step={step}
         placeholder={placeholder}
-        className="focus:ring-engineering-primary focus:border-engineering-primary"
+        className="border-blue-300 focus:border-blue-400 focus:ring-blue-400 shadow-sm shadow-blue-200/50 focus:shadow-blue-300/60 transition-all duration-200"
       />
     </div>
   );

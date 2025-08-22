@@ -1,12 +1,31 @@
-export interface GeometricParameters {
-  beltWidth: number; // 450-2400mm
-  suspensionHeight: number; // 0-800mm
-  elementLength: number;
-  elementWidth: number;
-  elementHeight: number;
+export interface ConveyorParameters {
   beltSpeed: number; // m/s
-  feedRate: number; // t/h
-  materialLayerThickness: number; // mm
+  troughAngle: number; // degrees 0-45
+  beltWidth: number; // mm 450-2400
+}
+
+export interface BurdenParameters {
+  feedDepth: number; // mm
+  throughPut: number; // t/h (feed rate)
+  density: number; // t/m³
+  waterContent: number; // %
+}
+
+export interface ShapeParameters {
+  width: number; // mm (tramp metal particle width)
+  length: number; // mm (tramp metal particle length) 
+  height: number; // mm (tramp metal particle height)
+}
+
+export interface MagnetParameters {
+  gap: number; // mm (magnet gap)
+  coreBeltRatio: number; // ratio 0.1-0.9
+  position: number; // mm (position along belt)
+}
+
+export interface MiscParameters {
+  altitude: number; // m
+  ambientTemperature: number; // °C
 }
 
 export interface MagneticSystemInputs {
@@ -148,8 +167,9 @@ export interface EnhancedCalculationResults extends CalculationResults {
 }
 
 export interface CalculatorInputs {
-  geometric: GeometricParameters;
-  magnetic: MagneticSystemInputs;
-  material: MaterialSeparationMetrics;
-  environmental: EnvironmentalConstraints;
+  conveyor: ConveyorParameters;
+  burden: BurdenParameters;
+  shape: ShapeParameters;
+  magnet: MagnetParameters;
+  misc: MiscParameters;
 }
