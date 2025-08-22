@@ -1,121 +1,171 @@
 import { CalculatorInputs, CalculationResults, EnhancedCalculationResults, OptimizationResult } from '@/types/calculator';
 import { validateCalculationResults, getRecommendedValidationTools } from '@/utils/validation';
 
-export function calculateMagneticField(inputs: CalculatorInputs): CalculationResults['magneticFieldStrength'] {
+/* ------------------------- Calibratable constants ------------------------- */
+const μ0 = 4 * Math.PI * 1e-7;          // H/m
+const g_grav = 9.80665;                 // m/s^2
+const ρ_steel = 7800;                   // kg/m^3 (ferrous tramp)
+const B_SAT = 1.8;                      // Tesla, steel saturation proxy
+const DECAY_N = 2.5;                    // field decay exponent (2–3 typical)
+const CAL_NI_PER_RATIO_PER_M = 2.2e5;   // A·turns per (ratio·meter of belt width)
+const LEAKAGE_MM = 12;                  // mm, adds to effective gap
+const CAL_KP_W_PER_AT2 = 1.2e-5;        // W / (A·turn)^2  (electrical loss scaling)
+const RTH_AIR_BASE = 0.32;              // °C/W (air-cooled baseline)
+const ALT_DERATE_PER_KM = 0.12;         // convective loss derate per km
+const AMB_REF = 25;                     // °C reference for cooling
+const AMB_DERATE_PER_10C = 0.10;        // -10% h per +10°C
+const CAPTURE_SAFETY_K = 1.6;           // margin on resisting forces
+const LOGIT_STEEPNESS = 4.0;            // mapping force ratio → probability
+const LOGIT_CENTER = 1.0;               // 50% at Fm/Fres = 1
+/* ------------------------------------------------------------------------- */
+
+function clamp01(x: number) { return Math.max(0, Math.min(1, x)); }
+function roundSig(x: number, sig = 3) {
+  if (!isFinite(x) || x === 0) return 0;
+  const p = Math.pow(10, sig - 1 - Math.floor(Math.log10(Math.abs(x))));
+  return Math.round(x * p) / p;
+}
+
+/** Estimate NI (ampere-turns) from geometry proxy (core:belt ratio & belt width) */
+function estimateNI(inputs: CalculatorInputs): number {
   const { magnet, conveyor } = inputs;
-  
-  // Core magnetic field calculation using simplified approach
-  const permeability = 4 * Math.PI * 1e-7; // μ₀ in H/m
-  const effectiveLength = conveyor.beltWidth / 1000; // Convert to meters
-  
-  // Simplified magnetic field calculation based on gap and core:belt ratio
-  const magneticField = (0.1 * magnet.coreBeltRatio) / (magnet.gap / 1000);
-  
-  // Convert to practical units
-  const tesla = magneticField;
-  const gauss = tesla * 10000;
-  
-  // Calculate penetration depth (simplified model)
-  const penetrationDepth = Math.sqrt(2 / (2 * Math.PI * 50 * 4 * Math.PI * 1e-7 * 1e6)) * 1000; // mm
-  
-  return {
-    tesla,
-    gauss,
-    penetrationDepth
-  };
+  const width_m = (conveyor.beltWidth || 1000) / 1000; // m
+  // Scales linearly with core coverage of belt and magnet family
+  return CAL_NI_PER_RATIO_PER_M * magnet.coreBeltRatio * width_m;
 }
 
+/** Effective air gap including leakage margin (m) */
+function effectiveGap_m(inputs: CalculatorInputs): number {
+  const { magnet } = inputs;
+  const g_m = (magnet.gap ?? 100) / 1000; // m
+  return g_m + LEAKAGE_MM / 1000; // leakage/stray path
+}
+
+/** Field at belt and simple decay model */
+export function calculateMagneticField(inputs: CalculatorInputs): CalculationResults['magneticFieldStrength'] {
+  const NI = estimateNI(inputs);
+  const g_eff = effectiveGap_m(inputs);
+
+  // B0 limited by saturation
+  const B0 = Math.min((μ0 * NI) / g_eff, B_SAT);
+
+  // Convert
+  const tesla = roundSig(B0, 3);
+  const gauss = Math.round(tesla * 10000);
+
+  // “Penetration depth”: distance where B(d) = 0.1·B0 from B(d)=B0*(g/(g+d))^n
+  // Solve (g/(g+δ))^n = 0.1 ⇒ δ = g*(10^(1/n) - 1)
+  const tenPow = Math.pow(10, 1 / DECAY_N);
+  const penetrationDepth_m = g_eff * (tenPow - 1);
+  const penetrationDepth = Math.max(0, Math.round(penetrationDepth_m * 1000)); // mm, integer display
+
+  return { tesla, gauss, penetrationDepth };
+}
+
+/** Capture physics + calibrated factors */
 export function calculateTrampMetalRemoval(inputs: CalculatorInputs): CalculationResults['trampMetalRemoval'] {
-  const { magnet, conveyor, burden, shape, misc } = inputs;
-  
-  // Base magnetic force calculation
-  const magneticFieldStrength = calculateMagneticField(inputs);
-  const magneticForce = magneticFieldStrength.tesla * 0.003 * 1000; // Assuming iron susceptibility
-  
-  // Belt speed factor - higher speeds reduce collection efficiency
-  const beltSpeedFactor = Math.max(0.3, 1 - (conveyor.beltSpeed - 1) * 0.15);
-  
-  // Feed depth factor - thicker layers reduce efficiency
-  const depthFactor = Math.max(0.4, 1 - (burden.feedDepth - 50) / 500);
-  
-  // Trough angle factor - affects material distribution
-  const troughFactor = Math.max(0.8, 1 - (conveyor.troughAngle - 20) * 0.01);
-  
-  // Environmental factors
-  const tempFactor = Math.max(0.7, 1 - Math.abs(misc.ambientTemperature - 25) / 100);
-  const altitudeFactor = Math.max(0.9, 1 - misc.altitude / 5000);
-  
-  // Water content impact
-  const waterFactor = Math.max(0.6, 1 - burden.waterContent / 50);
-  
-  // Gap factor - smaller gaps improve efficiency
-  const gapFactor = Math.max(0.5, 1 - (magnet.gap - 100) / 400);
-  
-  // Core:Belt ratio factor
-  const ratioFactor = 0.5 + magnet.coreBeltRatio * 0.5;
-  
-  // Particle size factors based on shape dimensions
-  const avgSize = (shape.width + shape.length + shape.height) / 3;
-  const particleSizeFactors = {
-    fine: avgSize < 10 ? 0.7 : avgSize < 20 ? 0.8 : 0.9,
-    medium: avgSize < 10 ? 0.9 : avgSize < 20 ? 0.95 : 0.85,
-    large: avgSize < 10 ? 0.95 : avgSize < 20 ? 0.9 : 0.8
-  };
-  
-  // Calculate base efficiency
-  const baseEfficiency = Math.min(0.98, magneticForce * 0.15);
-  
-  // Apply all factors
-  const overallEfficiency = baseEfficiency * 
-    beltSpeedFactor * depthFactor * troughFactor * tempFactor * 
-    altitudeFactor * waterFactor * gapFactor * ratioFactor;
-  
+  const { conveyor, burden, shape, misc, magnet } = inputs;
+
+  // Field model
+  const NI = estimateNI(inputs);
+  const g_eff = effectiveGap_m(inputs);
+  const B0 = Math.min((μ0 * NI) / g_eff, B_SAT);
+
+  // Evaluate at mid-burden depth (cap to 150 mm for fines relevance)
+  const d_mid_m = 0.5 * Math.min((burden.feedDepth || 50) / 1000, 0.15);
+  const B_at_d = B0 * Math.pow(g_eff / (g_eff + d_mid_m), DECAY_N);
+
+  // Gradient of B^2 from decay model (analytic derivative)
+  // B(d) = B0*(g/(g+d))^n
+  // dB/dd = -n * B0 * g^n * (g+d)^(-n-1)
+  const g = g_eff, n = DECAY_N;
+  const dB_dd = -n * B0 * Math.pow(g, n) * Math.pow(g + d_mid_m, -n - 1);
+  const dB2_dd = 2 * B_at_d * dB_dd; // derivative of B^2
+
+  // Particle volume & mass from user “shape” (mm → m)
+  const w = Math.max(1, shape.width) / 1000;
+  const l = Math.max(1, shape.length) / 1000;
+  const h = Math.max(1, shape.height) / 1000;
+  const Vp = w * l * h;                // m^3
+  const mp = Vp * ρ_steel;             // kg
+  const dChi = 0.003;                  // susceptibility delta
+
+  // Magnetic force (point-particle approximation)
+  const Fm = (Vp * dChi / (2 * μ0)) * Math.abs(dB2_dd); // N
+
+  // Resisting force proxy: gravity + motion penalty with belt speed
+  const v = Math.max(0.1, conveyor.beltSpeed);
+  const F_resist = CAPTURE_SAFETY_K * (mp * g_grav) * (1 + 0.25 * (v - 1)); // N
+
+  // Base capture probability via logistic map on force ratio
+  const ratio = Fm / Math.max(1e-9, F_resist);
+  const p_capture = 1 / (1 + Math.exp(-LOGIT_STEEPNESS * (ratio - LOGIT_CENTER)));
+
+  // Environmental/operational penalties (clamped 0..1)
+  const f_speed = clamp01(1 - 0.15 * Math.max(0, v - 1));
+  const f_depth = clamp01(1 - (burden.feedDepth || 0) / 500);
+  const f_trough = clamp01(1 - Math.max(0, (conveyor.troughAngle || 20) - 20) * 0.01);
+  const f_temp = clamp01(1 - Math.abs((misc.ambientTemperature ?? AMB_REF) - AMB_REF) / 100);
+  const f_alt = clamp01(1 - (misc.altitude || 0) / 5000);
+  const f_water = clamp01(1 - (burden.waterContent || 0) / 50);
+  const f_gap = clamp01(Math.pow((magnet.gap > 0 ? (100 / magnet.gap) : 1), 1.0)); // relative to 100 mm
+  const f_env = clamp01(f_temp * f_alt * f_water);
+
+  // Overall base efficiency
+  const η_base = clamp01(p_capture * f_speed * f_depth * f_trough * f_env * f_gap);
+
+  // Size-class mapping (kept compatible with your UI expectations)
+  const avgSize_mm = (shape.width + shape.length + shape.height) / 3;
+  const fineMult   = avgSize_mm < 10 ? 0.85 : avgSize_mm < 20 ? 0.75 : 0.65;
+  const medMult    = avgSize_mm < 10 ? 0.90 : avgSize_mm < 20 ? 0.92 : 0.85;
+  const largeMult  = avgSize_mm < 10 ? 0.88 : avgSize_mm < 20 ? 0.90 : 0.92;
+
+  const overall = clamp01(η_base);
+  const fine = clamp01(overall * fineMult);
+  const medium = clamp01(overall * medMult);
+  const large = clamp01(overall * largeMult);
+
   return {
-    overallEfficiency: Math.min(0.99, Math.max(0.1, overallEfficiency)),
-    fineParticles: Math.min(0.95, Math.max(0.05, overallEfficiency * particleSizeFactors.fine)),
-    mediumParticles: Math.min(0.98, Math.max(0.1, overallEfficiency * particleSizeFactors.medium)),
-    largeParticles: Math.min(0.99, Math.max(0.15, overallEfficiency * particleSizeFactors.large))
+    overallEfficiency: roundSig(Math.min(0.99, Math.max(0.05, overall)), 3),
+    fineParticles:      roundSig(Math.min(0.98, Math.max(0.05, fine)), 3),
+    mediumParticles:    roundSig(Math.min(0.99, Math.max(0.05, medium)), 3),
+    largeParticles:     roundSig(Math.min(0.995, Math.max(0.05, large)), 3),
   };
 }
 
+/** Thermal losses from NI proxy and ΔT via thermal resistance */
 export function calculateThermalPerformance(inputs: CalculatorInputs): CalculationResults['thermalPerformance'] {
-  const { magnet, conveyor, burden, misc } = inputs;
-  
-  // Simplified power calculation based on core:belt ratio
-  const basePower = magnet.coreBeltRatio * 10; // kW base power
-  
-  // Throughput factor
-  const throughputFactor = 1 + (burden.throughPut / 100) * 0.1;
-  
-  // Belt speed factor
-  const speedFactor = 1 + (conveyor.beltSpeed / 5) * 0.2;
-  
-  // Total power loss
-  const totalPowerLoss = basePower * throughputFactor * speedFactor;
-  
-  // Cooling efficiency (assuming air cooling)
-  const coolingEfficiency = 0.65;
-  
-  // Environmental factors affecting cooling
-  const altitudeFactor = Math.max(0.7, 1 - misc.altitude / 3000);
-  const tempFactor = Math.max(0.6, 1 - (misc.ambientTemperature - 20) / 50);
-  
-  const effectiveCoolingEfficiency = coolingEfficiency * altitudeFactor * tempFactor;
-  
-  // Temperature rise calculation
-  const thermalResistance = 1 / effectiveCoolingEfficiency;
-  const temperatureRise = totalPowerLoss * thermalResistance;
-  
+  const { misc } = inputs;
+
+  const NI = estimateNI(inputs);
+
+  // Electrical copper loss proxy (covers I^2R without needing coil geometry)
+  const totalPowerLoss_W = (NI * NI) * CAL_KP_W_PER_AT2;
+  const totalPowerLoss = roundSig(totalPowerLoss_W / 1000, 3); // kW
+
+  // Thermal resistance (air-cooled baseline, derated by ambient & altitude)
+  const altitude_km = (misc.altitude || 0) / 1000;
+  const f_alt = Math.max(0.5, 1 - ALT_DERATE_PER_KM * altitude_km);
+  const amb = misc.ambientTemperature ?? AMB_REF;
+  const f_amb = Math.max(0.5, 1 - AMB_DERATE_PER_10C * Math.max(0, (amb - AMB_REF) / 10));
+
+  const Rth = RTH_AIR_BASE / (f_alt * f_amb); // °C/W
+  const temperatureRise_C = (totalPowerLoss_W) * Rth;
+
+  const temperatureRise = Math.max(0, roundSig(temperatureRise_C, 3));
+  const coolingEfficiency = clamp01((RTH_AIR_BASE / Rth)); // 0..1 notion for UI
+
   return {
     totalPowerLoss,
     temperatureRise,
-    coolingEfficiency: effectiveCoolingEfficiency
+    coolingEfficiency
   };
 }
 
+/* ------------------------ Model recommendation (kept) --------------------- */
+/* Left mostly as-is, but this now aligns better with plausible losses.      */
 export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationResults['recommendedModel'] {
   const { magnet, conveyor, burden, misc } = inputs;
-  
   const models = [
     { name: 'EMAX (Air Cooled)', baseScore: 85 },
     { name: 'OCW (Oil Cooled)', baseScore: 90 },
@@ -123,40 +173,19 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
     { name: 'Drum Separator', baseScore: 75 },
     { name: 'Cross-Belt Separator', baseScore: 82 }
   ];
-  
+
   const scoredModels = models.map(model => {
     let score = model.baseScore;
-    
-    // Adjust based on belt width
-    if (conveyor.beltWidth > 1800 && model.name.includes('Cross-Belt')) {
-      score += 5;
-    }
-    
-    // Adjust based on throughput
-    if (burden.throughPut > 500 && model.name.includes('Oil')) {
-      score += 8;
-    }
-    
-    // Adjust based on gap size
-    if (magnet.gap < 100 && model.name.includes('Drum')) {
-      score += 6;
-    }
-    
-    // Adjust based on environmental conditions
-    if (misc.ambientTemperature > 35 && model.name.includes('Oil')) {
-      score += 6;
-    }
-    
-    // Adjust based on core:belt ratio
-    if (magnet.coreBeltRatio > 0.7 && model.name.includes('EMAX')) {
-      score += 8;
-    }
-    
+
+    if (conveyor.beltWidth > 1800 && model.name.includes('Cross-Belt')) score += 5;
+    if (burden.throughPut > 500 && model.name.includes('Oil')) score += 8;
+    if (magnet.gap < 100 && model.name.includes('Drum')) score += 6;
+    if (misc.ambientTemperature > 35 && model.name.includes('Oil')) score += 6;
+    if (magnet.coreBeltRatio > 0.7 && model.name.includes('EMAX')) score += 8;
+
     return { model: model.name, score: Math.min(100, score) };
-  });
-  
-  scoredModels.sort((a, b) => b.score - a.score);
-  
+  }).sort((a, b) => b.score - a.score);
+
   return {
     model: scoredModels[0].model,
     score: scoredModels[0].score,
@@ -164,9 +193,9 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
   };
 }
 
+/* ----------------------- No changes below this line ----------------------- */
 export function performCompleteCalculation(inputs: CalculatorInputs): CalculationResults {
   console.log('Starting calculation with inputs:', inputs);
-  
   try {
     const results = {
       magneticFieldStrength: calculateMagneticField(inputs),
@@ -174,7 +203,6 @@ export function performCompleteCalculation(inputs: CalculatorInputs): Calculatio
       thermalPerformance: calculateThermalPerformance(inputs),
       recommendedModel: recommendSeparatorModel(inputs)
     };
-    
     console.log('Calculation results:', results);
     return results;
   } catch (error) {
@@ -194,7 +222,6 @@ export function optimizeForEfficiency(
   let bestEfficiency = 0;
   let iterations = 0;
 
-  // Define optimization bounds
   const bounds = {
     gap: { min: 50, max: 300, step: 5 },
     coreBeltRatio: { min: 0.3, max: 0.9, step: 0.05 },
@@ -210,50 +237,24 @@ export function optimizeForEfficiency(
       bestEfficiency = currentEfficiency;
       bestInputs = { ...currentInputs };
     }
+    if (currentEfficiency >= targetEfficiency) break;
 
-    if (currentEfficiency >= targetEfficiency) {
-      break;
+    // Heuristics aligned with corrected physics
+    if (currentInputs.magnet.gap > bounds.gap.min) {
+      currentInputs.magnet.gap = Math.max(bounds.gap.min, currentInputs.magnet.gap - bounds.gap.step);
     }
-
-    // Optimize parameters that most directly affect efficiency
-    if (currentEfficiency < targetEfficiency) {
-      // Reduce gap to improve magnetic field strength
-      if (currentInputs.magnet.gap > bounds.gap.min) {
-        currentInputs.magnet.gap = Math.max(
-          bounds.gap.min,
-          currentInputs.magnet.gap - bounds.gap.step
-        );
-      }
-      
-      // Increase core:belt ratio for stronger field
-      if (currentInputs.magnet.coreBeltRatio < bounds.coreBeltRatio.max) {
-        currentInputs.magnet.coreBeltRatio = Math.min(
-          bounds.coreBeltRatio.max,
-          currentInputs.magnet.coreBeltRatio + bounds.coreBeltRatio.step
-        );
-      }
-      
-      // Reduce belt speed for more collection time
-      if (currentInputs.conveyor.beltSpeed > bounds.beltSpeed.min) {
-        currentInputs.conveyor.beltSpeed = Math.max(
-          bounds.beltSpeed.min,
-          currentInputs.conveyor.beltSpeed - bounds.beltSpeed.step
-        );
-      }
-      
-      // Reduce feed depth for better accessibility
-      if (currentInputs.burden.feedDepth > bounds.feedDepth.min) {
-        currentInputs.burden.feedDepth = Math.max(
-          bounds.feedDepth.min,
-          currentInputs.burden.feedDepth - bounds.feedDepth.step
-        );
-      }
+    if (currentInputs.magnet.coreBeltRatio < bounds.coreBeltRatio.max) {
+      currentInputs.magnet.coreBeltRatio = Math.min(bounds.coreBeltRatio.max, currentInputs.magnet.coreBeltRatio + bounds.coreBeltRatio.step);
     }
-
+    if (currentInputs.conveyor.beltSpeed > bounds.beltSpeed.min) {
+      currentInputs.conveyor.beltSpeed = Math.max(bounds.beltSpeed.min, currentInputs.conveyor.beltSpeed - bounds.beltSpeed.step);
+    }
+    if (currentInputs.burden.feedDepth > bounds.feedDepth.min) {
+      currentInputs.burden.feedDepth = Math.max(bounds.feedDepth.min, currentInputs.burden.feedDepth - bounds.feedDepth.step);
+    }
     iterations++;
   }
 
-  // Calculate parameter changes
   const parameterChanges = [
     {
       parameter: 'Gap (mm)',
@@ -279,7 +280,7 @@ export function optimizeForEfficiency(
       optimizedValue: bestInputs.burden.feedDepth,
       change: ((bestInputs.burden.feedDepth - originalInputs.burden.feedDepth) / originalInputs.burden.feedDepth) * 100
     }
-  ].filter(change => Math.abs(change.change) > 0.1);
+  ].filter(c => Math.abs(c.change) > 0.1);
 
   return {
     success: bestEfficiency >= targetEfficiency,
@@ -302,32 +303,24 @@ export function performEnhancedCalculation(
   targetEfficiency?: number
 ): EnhancedCalculationResults {
   console.log('Starting enhanced calculation:', { optimizeMode, targetEfficiency });
-  
   try {
     const baseResults = performCompleteCalculation(inputs);
     console.log('Base results completed');
-    
+
     const validation = validateCalculationResults(baseResults);
     console.log('Validation completed:', validation);
-    
+
     const recommendedTools = getRecommendedValidationTools(baseResults);
     console.log('Recommended tools:', recommendedTools);
-    
+
     let optimization: OptimizationResult | undefined;
-    
     if (optimizeMode && targetEfficiency) {
       console.log('Starting optimization for target:', targetEfficiency);
       optimization = optimizeForEfficiency(inputs, targetEfficiency);
       console.log('Optimization completed:', optimization);
     }
-    
-    const finalResults = {
-      ...baseResults,
-      validation,
-      recommendedTools,
-      optimization
-    };
-    
+
+    const finalResults = { ...baseResults, validation, recommendedTools, optimization };
     console.log('Enhanced calculation completed:', finalResults);
     return finalResults;
   } catch (error) {
