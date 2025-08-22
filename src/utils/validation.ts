@@ -66,6 +66,36 @@ export function validateCalculationResults(results: CalculationResults): Validat
   // Get equipment rating for recommended model
   const equipmentRating = EQUIPMENT_RATINGS[results.recommendedModel.model];
   
+  // Check if equipment rating exists
+  if (!equipmentRating) {
+    errors.push({
+      field: 'recommendedModel',
+      message: 'CRITICAL: Equipment rating not found for recommended model',
+      value: 0,
+      threshold: 0,
+      recommendation: 'Check equipment database configuration',
+    });
+    return {
+      isValid: false,
+      severity: 'critical',
+      errors,
+      warnings,
+      equipmentCompliance: {
+        powerCompliance: false,
+        thermalCompliance: false,
+        magneticCompliance: false,
+        overallCompliance: false,
+        rating: {
+          model: 'Unknown',
+          maxPowerLoss: 0,
+          maxOperatingTemp: 0,
+          maxMagneticField: 0,
+          thermalRating: 0,
+        },
+      },
+    };
+  }
+  
   // Critical error checks
   if (results.thermalPerformance.temperatureRise > SAFETY_THRESHOLDS.maxTemperature) {
     errors.push({

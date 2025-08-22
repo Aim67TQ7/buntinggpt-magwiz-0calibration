@@ -117,8 +117,8 @@ export function recommendSeparatorModel(inputs: CalculatorInputs): CalculationRe
   const { magnet, conveyor, burden, misc } = inputs;
   
   const models = [
-    { name: 'EMAX Air Cooled', baseScore: 85 },
-    { name: 'OCW Oil Cooled', baseScore: 90 },
+    { name: 'EMAX (Air Cooled)', baseScore: 85 },
+    { name: 'OCW (Oil Cooled)', baseScore: 90 },
     { name: 'Suspended Electromagnet', baseScore: 80 },
     { name: 'Drum Separator', baseScore: 75 },
     { name: 'Cross-Belt Separator', baseScore: 82 }
