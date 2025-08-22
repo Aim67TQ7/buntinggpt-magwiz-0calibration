@@ -4,14 +4,20 @@ export interface GeometricParameters {
   elementLength: number;
   elementWidth: number;
   elementHeight: number;
+  beltSpeed: number; // m/s
+  feedRate: number; // t/h
+  materialLayerThickness: number; // mm
 }
 
 export interface MagneticSystemInputs {
-  powerSourceType: 'permanent' | 'electromagnetic-air' | 'electromagnetic-oil';
+  powerSourceType: 'electromagnetic-air' | 'electromagnetic-oil';
   ampereTurns: number;
   numberOfTurns: number;
   current: number;
   magnetGap: number;
+  numberOfPoles: number;
+  poleConfiguration: 'alternating' | 'single' | 'focused';
+  magnetArrangement: 'linear' | 'drum' | 'cross-belt';
 }
 
 export interface MaterialSeparationMetrics {
@@ -23,7 +29,9 @@ export interface MaterialSeparationMetrics {
     max: number;
   };
   magneticSusceptibility: number;
-  particleDistribution: string;
+  particleDistribution: 'fine' | 'mixed' | 'coarse';
+  flowCharacteristics: 'free-flowing' | 'cohesive' | 'sticky';
+  contaminationLevel: number; // % of tramp metal in feed
 }
 
 export interface EnvironmentalConstraints {
@@ -31,6 +39,9 @@ export interface EnvironmentalConstraints {
   altitude: number; // m
   dustExposure: 'low' | 'medium' | 'high';
   humidity: number; // %
+  vibrationLevel: 'low' | 'medium' | 'high';
+  airCurrents: 'none' | 'mild' | 'strong';
+  materialPreConditioning: 'none' | 'screening' | 'drying' | 'both';
   atexRating?: string;
 }
 

@@ -36,14 +36,20 @@ export function MagneticSeparatorCalculator() {
       suspensionHeight: 300,
       elementLength: 1000,
       elementWidth: 800,
-      elementHeight: 400
+      elementHeight: 400,
+      beltSpeed: 1.5,
+      feedRate: 100,
+      materialLayerThickness: 25
     },
     magnetic: {
       powerSourceType: 'electromagnetic-air',
       ampereTurns: 5000,
       numberOfTurns: 100,
       current: 50,
-      magnetGap: 150
+      magnetGap: 150,
+      numberOfPoles: 4,
+      poleConfiguration: 'alternating',
+      magnetArrangement: 'cross-belt'
     },
     material: {
       materialType: 'Iron',
@@ -51,14 +57,18 @@ export function MagneticSeparatorCalculator() {
       waterContent: 8,
       trampMetalSize: { min: 5, max: 150 },
       magneticSusceptibility: 2000,
-      particleDistribution: 'Normal'
+      particleDistribution: 'mixed',
+      flowCharacteristics: 'free-flowing',
+      contaminationLevel: 2
     },
     environmental: {
       operatingTemperature: 25,
       altitude: 500,
       dustExposure: 'medium',
-      humidity: 60,
-      atexRating: 'Zone 2'
+      humidity: 65,
+      vibrationLevel: 'low',
+      airCurrents: 'none',
+      materialPreConditioning: 'screening'
     }
   });
 
@@ -167,7 +177,7 @@ export function MagneticSeparatorCalculator() {
           <div className="space-y-6">
             {/* Geometric Parameters */}
             <ParameterSection title="Geometric Parameters" icon={<Settings size={20} />}>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
                   label="Belt Width"
                   value={inputs.geometric.beltWidth}
@@ -175,10 +185,29 @@ export function MagneticSeparatorCalculator() {
                     ...prev,
                     geometric: { ...prev.geometric, beltWidth: Number(value) }
                   }))}
-                  min={450}
-                  max={2400}
                   unit="mm"
                 />
+                <ParameterInput
+                  label="Belt Speed"
+                  value={inputs.geometric.beltSpeed}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    geometric: { ...prev.geometric, beltSpeed: Number(value) }
+                  }))}
+                  unit="m/s"
+                  step={0.1}
+                />
+                <ParameterInput
+                  label="Feed Rate"
+                  value={inputs.geometric.feedRate}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    geometric: { ...prev.geometric, feedRate: Number(value) }
+                  }))}
+                  unit="t/h"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
                   label="Suspension Height"
                   value={inputs.geometric.suspensionHeight}
@@ -186,14 +215,19 @@ export function MagneticSeparatorCalculator() {
                     ...prev,
                     geometric: { ...prev.geometric, suspensionHeight: Number(value) }
                   }))}
-                  min={0}
-                  max={800}
                   unit="mm"
                 />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
-                  label="Length"
+                  label="Material Layer Thickness"
+                  value={inputs.geometric.materialLayerThickness}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    geometric: { ...prev.geometric, materialLayerThickness: Number(value) }
+                  }))}
+                  unit="mm"
+                />
+                <ParameterInput
+                  label="Element Length"
                   value={inputs.geometric.elementLength}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
@@ -201,8 +235,10 @@ export function MagneticSeparatorCalculator() {
                   }))}
                   unit="mm"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <ParameterInput
-                  label="Width"
+                  label="Element Width"
                   value={inputs.geometric.elementWidth}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
@@ -211,7 +247,7 @@ export function MagneticSeparatorCalculator() {
                   unit="mm"
                 />
                 <ParameterInput
-                  label="Height"
+                  label="Element Height"
                   value={inputs.geometric.elementHeight}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
@@ -236,6 +272,44 @@ export function MagneticSeparatorCalculator() {
                   { value: 'electromagnetic-oil', label: 'Electromagnetic (Oil Cooled)' }
                 ]}
               />
+              <div className="grid grid-cols-3 gap-4">
+                <ParameterSelect
+                  label="Pole Configuration"
+                  value={inputs.magnetic.poleConfiguration}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    magnetic: { ...prev.magnetic, poleConfiguration: value as any }
+                  }))}
+                  options={[
+                    { value: 'alternating', label: 'Alternating Poles' },
+                    { value: 'single', label: 'Single Polarity' },
+                    { value: 'focused', label: 'Focused Field' }
+                  ]}
+                />
+                <ParameterSelect
+                  label="Magnet Arrangement"
+                  value={inputs.magnetic.magnetArrangement}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    magnetic: { ...prev.magnetic, magnetArrangement: value as any }
+                  }))}
+                  options={[
+                    { value: 'cross-belt', label: 'Cross-Belt' },
+                    { value: 'drum', label: 'Drum Type' },
+                    { value: 'linear', label: 'Linear' }
+                  ]}
+                />
+                <ParameterInput
+                  label="Number of Poles"
+                  value={inputs.magnetic.numberOfPoles}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    magnetic: { ...prev.magnetic, numberOfPoles: Number(value) }
+                  }))}
+                  min={2}
+                  max={20}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <ParameterInput
                   label="Ampere-turns (NI)"
@@ -324,6 +398,46 @@ export function MagneticSeparatorCalculator() {
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
+                <ParameterSelect
+                  label="Particle Distribution"
+                  value={inputs.material.particleDistribution}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    material: { ...prev.material, particleDistribution: value as any }
+                  }))}
+                  options={[
+                    { value: 'fine', label: 'Fine Particles' },
+                    { value: 'mixed', label: 'Mixed Distribution' },
+                    { value: 'coarse', label: 'Coarse Particles' }
+                  ]}
+                />
+                <ParameterSelect
+                  label="Flow Characteristics"
+                  value={inputs.material.flowCharacteristics}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    material: { ...prev.material, flowCharacteristics: value as any }
+                  }))}
+                  options={[
+                    { value: 'free-flowing', label: 'Free Flowing' },
+                    { value: 'cohesive', label: 'Cohesive' },
+                    { value: 'sticky', label: 'Sticky' }
+                  ]}
+                />
+                <ParameterInput
+                  label="Contamination Level"
+                  value={inputs.material.contaminationLevel}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    material: { ...prev.material, contaminationLevel: Number(value) }
+                  }))}
+                  unit="%"
+                  min={0}
+                  max={50}
+                  step={0.1}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
                 <ParameterInput
                   label="Water Content"
                   value={inputs.material.waterContent}
@@ -384,13 +498,26 @@ export function MagneticSeparatorCalculator() {
                   unit="m"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <ParameterSelect
                   label="Dust Exposure"
                   value={inputs.environmental.dustExposure}
                   onChange={(value) => setInputs(prev => ({
                     ...prev,
                     environmental: { ...prev.environmental, dustExposure: value as any }
+                  }))}
+                  options={[
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high', label: 'High' }
+                  ]}
+                />
+                <ParameterSelect
+                  label="Vibration Level"
+                  value={inputs.environmental.vibrationLevel}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    environmental: { ...prev.environmental, vibrationLevel: value as any }
                   }))}
                   options={[
                     { value: 'low', label: 'Low' },
@@ -408,6 +535,35 @@ export function MagneticSeparatorCalculator() {
                   unit="%"
                   min={0}
                   max={100}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <ParameterSelect
+                  label="Air Currents"
+                  value={inputs.environmental.airCurrents}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    environmental: { ...prev.environmental, airCurrents: value as any }
+                  }))}
+                  options={[
+                    { value: 'none', label: 'None' },
+                    { value: 'mild', label: 'Mild' },
+                    { value: 'strong', label: 'Strong' }
+                  ]}
+                />
+                <ParameterSelect
+                  label="Material Pre-Conditioning"
+                  value={inputs.environmental.materialPreConditioning}
+                  onChange={(value) => setInputs(prev => ({
+                    ...prev,
+                    environmental: { ...prev.environmental, materialPreConditioning: value as any }
+                  }))}
+                  options={[
+                    { value: 'none', label: 'None' },
+                    { value: 'screening', label: 'Screening' },
+                    { value: 'drying', label: 'Drying' },
+                    { value: 'both', label: 'Screening + Drying' }
+                  ]}
                 />
               </div>
             </ParameterSection>

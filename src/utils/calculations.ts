@@ -28,39 +28,84 @@ export function calculateMagneticField(inputs: CalculatorInputs): CalculationRes
 }
 
 export function calculateTrampMetalRemoval(inputs: CalculatorInputs): CalculationResults['trampMetalRemoval'] {
-  const { magnetic, material, geometric } = inputs;
+  const { magnetic, material, geometric, environmental } = inputs;
   const fieldStrength = calculateMagneticField(inputs);
   
-  // Physics-based efficiency calculation
-  // Magnetic force factor: F ∝ χ × ∇(B²)
+  // Enhanced physics-based efficiency calculation
+  
+  // 1. Magnetic force factor: F ∝ χ × ∇(B²) with field gradient optimization
   const fieldGradient = fieldStrength.tesla / (magnetic.magnetGap / 1000); // T/m
-  const magneticForceFactor = (material.magneticSusceptibility / 1000) * fieldGradient * fieldStrength.tesla;
+  const poleConfigurationFactor = magnetic.poleConfiguration === 'focused' ? 1.3 : 
+                                  magnetic.poleConfiguration === 'alternating' ? 1.1 : 1.0;
+  const magneticForceFactor = (material.magneticSusceptibility / 1000) * 
+                              fieldGradient * fieldStrength.tesla * poleConfigurationFactor;
   
-  // Particle size efficiency (larger particles easier to capture)
+  // 2. Belt speed and residence time effects
+  const residenceTime = (geometric.elementLength / 1000) / geometric.beltSpeed; // seconds
+  const optimalResidenceTime = 0.5; // seconds for optimal capture
+  const residenceTimeFactor = Math.min(1.0, residenceTime / optimalResidenceTime);
+  
+  // 3. Material flow and distribution effects
+  const feedRateNormalized = geometric.feedRate / (geometric.beltWidth * geometric.beltSpeed * 3.6); // Normalize to belt capacity
+  const layerThicknessFactor = Math.max(0.4, 1 - (geometric.materialLayerThickness / 100) * 0.6); // Thicker layers reduce efficiency
+  const flowCharacteristicsFactor = material.flowCharacteristics === 'free-flowing' ? 1.0 :
+                                   material.flowCharacteristics === 'cohesive' ? 0.85 : 0.7;
+  
+  // 4. Particle size efficiency with distribution consideration
   const avgParticleSize = (material.trampMetalSize.min + material.trampMetalSize.max) / 2;
-  const particleSizeEfficiency = Math.min(1.0, avgParticleSize / 10); // Normalized to 10mm reference
+  const particleSizeBaseFactor = Math.min(1.0, avgParticleSize / 10); // Normalized to 10mm reference
+  const distributionFactor = material.particleDistribution === 'coarse' ? 1.1 :
+                            material.particleDistribution === 'mixed' ? 1.0 : 0.8; // Fine particles harder
+  const particleSizeEfficiency = particleSizeBaseFactor * distributionFactor;
   
-  // Belt speed effect (suspension height affects residence time)
-  const residenceTimeFactor = Math.max(0.3, 1 - (geometric.suspensionHeight / 800)); // Normalized to max height
+  // 5. Competitive forces (gravity, momentum, centrifugal)
+  const gravitationalForce = material.bulkDensity * 9.81; // N/m³
+  const momentumForce = material.bulkDensity * Math.pow(geometric.beltSpeed, 2); // Simplified momentum
+  const magneticForceStrength = magneticForceFactor * 1000; // Convert to comparable units
+  const forceRatio = magneticForceStrength / (gravitationalForce + momentumForce);
+  const competitiveForceFactor = Math.min(1.0, forceRatio / 2.0); // Magnetic force should dominate
   
-  // Material property factors
-  const bulkDensityFactor = Math.min(1.0, material.bulkDensity / 3.0); // Normalized to 3 t/m³
+  // 6. Equipment configuration optimization
+  const numberOfPolesFactor = Math.min(1.2, 1 + (magnetic.numberOfPoles - 2) * 0.05); // More poles help
+  const arrangementFactor = magnetic.magnetArrangement === 'cross-belt' ? 1.15 :
+                           magnetic.magnetArrangement === 'drum' ? 1.1 : 1.0;
+  
+  // 7. Environmental and operational factors
   const moisturePenalty = Math.max(0.5, 1 - (material.waterContent / 100) * 0.4);
+  const vibrationFactor = environmental.vibrationLevel === 'low' ? 1.0 :
+                         environmental.vibrationLevel === 'medium' ? 0.95 : 0.9;
+  const airCurrentFactor = environmental.airCurrents === 'none' ? 1.0 :
+                          environmental.airCurrents === 'mild' ? 0.98 : 0.95;
+  const preConditioningFactor = environmental.materialPreConditioning === 'both' ? 1.15 :
+                               environmental.materialPreConditioning === 'screening' ? 1.08 :
+                               environmental.materialPreConditioning === 'drying' ? 1.05 : 1.0;
+  
+  // 8. Contamination level effect (higher contamination can reduce efficiency due to overloading)
+  const contaminationFactor = Math.max(0.8, 1 - (material.contaminationLevel / 100) * 0.3);
   
   // Base efficiency from empirical data for magnetic separators
-  const baseEfficiency = 0.78; // Realistic base efficiency
+  const baseEfficiency = 0.82; // Slightly higher base with proper configuration
   
-  const overallEfficiency = Math.min(0.98, baseEfficiency * 
-    Math.min(1.2, magneticForceFactor) * 
-    particleSizeEfficiency * 
+  // Calculate overall efficiency with all factors
+  const overallEfficiency = Math.min(0.99, baseEfficiency * 
+    Math.min(1.5, magneticForceFactor) * 
     residenceTimeFactor * 
-    bulkDensityFactor * 
-    moisturePenalty);
+    layerThicknessFactor * 
+    flowCharacteristicsFactor * 
+    particleSizeEfficiency * 
+    competitiveForceFactor * 
+    numberOfPolesFactor * 
+    arrangementFactor * 
+    moisturePenalty * 
+    vibrationFactor * 
+    airCurrentFactor * 
+    preConditioningFactor * 
+    contaminationFactor);
   
-  // Size-specific efficiencies (fine particles are harder to capture)
-  const fineEfficiency = overallEfficiency * 0.65; // < 5mm
-  const mediumEfficiency = overallEfficiency * 0.85; // 5-15mm  
-  const largeEfficiency = overallEfficiency * 0.95; // > 15mm
+  // Size-specific efficiencies with enhanced modeling
+  const fineEfficiency = overallEfficiency * 0.7; // < 5mm - improved from 0.65
+  const mediumEfficiency = overallEfficiency * 0.9; // 5-15mm - improved from 0.85
+  const largeEfficiency = overallEfficiency * 0.98; // > 15mm - improved from 0.95
   
   return {
     overallEfficiency: parseFloat((overallEfficiency * 100).toFixed(2)),
