@@ -20,8 +20,8 @@ const RTH_AIR_BASE = 0.30;          // °C/W (air cooled baseline)
 const RTH_OIL_BASE = 0.085;         // °C/W (oil cooled baseline, typical band 0.06–0.10)
 const G = 9.80665;                  // m/s²
 
-// NI estimation from geometry proxy (kept for workflows lacking coil data)
-const CAL_NI_PER_RATIO_PER_M = 2.2e5; // A·turns per (ratio·meter belt width)
+// NI estimation from geometry proxy (kept for workflows lacking coil data) - SCALED DOWN
+const CAL_NI_PER_RATIO_PER_M = 2200; // A·turns per (ratio·meter belt width) - reduced by 100x
 
 // Coil physics
 const RHO_CU_20C = 1.72e-8;         // Ω·m (copper at 20°C)
@@ -29,7 +29,7 @@ const TCR_CU = 0.00393;             // 1/°C (copper temp coefficient)
 // Defaults used if coil details not provided (tune per family)
 const N_EFF_DEFAULT = 600;          // turns
 const L_MEAN_DEFAULT = 1.10;        // m per turn
-const ACU_DEFAULT = 85e-6;          // m² total copper area across strands
+const ACU_DEFAULT = 200e-6;          // m² total copper area across strands - increased from 85e-6
 
 // Capture physics
 const DELTA_CHI = 0.003;            // susceptibility delta (ferrous vs. matrix)
