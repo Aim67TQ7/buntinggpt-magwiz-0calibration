@@ -9,6 +9,9 @@ export interface BurdenParameters {
   throughPut: number; // t/h (feed rate)
   density: number; // t/m³
   waterContent: number; // %
+
+  /** Alias for compatibility: prefer `throughPut`; backend maps either to the same field */
+  throughput?: number; // t/h (alias; will be merged to throughPut)
 }
 
 export interface ShapeParameters {
@@ -21,6 +24,15 @@ export interface MagnetParameters {
   gap: number; // mm (magnet gap)
   coreBeltRatio: number; // ratio 0.1-0.9
   position: 'overhead' | 'crossbelt' | 'inline' | 'drum'; // magnet type/position
+
+  /** Optional coil/thermal details (recommended for production accuracy) */
+  coolingType?: 'air' | 'oil';
+  /** Effective turns used for NI = N * I */
+  turns?: number;                 // N [turns]
+  /** Mean turn length */
+  meanTurnLength?: number;        // m/turn
+  /** Total copper cross-sectional area across parallel strands */
+  copperArea?: number;            // m²
 }
 
 export interface MiscParameters {
