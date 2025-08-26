@@ -70,7 +70,7 @@ export function MagneticSeparatorCalculator() {
       // Simulate calculation time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('About to call performEnhancedCalculation');
-      const calculationResults = performEnhancedCalculation(inputs, false);
+      const calculationResults = await performEnhancedCalculation(inputs, false);
       console.log('Calculation results received:', calculationResults);
       setResults(calculationResults);
       
@@ -113,7 +113,7 @@ export function MagneticSeparatorCalculator() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       console.log('About to call performEnhancedCalculation with optimization');
-      const calculationResults = performEnhancedCalculation(inputs, true, targetEfficiency / 100);
+      const calculationResults = await performEnhancedCalculation(inputs, true, targetEfficiency / 100);
       console.log('Optimization results received:', calculationResults);
       setResults(calculationResults);
       

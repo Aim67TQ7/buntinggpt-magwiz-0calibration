@@ -190,6 +190,13 @@ export interface OptimizationResult {
     optimizedValue: number;
     change: number;
   }>;
+  changes: {
+    [key: string]: {
+      originalValue: number;
+      optimizedValue: number;
+      change: number;
+    };
+  };
 }
 
 export interface AdvancedParameters {

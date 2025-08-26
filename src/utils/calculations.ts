@@ -417,8 +417,15 @@ export function optimizeForEfficiency(
       beltSpeed: bestInputs.conveyor.beltSpeed,
       feedDepth: bestInputs.burden.feedDepth
     },
-    changes,
-    finalResults: finalRes,
+    parameterChanges: changes,
+    changes: changes.reduce((acc, item) => {
+      acc[item.parameter] = {
+        originalValue: item.originalValue,
+        optimizedValue: item.optimizedValue,
+        change: item.change
+      };
+      return acc;
+    }, {} as { [key: string]: { originalValue: number; optimizedValue: number; change: number } }),
   };
 }
 
@@ -433,7 +440,7 @@ export async function performEnhancedCalculation(
 
     // Validation
     const validation = validateCalculationResults(baseResults);
-    const recommendedTools = getRecommendedValidationTools(validation);
+    const recommendedTools = getRecommendedValidationTools(baseResults);
 
     // Optional optimization
     let optimization: OptimizationResult | undefined;
