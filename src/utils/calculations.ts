@@ -66,9 +66,9 @@ function getPath(obj: any, path: (string | number)[]) {
   return path.reduce((o, k) => (o == null ? undefined : o[k]), obj);
 }
 function setPath(obj: any, path: (string | number)[], value: any) {
-  let o = obj;
-  for (let i = 0; i < path.length - 1; i++) o = o[path[i]];
-  o[path[path.length - 1]] = value;
+  const last = path[path.length - 1];
+  const parent = getPath(obj, path.slice(0, -1));
+  if (parent != null) parent[last] = value;
 }
 function deepClone<T>(x: T): T {
   return JSON.parse(JSON.stringify(x));
@@ -125,42 +125,63 @@ export function calculateTrampMetalRemoval(
 ): CalculationResults['trampMetalRemoval'] {
   const { conveyor, burden, shape, misc, magnet } = inputs;
 
-  // Simplified but more realistic approach based on magnetic field strength
+  // Base field at effective gap
   const magneticField = calculateMagneticField(inputs);
-  const B = magneticField.tesla;
-  
-  // Base efficiency from magnetic field strength
-  let baseEfficiency = Math.min(0.98, Math.max(0.4, (B - 0.1) / 1.2)); // Scale 0.1-1.3T to 40-98%
-  
-  // Apply operational factors
-  const v = Math.max(0.1, conveyor.beltSpeed);
-  const f_speed = Math.max(0.6, 1 - (v - 1) * 0.15);
-  const f_depth = Math.max(0.5, 1 - (burden.feedDepth || 50) / 400);
-  const f_gap = Math.max(0.6, Math.pow(100 / Math.max(50, magnet.gap || 100), 0.8));
-  const f_water = Math.max(0.7, 1 - (burden.waterContent || 0) / 50);
-  const f_trough = Math.max(0.85, 1 - Math.max(0, (conveyor.troughAngle || 20) - 20) * 0.01);
-  const f_temp = Math.max(0.8, 1 - Math.abs((misc.ambientTemperature ?? AMBIENT_REF) - AMBIENT_REF) / 100);
-  const f_alt = Math.max(0.9, 1 - (misc.altitude || 0) / 5000);
-  const f_ratio = Math.max(0.6, 0.5 + (magnet.coreBeltRatio || 0.6) * 0.5);
+  const B0 = magneticField.tesla;
+  const g_eff = effectiveGap_m(inputs); // [m]
 
-  // Combined factor using geometric mean for stability
-  const factors = [f_speed, f_depth, f_gap, f_water, f_trough, f_temp, f_alt, f_ratio];
-  const fCombined = Math.pow(factors.reduce((prod, f) => prod * f, 1), 1 / factors.length);
-  
-  // Apply combined factors
-  const overall = baseEfficiency * fCombined;
+  // Power-law field decay and gradient (calibratable exponent)
+  const N_DECAY = 3.0;
+  const B_at = (z_m: number) => B0 / Math.pow(1 + z_m / g_eff, N_DECAY);
+  const dBdz_at = (z_m: number) => -(N_DECAY * B0 / g_eff) / Math.pow(1 + z_m / g_eff, N_DECAY + 1);
+
+  // Representative evaluation height: half the burden depth, at least 10 mm
+  const zStar_m = Math.max(0.010, (burden.feedDepth || 50) / 2000);
+
+  // Capture index proportional to magnetic force ~ B * dB/dz (T^2/m)
+  const CI = Math.abs(B_at(zStar_m) * dBdz_at(zStar_m));
+
+  // Map CI to base capture efficiency via logistic curve; scale fit needed from test data
+  const CI_SCALE = 1.0; // tuning constant; set from back-tests
+  const baseEfficiency = clamp01(0.30 + 0.68 * Math.tanh(CI / CI_SCALE));
+
+  // Operational reduction factors (each ≤ 1.0, with floors)
+  const v = Math.max(0.1, conveyor.beltSpeed || 2);
+  const f_speed  = Math.min(1, Math.max(0.6, 1 - (v - 1) * 0.15));
+  const f_depth  = Math.min(1, Math.max(0.5, 1 - (burden.feedDepth || 50) / 400));
+  const f_gap    = Math.min(1, Math.max(0.6, Math.pow(100 / Math.max(50, magnet.gap || 100), 0.8)));
+  const f_water  = Math.min(1, Math.max(0.7, 1 - (burden.waterContent || 0) / 50));
+  const f_trough = Math.min(1, Math.max(0.85, 1 - Math.max(0, (conveyor.troughAngle || 20) - 20) * 0.01));
+  const f_temp   = Math.min(1, Math.max(0.8, 1 - Math.abs((misc.ambientTemperature ?? 25) - 25) / 100));
+  const f_alt    = Math.min(1, Math.max(0.7, Math.exp(- (misc.altitude || 0) / 8500))); // air density effect
+  const f_ratio  = Math.min(1, Math.max(0.6, 0.5 + (magnet.coreBeltRatio || 0.6) * 0.5));
+
+  // Weighted geometric mean of factors
+  const factors: Array<[number, number]> = [
+    [f_speed,  W_SPEED],
+    [f_depth,  W_DEPTH],
+    [f_gap,    W_GAP],
+    [f_water,  W_WATER],
+    [f_trough, W_TROUGH],
+    [f_temp,   W_TEMP],
+    [f_alt,    W_ALT],
+    [f_ratio,  0.10],
+  ];
+  const fCombined = gmeanWeighted(factors);
+
+  const overall = clamp01(baseEfficiency * fCombined);
 
   // Size-class scaling based on particle size
-  const avgSize = (shape.width + shape.length + shape.height) / 3;
+  const avgSize = ((shape.width || 20) + (shape.length || 20) + (shape.height || 10)) / 3;
   const fineMult = avgSize < 10 ? 0.85 : avgSize < 20 ? 0.88 : 0.92;
-  const medMult = avgSize < 10 ? 0.92 : avgSize < 20 ? 0.95 : 0.97;
-  const largeMult = avgSize < 10 ? 0.88 : avgSize < 20 ? 0.93 : 0.96;
+  const medMult  = avgSize < 10 ? 0.92 : avgSize < 20 ? 0.95 : 0.97;
+  const largeMult= avgSize < 10 ? 0.88 : avgSize < 20 ? 0.93 : 0.96;
 
   return {
     overallEfficiency: round3(Math.min(0.99, Math.max(0.3, overall))),
-    fineParticles: round3(Math.min(0.98, Math.max(0.25, overall * fineMult))),
-    mediumParticles: round3(Math.min(0.99, Math.max(0.3, overall * medMult))),
-    largeParticles: round3(Math.min(0.995, Math.max(0.28, overall * largeMult))),
+    fineParticles: round3(clamp01(overall * fineMult)),
+    mediumParticles: round3(clamp01(overall * medMult)),
+    largeParticles: round3(clamp01(overall * largeMult)),
   };
 }
 
@@ -168,73 +189,83 @@ export function calculateTrampMetalRemoval(
 export function calculateThermalPerformance(
   inputs: CalculatorInputs
 ): CalculationResults['thermalPerformance'] {
-  const { misc, magnet, conveyor, burden } = inputs;
-
-  // Simplified power calculation based on magnetic system size and loading
-  const beltWidth_m = (conveyor.beltWidth || 1000) / 1000;
-  const throughput = burden.throughPut || 100;
-  const coreBeltRatio = magnet.coreBeltRatio || 0.6;
-  
-  // Base power scales with magnet size and field strength
-  const magneticField = calculateMagneticField(inputs);
-  const basePower = Math.pow(magneticField.tesla, 2) * beltWidth_m * coreBeltRatio * 8; // kW
-  
-  // Loading factors
-  const throughputFactor = 1 + (throughput / 500) * 0.3;
-  const speedFactor = 1 + ((conveyor.beltSpeed || 2) / 4) * 0.2;
-  
-  const totalPowerLoss = roundSig(basePower * throughputFactor * speedFactor, 2);
-
-  // Realistic thermal resistance based on cooling type
+  const { misc } = inputs;
   const ambient = misc.ambientTemperature ?? AMBIENT_REF;
   const altitude = misc.altitude ?? 0;
-  
-  const { coolingType } = coilParamsFor(inputs);
-  
-  // More realistic thermal resistance values
-  const baseRth = coolingType === 'oil' ? 0.8 : 2.5; // °C/kW
-  
-  // Environmental derating
-  const altitudeFactor = Math.max(0.7, 1 - altitude / 4000);
-  const tempFactor = Math.max(0.8, 1 - Math.max(0, ambient - 25) / 40);
-  
-  const effectiveRth = baseRth / (altitudeFactor * tempFactor);
-  
-  // Temperature rise in realistic range
-  const temperatureRise = roundSig(totalPowerLoss * effectiveRth, 1);
-  
-  // Cooling efficiency as percentage
-  const coolingEfficiency = roundSig(Math.min(0.95, baseRth / effectiveRth), 2);
 
-  return { 
-    totalPowerLoss, 
-    temperatureRise: Math.min(150, temperatureRise), // Cap at reasonable value
-    coolingEfficiency 
+  // Coil parameters and NI
+  const { N, lMean, Acu, coolingType } = coilParamsFor(inputs);
+  const NI = estimateNI(inputs);
+  const I = NI / Math.max(1, N); // [A]
+
+  // Fixed-point iteration because copper resistance depends on temperature
+  let Tcoil = ambient;
+  let P_W = 0;
+  const MAX_IT = 15;
+  for (let k = 0; k < MAX_IT; k++) {
+    const rho = RHO_CU_20C * (1 + TCR_CU * (Tcoil - 20));
+    const Lwire = N * lMean;               // [m]
+    const R = rho * Lwire / Acu;           // [Ω]
+    P_W = I * I * R;                       // [W]
+
+    // Thermal path (unified in °C/W)
+    const Rth_base = (coolingType === 'oil' ? RTH_OIL_BASE : RTH_AIR_BASE); // °C/W
+    const airDensityFactor = Math.exp(-altitude / 8500); // convection degrades with altitude
+    const tempFactor = Math.max(0.6, 1 - Math.max(0, ambient - AMBIENT_REF) / 60);
+    const Rth_eff = Rth_base / Math.max(0.5, airDensityFactor * tempFactor);
+    const Tnext = ambient + P_W * Rth_eff;
+    if (Math.abs(Tnext - Tcoil) < 0.5) { Tcoil = Tnext; break; }
+    Tcoil = 0.5 * (Tcoil + Tnext); // damping
+  }
+
+  const totalPowerLoss = roundSig(P_W / 1000, 3); // kW
+  // Recompute effective Rth at converged T
+  const Rth_base2 = (coolingType === 'oil' ? RTH_OIL_BASE : RTH_AIR_BASE);
+  const Rth_eff2 = Rth_base2 / Math.max(0.5, Math.exp(-altitude / 8500) * Math.max(0.6, 1 - Math.max(0, ambient - AMBIENT_REF) / 60));
+  const temperatureRise = roundSig((Tcoil - ambient), 1);
+  const coolingEfficiency = Math.min(0.95, Rth_base2 / Rth_eff2);
+
+  return {
+    totalPowerLoss: totalPowerLoss,
+    temperatureRise,
+    coolingEfficiency: round3(coolingEfficiency),
   };
 }
 
-/* ─────────────────────────── Model Recommendation ─────────────────────────── */
+/* ───────────────────────────── Model Recommendation ───────────────────────────── */
 export function recommendSeparatorModel(
   inputs: CalculatorInputs
 ): CalculationResults['recommendedModel'] {
-  const { magnet, conveyor, burden, misc } = inputs;
+  const magneticField = calculateMagneticField(inputs);
+  const B = magneticField.tesla;
+  const { conveyor, burden, magnet, misc } = inputs;
 
+  // Base scores
   const models = [
-    { name: 'EMAX (Air Cooled)', baseScore: 85 },
-    { name: 'OCW (Oil Cooled)', baseScore: 90 },
-    { name: 'Suspended Electromagnet', baseScore: 80 },
-    { name: 'Drum Separator', baseScore: 75 },
-    { name: 'Cross-Belt Separator', baseScore: 82 }
+    { name: 'EMAX (Air Cooled)', base: 85 },
+    { name: 'OCW (Oil Cooled)', base: 90 },
+    { name: 'Suspended Electromagnet', base: 80 },
+    { name: 'Drum Separator', base: 75 },
+    { name: 'Cross-Belt Separator', base: 82 },
   ];
 
   const scoredModels = models.map(model => {
-    let score = model.baseScore;
+    let score = model.base;
 
-    if (conveyor.beltWidth > 1800 && model.name.includes('Cross-Belt')) score += 5;
-    if (burden.throughPut > 500 && model.name.includes('Oil'))         score += 8;
-    if (magnet.gap < 100 && model.name.includes('Drum'))               score += 6;
-    if (misc.ambientTemperature > 35 && model.name.includes('Oil'))    score += 6;
-    if (magnet.coreBeltRatio > 0.7 && model.name.includes('EMAX'))     score += 8;
+    // Physics-tied nudges
+    if (conveyor.beltWidth >= 1800 && model.name.includes('Cross-Belt')) score += 5;
+
+    // Favor oil if air coil temp would run hot or current density high
+    const therm = calculateThermalPerformance(inputs);
+    const { N, Acu } = coilParamsFor(inputs);
+    const I = estimateNI(inputs) / Math.max(1, N);
+    const jAmm2 = (I / Acu) / 1e6;
+
+    if ((therm.temperatureRise + (misc.ambientTemperature ?? AMBIENT_REF) > 120 || jAmm2 > 4) && model.name.includes('Oil')) score += 8;
+
+    if (magnet.gap < 100 && model.name.includes('Drum')) score += 6;
+    if ((misc.ambientTemperature ?? 25) > 35 && model.name.includes('Oil')) score += 6;
+    if (magnet.coreBeltRatio > 0.7 && model.name.includes('EMAX')) score += 8;
 
     return { model: model.name, score: Math.min(100, score) };
   }).sort((a, b) => b.score - a.score);
@@ -248,20 +279,17 @@ export function recommendSeparatorModel(
 
 /* ─────────────────────────── Complete + Enhanced Calcs ─────────────────────────── */
 export function performCompleteCalculation(inputs: CalculatorInputs): CalculationResults {
-  console.log('Starting calculation with inputs:', inputs);
-  try {
-    const results = {
-      magneticFieldStrength: calculateMagneticField(inputs),
-      trampMetalRemoval:     calculateTrampMetalRemoval(inputs),
-      thermalPerformance:    calculateThermalPerformance(inputs),
-      recommendedModel:      recommendSeparatorModel(inputs),
-    };
-    console.log('Calculation results:', results);
-    return results;
-  } catch (error) {
-    console.error('Error in performCompleteCalculation:', error);
-    throw error;
-  }
+  const magneticFieldStrength = calculateMagneticField(inputs);
+  const trampMetalRemoval = calculateTrampMetalRemoval(inputs);
+  const thermalPerformance = calculateThermalPerformance(inputs);
+  const recommendedModel = recommendSeparatorModel(inputs);
+
+  return {
+    magneticFieldStrength,
+    trampMetalRemoval,
+    thermalPerformance,
+    recommendedModel
+  };
 }
 
 /* ─────────────────────────────── Optimizer (Improved) ───────────────────────────────
@@ -302,7 +330,15 @@ export function optimizeForEfficiency(
     const tempOver = Math.max(0, operatingTemp - 150);     // °C over soft limit
     const Bover    = Math.max(0, res.magneticFieldStrength.tesla - 1.5); // T over soft limit
 
-    return η - 0.002 * tempOver - 0.2 * Bover; // tune weights as needed
+    // Current density penalty (A/mm²)
+    const { N, lMean, Acu } = coilParamsFor(x);
+    const NI = estimateNI(x);
+    const I = NI / Math.max(1, N);
+    const j_Am2 = I / Acu;            // A/m²
+    const j_Ammsq = j_Am2 / 1e6;      // A/mm²
+    const jPenalty = Math.max(0, j_Ammsq - 5.0);  // >~5 A/mm² continuous is risky
+
+    return η - 0.002 * tempOver - 0.2 * Bover - 0.08 * jPenalty;
   }
 
   // Initialize score
@@ -313,17 +349,18 @@ export function optimizeForEfficiency(
     let improved = false;
 
     for (const p of PARAMS) {
-      const baseVal = getPath(currentInputs, p.path) as number;
-      const step = p.step0 * stepScale;
+      const baseVal = getPath(currentInputs, p.path);
+      if (typeof baseVal !== 'number') continue;
 
-      // Try both directions
-      for (const dir of [-1, +1]) {
+      const steps = [+1, -1];
+      for (const s of steps) {
         const trial = deepClone(currentInputs);
-        const nv = Math.min(p.max, Math.max(p.min, baseVal + dir * step));
-        setPath(trial, p.path, nv);
+        const step = p.step0 * stepScale * s;
+        const nextVal = Math.min(p.max, Math.max(p.min, baseVal + step));
+        setPath(trial, p.path, nextVal);
 
         const sc = scoreInputs(trial);
-        if (sc > bestScore) {
+        if (sc > bestScore + 1e-6) {
           bestScore = sc;
           currentInputs = trial;
           bestInputs = deepClone(trial);
@@ -342,7 +379,7 @@ export function optimizeForEfficiency(
   const finalRes = performCompleteCalculation(bestInputs);
   const bestEfficiency = finalRes.trampMetalRemoval.overallEfficiency;
 
-  const parameterChanges = [
+  const changes = [
     {
       parameter: 'Gap (mm)',
       originalValue: originalInputs.magnet.gap,
@@ -380,27 +417,25 @@ export function optimizeForEfficiency(
       beltSpeed: bestInputs.conveyor.beltSpeed,
       feedDepth: bestInputs.burden.feedDepth
     },
-    parameterChanges
+    changes,
+    finalResults: finalRes,
   };
 }
 
-/* ─────────────────────────────── Enhanced Wrapper ─────────────────────────────── */
-export function performEnhancedCalculation(
+/* ───────────────────────── Enhanced wrapper for UI/validation ───────────────────────── */
+export async function performEnhancedCalculation(
   inputs: CalculatorInputs,
-  optimizeMode: boolean = false,
+  optimizeMode?: boolean,
   targetEfficiency?: number
-): EnhancedCalculationResults {
-  console.log('Starting enhanced calculation:', { optimizeMode, targetEfficiency });
+): Promise<EnhancedCalculationResults> {
   try {
     const baseResults = performCompleteCalculation(inputs);
-    console.log('Base results completed');
 
+    // Validation
     const validation = validateCalculationResults(baseResults);
-    console.log('Validation completed:', validation);
+    const recommendedTools = getRecommendedValidationTools(validation);
 
-    const recommendedTools = getRecommendedValidationTools(baseResults);
-    console.log('Recommended tools:', recommendedTools);
-
+    // Optional optimization
     let optimization: OptimizationResult | undefined;
     if (optimizeMode && targetEfficiency) {
       console.log('Starting optimization for target:', targetEfficiency);
