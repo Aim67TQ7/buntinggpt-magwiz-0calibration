@@ -219,6 +219,7 @@ const Dashboard = () => {
                           onClick={() => {
                             console.log('View Details clicked for quote:', quote);
                             setSelectedQuote(quote);
+                            console.log('Selected quote set to:', quote);
                           }}
                         >
                           View Details
