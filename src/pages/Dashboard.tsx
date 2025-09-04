@@ -229,37 +229,113 @@ const Dashboard = () => {
           </Card>
 
           {selectedQuote && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Quote Details - {selectedQuote.quote_number}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item Name</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Weight</TableHead>
-                      <TableHead>Unit Cost</TableHead>
-                      <TableHead>Total Cost</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {quoteItems
-                      .filter(item => item.quote_id === selectedQuote.id)
-                      .map((item) => (
-                        <TableRow key={item["# item_id"]}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.amount}</TableCell>
-                          <TableCell>{item.weight || 0} kg</TableCell>
-                          <TableCell>${item.cost}</TableCell>
-                          <TableCell>${(item.cost * item.amount).toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              {/* Quote Items Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quote Details - {selectedQuote.quote_number}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Quote Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Quote Information</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Product:</span> {getProductName(selectedQuote.product_id)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Date:</span> {formatDate(selectedQuote.date_generated)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Status:</span>
+                          <Badge variant={selectedQuote.verified === "true" ? "default" : "secondary"} className="ml-2">
+                            {selectedQuote.verified === "true" ? "Verified" : "Pending"}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="font-medium">Total:</span> ${getQuoteTotal(selectedQuote.id).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quote Items Table */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Quote Items</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Dimensions</TableHead>
+                            <TableHead>Mass</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {quoteItems
+                            .filter(item => item.quote_id === selectedQuote.id)
+                            .map((item) => (
+                              <TableRow key={item["# item_id"]}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{item.amount}</TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>-</TableCell>
+                                <TableCell>{item.weight || 0} kg</TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* BOM Components Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bill of Materials - Components</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Dimensions</TableHead>
+                        <TableHead>Mass</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bomItems
+                        .filter(item => {
+                          // Filter BOM items related to this quote's product
+                          return item.bom === selectedQuote.product_id;
+                        })
+                        .map((item) => {
+                          const material = products.find(p => p.id === item.material);
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>{item.amount}</TableCell>
+                              <TableCell>{material?.name || `Material ${item.material}`}</TableCell>
+                              <TableCell>-</TableCell>
+                              <TableCell>-</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                  
+                  {bomItems.filter(item => item.bom === selectedQuote.product_id).length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No BOM components found for this product
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
