@@ -21,10 +21,19 @@ interface QuoteItem {
   "# item_id": number;
   quote_id: number;
   amount: number;
-  weight: number;
+  weight: number | null;
   cost: number;
   name: string;
 }
+
+type DatabaseQuoteItem = {
+  "# item_id": number;
+  quote_id: number;
+  amount: number;
+  weight: number | null;
+  cost: number;
+  name: string;
+};
 
 interface Product {
   id: number;
@@ -87,7 +96,7 @@ const Dashboard = () => {
       if (bomError) throw bomError;
 
       setQuotes(quotesData || []);
-      setQuoteItems(quoteItemsData || []);
+      setQuoteItems((quoteItemsData as DatabaseQuoteItem[]) || []);
       setProducts(productsData || []);
       setBomItems(bomData || []);
     } catch (error) {
@@ -242,7 +251,7 @@ const Dashboard = () => {
                         <TableRow key={item["# item_id"]}>
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.amount}</TableCell>
-                          <TableCell>{item.weight} kg</TableCell>
+                          <TableCell>{item.weight || 0} kg</TableCell>
                           <TableCell>${item.cost}</TableCell>
                           <TableCell>${(item.cost * item.amount).toLocaleString()}</TableCell>
                         </TableRow>
