@@ -216,7 +216,10 @@ const Dashboard = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedQuote(quote)}
+                          onClick={() => {
+                            console.log('View Details clicked for quote:', quote);
+                            setSelectedQuote(quote);
+                          }}
                         >
                           View Details
                         </Button>
