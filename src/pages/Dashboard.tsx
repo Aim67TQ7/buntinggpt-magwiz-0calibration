@@ -56,11 +56,13 @@ const Dashboard = () => {
       setLoading(true);
       
       // Fetch quotes
+      console.log('Fetching quotes...');
       const { data: quotesData, error: quotesError } = await supabase
         .from('BMR_quotes')
         .select('*')
         .order('date_generated', { ascending: false });
 
+      console.log('Quotes response:', { quotesData, quotesError });
       if (quotesError) throw quotesError;
 
       // Fetch quote items
