@@ -18,10 +18,10 @@ interface Quote {
 }
 
 interface QuoteItem {
-  item_id: number;
+  "# item_id": number;
   quote_id: number;
-  amount: string;
-  weight: string;
+  amount: number;
+  weight: number;
   cost: number;
   name: string;
 }
@@ -105,7 +105,7 @@ const Dashboard = () => {
   const getQuoteTotal = (quoteId: number) => {
     return quoteItems
       .filter(item => item.quote_id === quoteId)
-      .reduce((total, item) => total + (item.cost * parseInt(item.amount || '0')), 0);
+      .reduce((total, item) => total + (item.cost * item.amount), 0);
   };
 
   const formatDate = (timestamp: number) => {
@@ -239,12 +239,12 @@ const Dashboard = () => {
                     {quoteItems
                       .filter(item => item.quote_id === selectedQuote.id)
                       .map((item) => (
-                        <TableRow key={item.item_id}>
+                        <TableRow key={item["# item_id"]}>
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.amount}</TableCell>
                           <TableCell>{item.weight} kg</TableCell>
                           <TableCell>${item.cost}</TableCell>
-                          <TableCell>${(item.cost * parseInt(item.amount || '0')).toLocaleString()}</TableCell>
+                          <TableCell>${(item.cost * item.amount).toLocaleString()}</TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
