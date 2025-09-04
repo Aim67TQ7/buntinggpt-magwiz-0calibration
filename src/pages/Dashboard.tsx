@@ -124,7 +124,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading dashboard...</div>
+        <div className="text-center">Loading dashboard data...</div>
       </div>
     );
   }
