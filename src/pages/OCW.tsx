@@ -25,8 +25,8 @@ interface OCWData {
   backbar_mass?: number;
   core_backbar_mass?: number;
   side_pole_mass?: number;
-  sealing_plate_mass?: number;
-  core_insulator_mass?: number;
+  sealing_plate_mass?: string;
+  core_insulator_mass?: string;
   conservator_mass?: number;
   coolant_mass?: number;
   total_mass?: number;
@@ -53,15 +53,15 @@ interface OCWData {
   hot_current_A?: number;
   hot_current_B?: number;
   hot_current_C?: number;
-  cold_ampere_turns_A?: number;
-  cold_ampere_turns_B?: number;
-  cold_ampere_turns_C?: number;
+  cold_ampere_turns_A?: string;
+  cold_ampere_turns_B?: string;
+  cold_ampere_turns_C?: string;
   hot_ampere_turns_A?: number;
   hot_ampere_turns_B?: number;
   hot_ampere_turns_C?: number;
-  ambient_temperature_A?: number;
-  ambient_temperature_B?: number;
-  ambient_temperature_C?: number;
+  ambient_temperature_A?: string;
+  ambient_temperature_B?: string;
+  ambient_temperature_C?: string;
   temperature_rise_A?: number;
   temperature_rise_B?: number;
   temperature_rise_C?: number;
@@ -114,7 +114,7 @@ const OCW = () => {
       const {
         data,
         error
-      } = await supabase.from('OCW_magwiz').select('*');
+      } = await supabase.from('BMR_magwiz').select('*');
       if (error) throw error;
       setOcwData(data || []);
 
@@ -129,7 +129,7 @@ const OCW = () => {
       setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
       setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
     } catch (error) {
-      console.error('Error fetching OCW data:', error);
+      console.error('Error fetching BMR data:', error);
     } finally {
       setLoading(false);
     }
@@ -169,13 +169,13 @@ const OCW = () => {
     amount: 1,
     material: "Manganese Steel",
     dimension: selectedRecord.sealing_plate_dimension,
-    mass: selectedRecord.sealing_plate_mass
+    mass: selectedRecord.sealing_plate_mass ? parseFloat(selectedRecord.sealing_plate_mass) : undefined
   }, {
     name: "Core Insulator",
     amount: 1,
     material: "Elephantide",
     dimension: selectedRecord.core_insulator_dimension,
-    mass: selectedRecord.core_insulator_mass
+    mass: selectedRecord.core_insulator_mass ? parseFloat(selectedRecord.core_insulator_mass) : undefined
   }, {
     name: "Conservator",
     amount: 1,
@@ -191,7 +191,7 @@ const OCW = () => {
   }].filter(item => item.mass !== undefined && item.mass !== null) : [];
   if (loading) {
     return <div className="container mx-auto p-6">
-        <div className="text-center">Loading OCW data...</div>
+        <div className="text-center">Loading BMR data...</div>
       </div>;
   }
   return <div className="container mx-auto p-6 space-y-6">
@@ -203,7 +203,7 @@ const OCW = () => {
               Back to Calculator
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">OCW Magnet Specifications</h1>
+          <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
         </div>
       </div>
 
@@ -214,8 +214,17 @@ const OCW = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">OCW</span>
-              
+              <span className="text-sm font-medium">BMR</span>
+              <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="000" />
+                </SelectTrigger>
+                <SelectContent>
+                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
+                      {prefix}
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
               <span className="text-sm">-</span>
               <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
                 <SelectTrigger className="w-20">
