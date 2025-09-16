@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
-
 interface OCWData {
   filename: string;
   prefix?: string;
@@ -73,7 +72,6 @@ interface OCWData {
   expected_rise_B?: number;
   expected_rise_C?: number;
 }
-
 const OCW = () => {
   const [ocwData, setOcwData] = useState<OCWData[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
@@ -84,16 +82,12 @@ const OCW = () => {
   const [selectedSuffix, setSelectedSuffix] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isComponentsOpen, setIsComponentsOpen] = useState(true);
-
   useEffect(() => {
     fetchOCWData();
   }, []);
-
   useEffect(() => {
     if (selectedPrefix && selectedSuffix) {
-      const matchingRecord = ocwData.find(record => 
-        (record as any).prefix === selectedPrefix && (record as any).suffix === selectedSuffix
-      );
+      const matchingRecord = ocwData.find(record => (record as any).prefix === selectedPrefix && (record as any).suffix === selectedSuffix);
       setSelectedRecord(matchingRecord || null);
     } else {
       setSelectedRecord(null);
@@ -103,9 +97,7 @@ const OCW = () => {
   // Update available suffixes when prefix changes
   useEffect(() => {
     if (selectedPrefix) {
-      const validSuffixes = suffixes.filter(suffix => 
-        ocwData.some(record => (record as any).prefix === selectedPrefix && (record as any).suffix === suffix)
-      );
+      const validSuffixes = suffixes.filter(suffix => ocwData.some(record => (record as any).prefix === selectedPrefix && (record as any).suffix === suffix));
       setAvailableSuffixes(validSuffixes);
       // Reset suffix if current selection is not valid for the new prefix
       if (selectedSuffix && !validSuffixes.includes(selectedSuffix)) {
@@ -116,22 +108,19 @@ const OCW = () => {
       setSelectedSuffix("");
     }
   }, [selectedPrefix, suffixes, ocwData, selectedSuffix]);
-
   const fetchOCWData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('OCW_magwiz')
-        .select('*');
-
+      const {
+        data,
+        error
+      } = await supabase.from('OCW_magwiz').select('*');
       if (error) throw error;
-
       setOcwData(data || []);
-      
+
       // Extract unique prefixes and suffixes from database columns
       const prefixSet = new Set<string>();
       const suffixSet = new Set<string>();
-      
       (data || []).forEach(record => {
         if ((record as any).prefix) prefixSet.add((record as any).prefix);
         if ((record as any).suffix) suffixSet.add((record as any).suffix);
@@ -143,13 +132,11 @@ const OCW = () => {
         const numB = parseInt(b);
         return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
       });
-      
       const sortedSuffixes = Array.from(suffixSet).sort((a, b) => {
         const numA = parseInt(a);
         const numB = parseInt(b);
         return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
       });
-
       setPrefixes(sortedPrefixes);
       setSuffixes(sortedSuffixes);
       setAvailableSuffixes(sortedSuffixes);
@@ -159,29 +146,67 @@ const OCW = () => {
       setLoading(false);
     }
   };
-
-  const componentData = selectedRecord ? [
-    { name: "Core", amount: 1, material: "Mild Steel", dimension: selectedRecord.core_dimension, mass: selectedRecord.core_mass },
-    { name: "Winding", amount: 1, material: "Aluminium Nomex", dimension: selectedRecord.winding_dimension, mass: selectedRecord.winding_mass },
-    { name: "Backbar", amount: 1, material: "Mild Steel", dimension: selectedRecord.backbar_dimension, mass: selectedRecord.backbar_mass },
-    { name: "Core Backbar", amount: 1, material: "Mild Steel", dimension: selectedRecord.core_backbar_dimension, mass: selectedRecord.core_backbar_mass },
-    { name: "Side Pole", amount: 4, material: "Mild Steel", dimension: selectedRecord.side_pole_dimension, mass: selectedRecord.side_pole_mass },
-    { name: "Sealing Plate", amount: 1, material: "Manganese Steel", dimension: selectedRecord.sealing_plate_dimension, mass: selectedRecord.sealing_plate_mass },
-    { name: "Core Insulator", amount: 1, material: "Elephantide", dimension: selectedRecord.core_insulator_dimension, mass: selectedRecord.core_insulator_mass },
-    { name: "Conservator", amount: 1, material: "Mild Steel", dimension: selectedRecord.conservator_dimension, mass: selectedRecord.conservator_mass },
-    { name: "Coolant", amount: 7563, material: "Oil", dimension: "-", mass: selectedRecord.coolant_mass }
-  ].filter(item => item.mass !== undefined && item.mass !== null) : [];
-
+  const componentData = selectedRecord ? [{
+    name: "Core",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: selectedRecord.core_dimension,
+    mass: selectedRecord.core_mass
+  }, {
+    name: "Winding",
+    amount: 1,
+    material: "Aluminium Nomex",
+    dimension: selectedRecord.winding_dimension,
+    mass: selectedRecord.winding_mass
+  }, {
+    name: "Backbar",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: selectedRecord.backbar_dimension,
+    mass: selectedRecord.backbar_mass
+  }, {
+    name: "Core Backbar",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: selectedRecord.core_backbar_dimension,
+    mass: selectedRecord.core_backbar_mass
+  }, {
+    name: "Side Pole",
+    amount: 4,
+    material: "Mild Steel",
+    dimension: selectedRecord.side_pole_dimension,
+    mass: selectedRecord.side_pole_mass
+  }, {
+    name: "Sealing Plate",
+    amount: 1,
+    material: "Manganese Steel",
+    dimension: selectedRecord.sealing_plate_dimension,
+    mass: selectedRecord.sealing_plate_mass
+  }, {
+    name: "Core Insulator",
+    amount: 1,
+    material: "Elephantide",
+    dimension: selectedRecord.core_insulator_dimension,
+    mass: selectedRecord.core_insulator_mass
+  }, {
+    name: "Conservator",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: selectedRecord.conservator_dimension,
+    mass: selectedRecord.conservator_mass
+  }, {
+    name: "Coolant",
+    amount: 7563,
+    material: "Oil",
+    dimension: "-",
+    mass: selectedRecord.coolant_mass
+  }].filter(item => item.mass !== undefined && item.mass !== null) : [];
   if (loading) {
-    return (
-      <div className="container mx-auto p-6">
+    return <div className="container mx-auto p-6">
         <div className="text-center">Loading OCW data...</div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
+  return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/">
@@ -207,49 +232,36 @@ const OCW = () => {
                   <SelectValue placeholder="Select prefix" />
                 </SelectTrigger>
                 <SelectContent>
-                  {prefixes.map((prefix) => (
-                    <SelectItem key={prefix} value={prefix}>
+                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix}>
                       {prefix}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Suffix</label>
-              <Select 
-                value={selectedSuffix} 
-                onValueChange={setSelectedSuffix}
-                disabled={!selectedPrefix}
-              >
+              <Select value={selectedSuffix} onValueChange={setSelectedSuffix} disabled={!selectedPrefix}>
                 <SelectTrigger>
-                  <SelectValue 
-                    placeholder={selectedPrefix ? "Select suffix" : "Select prefix first"} 
-                  />
+                  <SelectValue placeholder={selectedPrefix ? "Select suffix" : "Select prefix first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSuffixes.map((suffix) => (
-                    <SelectItem key={suffix} value={suffix}>
+                  {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix}>
                       {suffix}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            {selectedRecord && (
-              <div className="mt-4 p-4 bg-muted rounded-lg">
+            {selectedRecord && <div className="mt-4 p-4 bg-muted rounded-lg">
                 <p className="font-medium">Selected: {selectedRecord.filename}</p>
                 <p className="text-lg font-semibold text-primary mt-2">
                   Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
                 </p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
       </div>
 
-      {selectedRecord && (
-        <div className="space-y-6">
+      {selectedRecord && <div className="space-y-6">
           {/* Component Table - Collapsible */}
           <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
             <Card>
@@ -274,15 +286,13 @@ const OCW = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {componentData.map((component, index) => (
-                        <TableRow key={index} className="h-10">
+                      {componentData.map((component, index) => <TableRow key={index} className="h-10">
                           <TableCell className="font-medium py-2">{component.name}</TableCell>
                           <TableCell className="py-2">{component.amount}</TableCell>
                           <TableCell className="py-2">{component.material}</TableCell>
                           <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
                           <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow>)}
                       <TableRow className="font-bold h-10">
                         <TableCell colSpan={4} className="py-2">Total</TableCell>
                         <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
@@ -303,7 +313,7 @@ const OCW = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <h4 className="font-semibold">Physical Properties</h4>
+                  
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span>Radial Depth:</span>
@@ -349,7 +359,7 @@ const OCW = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <h4 className="font-semibold">Temperature and Electrical Data</h4>
+                  
                   <div className="space-y-2 text-sm">
                     <div className="grid grid-cols-4 gap-2 text-xs font-medium">
                       <span></span>
@@ -428,10 +438,7 @@ const OCW = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default OCW;
