@@ -14,507 +14,2280 @@ export type Database = {
   }
   public: {
     Tables: {
-      BMR_bom: {
+      admin_audit_log: {
         Row: {
-          id: number
-          name: string | null
-          odds_factor: number | null
+          action: string
+          admin_user_id: string
+          created_at: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string | null
         }
         Insert: {
-          id: number
-          name?: string | null
-          odds_factor?: number | null
+          action: string
+          admin_user_id: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string | null
         }
         Update: {
-          id?: number
-          name?: string | null
-          odds_factor?: number | null
+          action?: string
+          admin_user_id?: string
+          created_at?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string | null
         }
         Relationships: []
       }
-      BMR_conductors: {
+      admin_sessions: {
         Row: {
-          id: number
-          material_id: number | null
-          resistivity: number | null
-          temp_coefficient: number | null
+          access_level: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity: string | null
+          session_id: string
         }
         Insert: {
-          id: number
-          material_id?: number | null
-          resistivity?: number | null
-          temp_coefficient?: number | null
+          access_level: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_activity?: string | null
+          session_id: string
         }
         Update: {
-          id?: number
-          material_id?: number | null
-          resistivity?: number | null
-          temp_coefficient?: number | null
+          access_level?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity?: string | null
+          session_id?: string
+        }
+        Relationships: []
+      }
+      app_items: {
+        Row: {
+          access_token: string | null
+          auth_passcode: string | null
+          auth_type: string | null
+          category: Database["public"]["Enums"]["app_type"]
+          coming_soon: boolean | null
+          created_at: string | null
+          description: string
+          icon_path: string | null
+          id: string
+          iframe_height: string | null
+          is_active: boolean | null
+          is_new: boolean | null
+          license: string | null
+          name: string
+          requires_auth: boolean | null
+          show_to_demo: boolean
+          token: string | null
+          updated_at: string | null
+          url: string
+          use_count: number | null
+          video_url: string | null
+          view_count: number | null
+        }
+        Insert: {
+          access_token?: string | null
+          auth_passcode?: string | null
+          auth_type?: string | null
+          category: Database["public"]["Enums"]["app_type"]
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description: string
+          icon_path?: string | null
+          id?: string
+          iframe_height?: string | null
+          is_active?: boolean | null
+          is_new?: boolean | null
+          license?: string | null
+          name: string
+          requires_auth?: boolean | null
+          show_to_demo?: boolean
+          token?: string | null
+          updated_at?: string | null
+          url: string
+          use_count?: number | null
+          video_url?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          access_token?: string | null
+          auth_passcode?: string | null
+          auth_type?: string | null
+          category?: Database["public"]["Enums"]["app_type"]
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description?: string
+          icon_path?: string | null
+          id?: string
+          iframe_height?: string | null
+          is_active?: boolean | null
+          is_new?: boolean | null
+          license?: string | null
+          name?: string
+          requires_auth?: boolean | null
+          show_to_demo?: boolean
+          token?: string | null
+          updated_at?: string | null
+          url?: string
+          use_count?: number | null
+          video_url?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          auth_passcode: string | null
+          auth_type: string | null
+          category: string | null
+          coming_soon: boolean | null
+          created_at: string | null
+          description: string | null
+          icon_path: string | null
+          id: string
+          iframe_height: string | null
+          is_active: boolean | null
+          is_new: boolean | null
+          license: string | null
+          name: string
+          requires_auth: boolean | null
+          updated_at: string | null
+          url: string | null
+          use_count: number | null
+          view_count: number | null
+        }
+        Insert: {
+          auth_passcode?: string | null
+          auth_type?: string | null
+          category?: string | null
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          icon_path?: string | null
+          id?: string
+          iframe_height?: string | null
+          is_active?: boolean | null
+          is_new?: boolean | null
+          license?: string | null
+          name: string
+          requires_auth?: boolean | null
+          updated_at?: string | null
+          url?: string | null
+          use_count?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          auth_passcode?: string | null
+          auth_type?: string | null
+          category?: string | null
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          icon_path?: string | null
+          id?: string
+          iframe_height?: string | null
+          is_active?: boolean | null
+          is_new?: boolean | null
+          license?: string | null
+          name?: string
+          requires_auth?: boolean | null
+          updated_at?: string | null
+          url?: string | null
+          use_count?: number | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
+      approved_knowledge_managers: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          department: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          department?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          department?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attendance_points: {
+        Row: {
+          attendance_record_id: string
+          created_at: string
+          date_assessed: string
+          employee_id: string
+          expires_on: string
+          id: string
+          is_active: boolean
+          points: number
+          violation_type: string
+        }
+        Insert: {
+          attendance_record_id: string
+          created_at?: string
+          date_assessed: string
+          employee_id: string
+          expires_on: string
+          id?: string
+          is_active?: boolean
+          points: number
+          violation_type: string
+        }
+        Update: {
+          attendance_record_id?: string
+          created_at?: string
+          date_assessed?: string
+          employee_id?: string
+          expires_on?: string
+          id?: string
+          is_active?: boolean
+          points?: number
+          violation_type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "BMR_conductors_material_id_fkey"
-            columns: ["material_id"]
+            foreignKeyName: "attendance_points_attendance_record_id_fkey"
+            columns: ["attendance_record_id"]
             isOneToOne: false
-            referencedRelation: "BMR_materials"
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_points_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      BMR_coolants: {
+      attendance_records: {
         Row: {
-          heat_transfer_rate: number | null
-          id: number
-          material_id: number
-          max_temp: number | null
+          clock_in: string | null
+          clock_out: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          is_excused: boolean | null
+          notes: string | null
+          points_assessed: number | null
+          pto_used: boolean | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          updated_at: string
+          violation_type: string | null
         }
         Insert: {
-          heat_transfer_rate?: number | null
-          id: number
-          material_id: number
-          max_temp?: number | null
+          clock_in?: string | null
+          clock_out?: string | null
+          created_at?: string
+          date: string
+          employee_id: string
+          id?: string
+          is_excused?: boolean | null
+          notes?: string | null
+          points_assessed?: number | null
+          pto_used?: boolean | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string
+          violation_type?: string | null
         }
         Update: {
-          heat_transfer_rate?: number | null
-          id?: number
-          material_id?: number
-          max_temp?: number | null
+          clock_in?: string | null
+          clock_out?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          is_excused?: boolean | null
+          notes?: string | null
+          points_assessed?: number | null
+          pto_used?: boolean | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          updated_at?: string
+          violation_type?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "BMR_coolants_material_id_fkey"
-            columns: ["material_id"]
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "BMR_materials"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      BMR_fed: {
+      attendance_warnings: {
         Row: {
-          "# id": number
-          drum_diameter: number | null
-          drum_length: number | null
-          product_id: number | null
-          voltage: number | null
+          created_at: string
+          employee_id: string
+          id: string
+          issued_by: string | null
+          issued_date: string
+          notes: string | null
+          total_points: number
+          warning_type: string
         }
         Insert: {
-          "# id": number
-          drum_diameter?: number | null
-          drum_length?: number | null
-          product_id?: number | null
-          voltage?: number | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          issued_by?: string | null
+          issued_date?: string
+          notes?: string | null
+          total_points: number
+          warning_type: string
         }
         Update: {
-          "# id"?: number
-          drum_diameter?: number | null
-          drum_length?: number | null
-          product_id?: number | null
-          voltage?: number | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          issued_by?: string | null
+          issued_date?: string
+          notes?: string | null
+          total_points?: number
+          warning_type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "BMR_fed_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "attendance_warnings_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "BMR_products"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      BMR_frames: {
+      baq_stoplight: {
         Row: {
-          "# id": number
-          Frame: string | null
+          Asm: number | null
+          Department: string | null
+          Description: string | null
+          "Due Date": string | null
+          EstProdHours: number | null
+          Job: string | null
+          JobNum: string | null
+          Name: string | null
+          Opr: number | null
+          Part: string | null
+          "Prod. Qty": number | null
+          "Start Date": string | null
+          uuid: string
         }
         Insert: {
-          "# id": number
-          Frame?: string | null
+          Asm?: number | null
+          Department?: string | null
+          Description?: string | null
+          "Due Date"?: string | null
+          EstProdHours?: number | null
+          Job?: string | null
+          JobNum?: string | null
+          Name?: string | null
+          Opr?: number | null
+          Part?: string | null
+          "Prod. Qty"?: number | null
+          "Start Date"?: string | null
+          uuid?: string
         }
         Update: {
-          "# id"?: number
-          Frame?: string | null
+          Asm?: number | null
+          Department?: string | null
+          Description?: string | null
+          "Due Date"?: string | null
+          EstProdHours?: number | null
+          Job?: string | null
+          JobNum?: string | null
+          Name?: string | null
+          Opr?: number | null
+          Part?: string | null
+          "Prod. Qty"?: number | null
+          "Start Date"?: string | null
+          uuid?: string
         }
         Relationships: []
       }
-      BMR_labor_hours: {
+      character_directives: {
         Row: {
-          hours: number | null
-          idx: number | null
-          labour_id: number
-          method: number | null
+          character_id: string
+          created_at: string | null
+          directive_text: string
+          directive_type: string
+          id: string
+          priority: number | null
         }
         Insert: {
-          hours?: number | null
-          idx?: number | null
-          labour_id: number
-          method?: number | null
+          character_id: string
+          created_at?: string | null
+          directive_text: string
+          directive_type: string
+          id?: string
+          priority?: number | null
         }
         Update: {
-          hours?: number | null
-          idx?: number | null
-          labour_id?: number
-          method?: number | null
-        }
-        Relationships: []
-      }
-      BMR_labour: {
-        Row: {
-          bom: number | null
-          id: number
-          name: string | null
-          rate: number | null
-        }
-        Insert: {
-          bom?: number | null
-          id: number
-          name?: string | null
-          rate?: number | null
-        }
-        Update: {
-          bom?: number | null
-          id?: number
-          name?: string | null
-          rate?: number | null
-        }
-        Relationships: []
-      }
-      BMR_materials: {
-        Row: {
-          density: number | null
-          id: number
-          name: string | null
-        }
-        Insert: {
-          density?: number | null
-          id: number
-          name?: string | null
-        }
-        Update: {
-          density?: number | null
-          id?: number
-          name?: string | null
-        }
-        Relationships: []
-      }
-      BMR_ocw: {
-        Row: {
-          ampere_turns: number | null
-          coil_core_ratio: number | null
-          core_diameter: number | null
-          frame: number | null
-          height: number | null
-          id: number
-          product_id: number | null
-          side_pole_width: number | null
-          voltage: number | null
-          width: number | null
-        }
-        Insert: {
-          ampere_turns?: number | null
-          coil_core_ratio?: number | null
-          core_diameter?: number | null
-          frame?: number | null
-          height?: number | null
-          id: number
-          product_id?: number | null
-          side_pole_width?: number | null
-          voltage?: number | null
-          width?: number | null
-        }
-        Update: {
-          ampere_turns?: number | null
-          coil_core_ratio?: number | null
-          core_diameter?: number | null
-          frame?: number | null
-          height?: number | null
-          id?: number
-          product_id?: number | null
-          side_pole_width?: number | null
-          voltage?: number | null
-          width?: number | null
-        }
-        Relationships: []
-      }
-      BMR_part_price: {
-        Row: {
-          ampere_turns: number | null
-          coil_core_ratio: number | null
-          core_diameter: number | null
-          frame: number | null
-          height: number | null
-          id: number
-          product_id: number | null
-          side_pole_width: number | null
-          voltage: number | null
-          width: number | null
-        }
-        Insert: {
-          ampere_turns?: number | null
-          coil_core_ratio?: number | null
-          core_diameter?: number | null
-          frame?: number | null
-          height?: number | null
-          id: number
-          product_id?: number | null
-          side_pole_width?: number | null
-          voltage?: number | null
-          width?: number | null
-        }
-        Update: {
-          ampere_turns?: number | null
-          coil_core_ratio?: number | null
-          core_diameter?: number | null
-          frame?: number | null
-          height?: number | null
-          id?: number
-          product_id?: number | null
-          side_pole_width?: number | null
-          voltage?: number | null
-          width?: number | null
-        }
-        Relationships: []
-      }
-      BMR_part_prices: {
-        Row: {
-          "# pricing_id": number
-          base_method: number | null
-          compound_method: number | null
-          idx: number | null
-          part_id: number | null
-          price: string | null
-        }
-        Insert: {
-          "# pricing_id": number
-          base_method?: number | null
-          compound_method?: number | null
-          idx?: number | null
-          part_id?: number | null
-          price?: string | null
-        }
-        Update: {
-          "# pricing_id"?: number
-          base_method?: number | null
-          compound_method?: number | null
-          idx?: number | null
-          part_id?: number | null
-          price?: string | null
+          character_id?: string
+          created_at?: string | null
+          directive_text?: string
+          directive_type?: string
+          id?: string
+          priority?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "BMR_part_prices_base_method_fkey"
-            columns: ["base_method"]
+            foreignKeyName: "character_directives_character_id_fkey"
+            columns: ["character_id"]
             isOneToOne: false
-            referencedRelation: "BMR_price_methods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "BMR_part_prices_part_id_fkey"
-            columns: ["part_id"]
-            isOneToOne: false
-            referencedRelation: "BMR_parts"
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
       }
-      BMR_parts: {
+      characters: {
         Row: {
-          amount: number | null
-          bom: number | null
-          id: number
-          material: number | null
-          name: string | null
+          avatar_base_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          role: string
+          updated_at: string | null
         }
         Insert: {
-          amount?: number | null
-          bom?: number | null
-          id: number
-          material?: number | null
-          name?: string | null
+          avatar_base_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          role: string
+          updated_at?: string | null
         }
         Update: {
-          amount?: number | null
-          bom?: number | null
-          id?: number
-          material?: number | null
-          name?: string | null
+          avatar_base_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          role?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
-      BMR_plates: {
+      conversation_starters: {
         Row: {
-          "# thickness": number
+          character_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          starter_order: number | null
+          title: string
         }
         Insert: {
-          "# thickness": number
+          character_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          starter_order?: number | null
+          title: string
         }
         Update: {
-          "# thickness"?: number
-        }
-        Relationships: []
-      }
-      BMR_price_methods: {
-        Row: {
-          field: string | null
-          id: number
-          name: string | null
-          tbl: string | null
-          type: string | null
-        }
-        Insert: {
-          field?: string | null
-          id: number
-          name?: string | null
-          tbl?: string | null
-          type?: string | null
-        }
-        Update: {
-          field?: string | null
-          id?: number
-          name?: string | null
-          tbl?: string | null
-          type?: string | null
-        }
-        Relationships: []
-      }
-      BMR_products: {
-        Row: {
-          id: number
-          name: string | null
-        }
-        Insert: {
-          id: number
-          name?: string | null
-        }
-        Update: {
-          id?: number
-          name?: string | null
-        }
-        Relationships: []
-      }
-      BMR_quote_items: {
-        Row: {
-          "# item_id": number
-          amount: number | null
-          cost: number | null
-          name: string | null
-          quote_id: number | null
-          weight: number | null
-        }
-        Insert: {
-          "# item_id": number
-          amount?: number | null
-          cost?: number | null
-          name?: string | null
-          quote_id?: number | null
-          weight?: number | null
-        }
-        Update: {
-          "# item_id"?: number
-          amount?: number | null
-          cost?: number | null
-          name?: string | null
-          quote_id?: number | null
-          weight?: number | null
+          character_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          starter_order?: number | null
+          title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "BMR_quote_items_quote_id_fkey"
-            columns: ["quote_id"]
+            foreignKeyName: "conversation_starters_character_id_fkey"
+            columns: ["character_id"]
             isOneToOne: false
-            referencedRelation: "BMR_quotes"
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
       }
-      BMR_quotes: {
+      conversations: {
         Row: {
-          date_generated: number | null
-          date_verified: string | null
-          id: number
-          product_id: number | null
-          quote_number: string | null
-          verified: string | null
+          content: Json | null
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          topic: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          date_generated?: number | null
-          date_verified?: string | null
-          id: number
-          product_id?: number | null
-          quote_number?: string | null
-          verified?: string | null
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          topic: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          date_generated?: number | null
-          date_verified?: string | null
-          id?: number
-          product_id?: number | null
-          quote_number?: string | null
-          verified?: string | null
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          topic?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
-      BMR_round_alum: {
+      corrections: {
         Row: {
-          Diameter: number | null
-          id: number
-          resistance_volume: number | null
-          turn_density: number | null
+          applied: boolean | null
+          conversation_id: string
+          correction_text: string
+          created_at: string
+          id: string
+          is_global: boolean | null
+          keywords: string[] | null
+          message_id: string
+          topic: string | null
+          user_id: string
         }
         Insert: {
-          Diameter?: number | null
-          id: number
-          resistance_volume?: number | null
-          turn_density?: number | null
+          applied?: boolean | null
+          conversation_id: string
+          correction_text: string
+          created_at?: string
+          id?: string
+          is_global?: boolean | null
+          keywords?: string[] | null
+          message_id: string
+          topic?: string | null
+          user_id: string
         }
         Update: {
-          Diameter?: number | null
-          id?: number
-          resistance_volume?: number | null
-          turn_density?: number | null
+          applied?: boolean | null
+          conversation_id?: string
+          correction_text?: string
+          created_at?: string
+          id?: string
+          is_global?: boolean | null
+          keywords?: string[] | null
+          message_id?: string
+          topic?: string | null
+          user_id?: string
         }
         Relationships: []
       }
-      BMR_strip_alum: {
+      curtis_conversations: {
         Row: {
-          height: number
-          resistance_volume: number | null
-          turn_density: number | null
+          created_at: string
+          customer_inquiry_type: string | null
+          equipment_recommendations: Json | null
+          id: string
+          message: string
+          product_context: Json | null
+          sender: string
+          session_id: string
         }
         Insert: {
-          height: number
-          resistance_volume?: number | null
-          turn_density?: number | null
+          created_at?: string
+          customer_inquiry_type?: string | null
+          equipment_recommendations?: Json | null
+          id?: string
+          message: string
+          product_context?: Json | null
+          sender: string
+          session_id: string
         }
         Update: {
-          height?: number
-          resistance_volume?: number | null
-          turn_density?: number | null
+          created_at?: string
+          customer_inquiry_type?: string | null
+          equipment_recommendations?: Json | null
+          id?: string
+          message?: string
+          product_context?: Json | null
+          sender?: string
+          session_id?: string
         }
         Relationships: []
       }
-      BMR_users: {
+      customer: {
         Row: {
-          admin: number | null
-          id: number
-          password_hash: string | null
-          username: string | null
+          company: string
+          corrected_address: string
+          created_at: string | null
+          customer_name: string | null
+          email: string | null
+          latitude: number | null
+          longitude: number | null
+          phone: string | null
+          sales_18_month: string | null
+          sales_2024: string | null
+          sales_2025: string | null
+          territory: string | null
+          uuid: string
         }
         Insert: {
-          admin?: number | null
-          id: number
-          password_hash?: string | null
-          username?: string | null
+          company: string
+          corrected_address: string
+          created_at?: string | null
+          customer_name?: string | null
+          email?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          sales_18_month?: string | null
+          sales_2024?: string | null
+          sales_2025?: string | null
+          territory?: string | null
+          uuid?: string
         }
         Update: {
-          admin?: number | null
-          id?: number
-          password_hash?: string | null
-          username?: string | null
+          company?: string
+          corrected_address?: string
+          created_at?: string | null
+          customer_name?: string | null
+          email?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          sales_18_month?: string | null
+          sales_2024?: string | null
+          sales_2025?: string | null
+          territory?: string | null
+          uuid?: string
+        }
+        Relationships: []
+      }
+      dashboard_cards: {
+        Row: {
+          author_name: string | null
+          card_type: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_urgent: boolean
+          linkedin_post_id: string | null
+          location: string
+          pdf_url: string | null
+          post_url: string | null
+          priority: number
+          published_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string | null
+          card_type: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_urgent?: boolean
+          linkedin_post_id?: string | null
+          location?: string
+          pdf_url?: string | null
+          post_url?: string | null
+          priority?: number
+          published_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string | null
+          card_type?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_urgent?: boolean
+          linkedin_post_id?: string | null
+          location?: string
+          pdf_url?: string | null
+          post_url?: string | null
+          priority?: number
+          published_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      don: {
+        Row: {
+          embedding_b64_f16: string | null
+          narrative: string | null
+          uuid: string
+        }
+        Insert: {
+          embedding_b64_f16?: string | null
+          narrative?: string | null
+          uuid?: string
+        }
+        Update: {
+          embedding_b64_f16?: string | null
+          narrative?: string | null
+          uuid?: string
+        }
+        Relationships: []
+      }
+      don2: {
+        Row: {
+          context: string | null
+          job_number: string | null
+          line_number: string
+          mentions_media_gallery: boolean | null
+          order_number: string | null
+          picture_ref: string | null
+        }
+        Insert: {
+          context?: string | null
+          job_number?: string | null
+          line_number: string
+          mentions_media_gallery?: boolean | null
+          order_number?: string | null
+          picture_ref?: string | null
+        }
+        Update: {
+          context?: string | null
+          job_number?: string | null
+          line_number?: string
+          mentions_media_gallery?: boolean | null
+          order_number?: string | null
+          picture_ref?: string | null
+        }
+        Relationships: []
+      }
+      embeddings: {
+        Row: {
+          embedding: string | null
+          narrative_text: string | null
+          uuid: string
+        }
+        Insert: {
+          embedding?: string | null
+          narrative_text?: string | null
+          uuid: string
+        }
+        Update: {
+          embedding?: string | null
+          narrative_text?: string | null
+          uuid?: string
+        }
+        Relationships: []
+      }
+      Employee_id: {
+        Row: {
+          accountEnabled: boolean | null
+          ageGroup: string | null
+          alternateEmailAddress: string | null
+          city: string | null
+          companyName: string | null
+          consentProvidedForMinor: string | null
+          country: string | null
+          createdDateTime: string | null
+          creationType: string | null
+          department: string | null
+          directorySynced: string | null
+          displayName: string | null
+          employee_id: string
+          givenName: string | null
+          identityIssuer: string | null
+          invitationState: string | null
+          jobTitle: string | null
+          legalAgeGroupClassification: string | null
+          mobilePhone: string | null
+          officeLocation: string | null
+          postalCode: string | null
+          state: string | null
+          streetAddress: string | null
+          surname: string | null
+          telephoneNumber: string | null
+          usageLocation: string | null
+          user_id: string | null
+          userPrincipalName: string
+          userType: string | null
+        }
+        Insert: {
+          accountEnabled?: boolean | null
+          ageGroup?: string | null
+          alternateEmailAddress?: string | null
+          city?: string | null
+          companyName?: string | null
+          consentProvidedForMinor?: string | null
+          country?: string | null
+          createdDateTime?: string | null
+          creationType?: string | null
+          department?: string | null
+          directorySynced?: string | null
+          displayName?: string | null
+          employee_id?: string
+          givenName?: string | null
+          identityIssuer?: string | null
+          invitationState?: string | null
+          jobTitle?: string | null
+          legalAgeGroupClassification?: string | null
+          mobilePhone?: string | null
+          officeLocation?: string | null
+          postalCode?: string | null
+          state?: string | null
+          streetAddress?: string | null
+          surname?: string | null
+          telephoneNumber?: string | null
+          usageLocation?: string | null
+          user_id?: string | null
+          userPrincipalName: string
+          userType?: string | null
+        }
+        Update: {
+          accountEnabled?: boolean | null
+          ageGroup?: string | null
+          alternateEmailAddress?: string | null
+          city?: string | null
+          companyName?: string | null
+          consentProvidedForMinor?: string | null
+          country?: string | null
+          createdDateTime?: string | null
+          creationType?: string | null
+          department?: string | null
+          directorySynced?: string | null
+          displayName?: string | null
+          employee_id?: string
+          givenName?: string | null
+          identityIssuer?: string | null
+          invitationState?: string | null
+          jobTitle?: string | null
+          legalAgeGroupClassification?: string | null
+          mobilePhone?: string | null
+          officeLocation?: string | null
+          postalCode?: string | null
+          state?: string | null
+          streetAddress?: string | null
+          surname?: string | null
+          telephoneNumber?: string | null
+          usageLocation?: string | null
+          user_id?: string | null
+          userPrincipalName?: string
+          userType?: string | null
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          employee_id: string
+          employment_type: string
+          first_name: string
+          hire_date: string
+          id: string
+          is_active: boolean
+          last_name: string
+          position: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          employee_id: string
+          employment_type?: string
+          first_name: string
+          hire_date: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          position?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          employee_id?: string
+          employment_type?: string
+          first_name?: string
+          hire_date?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          position?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       entities: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      escalations: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          days_overdue: number | null
+          escalation_type: string
+          id: string
+          order_id: string | null
+          po_number: string | null
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          days_overdue?: number | null
+          escalation_type: string
+          id?: string
+          order_id?: string | null
+          po_number?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          days_overdue?: number | null
+          escalation_type?: string
+          id?: string
+          order_id?: string | null
+          po_number?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      iframe_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity: string
+          origin_domain: string
+          token_hash: string
+          user_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_activity?: string
+          origin_domain: string
+          token_hash: string
+          user_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity?: string
+          origin_domain?: string
+          token_hash?: string
+          user_data?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      intent_patterns: {
+        Row: {
+          api_endpoint: string | null
+          character_id: string
+          confidence_threshold: number | null
+          created_at: string | null
+          id: string
+          intent_name: string
+          pattern_text: string
+          response_template: string | null
+        }
+        Insert: {
+          api_endpoint?: string | null
+          character_id: string
+          confidence_threshold?: number | null
+          created_at?: string | null
+          id?: string
+          intent_name: string
+          pattern_text: string
+          response_template?: string | null
+        }
+        Update: {
+          api_endpoint?: string | null
+          character_id?: string
+          confidence_threshold?: number | null
+          created_at?: string | null
+          id?: string
+          intent_name?: string
+          pattern_text?: string
+          response_template?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intent_patterns_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interaction_analytics: {
+        Row: {
+          created_at: string
+          id: string
+          order_found: boolean
+          query_type: string
+          response_time: number
+          satisfaction_score: number | null
+          updated_at: string
+          urgency_level: string
+          user_role: string
+          user_session: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_found?: boolean
+          query_type: string
+          response_time: number
+          satisfaction_score?: number | null
+          updated_at?: string
+          urgency_level?: string
+          user_role?: string
+          user_session: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_found?: boolean
+          query_type?: string
+          response_time?: number
+          satisfaction_score?: number | null
+          updated_at?: string
+          urgency_level?: string
+          user_role?: string
+          user_session?: string
+        }
+        Relationships: []
+      }
+      license_users: {
+        Row: {
+          created_at: string
+          id: string
+          last_access: string | null
+          license_id: string
+          user_identifier: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_access?: string | null
+          license_id: string
+          user_identifier: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_access?: string | null
+          license_id?: string
+          user_identifier?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_users_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      licenses: {
+        Row: {
+          company_name: string
+          contact_email: string
+          contact_name: string | null
+          created_at: string
+          custom_domain: string | null
+          id: string
+          is_active: boolean
+          license_code: string
+          qr_code_url: string | null
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          contact_email: string
+          contact_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean
+          license_code: string
+          qr_code_url?: string | null
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_email?: string
+          contact_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          is_active?: boolean
+          license_code?: string
+          qr_code_url?: string | null
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      market_research_reports: {
+        Row: {
+          competitive_landscape: Json
+          consumer_analysis: string
+          created_at: string
+          executive_summary: string
+          future_predictions: string
+          id: string
+          market_segmentation: Json
+          market_size: Json
+          recommendations: Json
+          swot_analysis: Json
+          topic_id: string
+          trends: Json
+          updated_at: string
+        }
+        Insert: {
+          competitive_landscape: Json
+          consumer_analysis: string
+          created_at?: string
+          executive_summary: string
+          future_predictions: string
+          id?: string
+          market_segmentation: Json
+          market_size: Json
+          recommendations: Json
+          swot_analysis: Json
+          topic_id: string
+          trends: Json
+          updated_at?: string
+        }
+        Update: {
+          competitive_landscape?: Json
+          consumer_analysis?: string
+          created_at?: string
+          executive_summary?: string
+          future_predictions?: string
+          id?: string
+          market_segmentation?: Json
+          market_size?: Json
+          recommendations?: Json
+          swot_analysis?: Json
+          topic_id?: string
+          trends?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_research_reports_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "market_research_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_research_topics: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          topic: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          topic: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          topic?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      match_feedback: {
+        Row: {
+          created_at: string | null
+          document_id: string | null
+          feedback_type: string | null
+          id: string
+          match_context: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id?: string | null
+          feedback_type?: string | null
+          id?: string
+          match_context?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string | null
+          feedback_type?: string | null
+          id?: string
+          match_context?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_feedback_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "training_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_recordings: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          is_processed: boolean | null
+          license_id: string | null
+          title: string | null
+          token: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_processed?: boolean | null
+          license_id?: string | null
+          title?: string | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_processed?: boolean | null
+          license_id?: string | null
+          title?: string | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_recordings_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_summaries: {
+        Row: {
+          created_at: string | null
+          id: string
+          key_points: Json | null
+          license_id: string | null
+          recording_id: string | null
+          summary: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key_points?: Json | null
+          license_id?: string | null
+          recording_id?: string | null
+          summary: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key_points?: Json | null
+          license_id?: string | null
+          recording_id?: string | null
+          summary?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_summaries_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_summaries_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          description: string
+          due_date: string | null
+          id: string
+          is_completed: boolean | null
+          license_id: string | null
+          recording_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          license_id?: string | null
+          recording_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          license_id?: string | null
+          recording_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_tasks_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_tasks_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mto_backlog: {
+        Row: {
+          backlog_data: string | null
+          created_at: string
+          id: string
+          month: string | null
+          order_count: number
+          status: string | null
+          total_amount: number
+        }
+        Insert: {
+          backlog_data?: string | null
+          created_at?: string
+          id?: string
+          month?: string | null
+          order_count?: number
+          status?: string | null
+          total_amount?: number
+        }
+        Update: {
+          backlog_data?: string | null
+          created_at?: string
+          id?: string
+          month?: string | null
+          order_count?: number
+          status?: string | null
+          total_amount?: number
+        }
+        Relationships: []
+      }
+      mto_delivery: {
+        Row: {
+          april_otd: number | null
+          august_otd: number | null
+          created_at: string | null
+          current_year: number | null
+          december_otd: number | null
+          february_otd: number | null
+          id: string
+          january_otd: number | null
+          july_otd: number | null
+          june_otd: number | null
+          last_updated_month: string | null
+          march_otd: number | null
+          may_otd: number | null
+          november_otd: number | null
+          october_otd: number | null
+          september_otd: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          april_otd?: number | null
+          august_otd?: number | null
+          created_at?: string | null
+          current_year?: number | null
+          december_otd?: number | null
+          february_otd?: number | null
+          id?: string
+          january_otd?: number | null
+          july_otd?: number | null
+          june_otd?: number | null
+          last_updated_month?: string | null
+          march_otd?: number | null
+          may_otd?: number | null
+          november_otd?: number | null
+          october_otd?: number | null
+          september_otd?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          april_otd?: number | null
+          august_otd?: number | null
+          created_at?: string | null
+          current_year?: number | null
+          december_otd?: number | null
+          february_otd?: number | null
+          id?: string
+          january_otd?: number | null
+          july_otd?: number | null
+          june_otd?: number | null
+          last_updated_month?: string | null
+          march_otd?: number | null
+          may_otd?: number | null
+          november_otd?: number | null
+          october_otd?: number | null
+          september_otd?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      mto_incoming: {
+        Row: {
+          created_at: string | null
+          gmMonth: number | null
+          id: string
+          incoming: number | null
+          month: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          gmMonth?: number | null
+          id?: string
+          incoming?: number | null
+          month?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          gmMonth?: number | null
+          id?: string
+          incoming?: number | null
+          month?: string | null
+        }
+        Relationships: []
+      }
+      mto_metadata: {
+        Row: {
+          created_at: string | null
+          id: string
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          timestamp: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      mto_shipclerk: {
+        Row: {
+          created_at: string
+          id: string
+          import_amount: number
+          month: string | null
+          orders_data: string | null
+          pending_count: number
+          processed_count: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          import_amount?: number
+          month?: string | null
+          orders_data?: string | null
+          pending_count?: number
+          processed_count?: number
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          import_amount?: number
+          month?: string | null
+          orders_data?: string | null
+          pending_count?: number
+          processed_count?: number
+          total_amount?: number
+        }
+        Relationships: []
+      }
+      mto_shipments: {
+        Row: {
+          budgetamount: number
+          created_at: string
+          id: string
+          monthtotal: number
+          productgroup: string
+          shipamount: number
+          shipnotinvoiced: number
+        }
+        Insert: {
+          budgetamount?: number
+          created_at?: string
+          id?: string
+          monthtotal?: number
+          productgroup: string
+          shipamount?: number
+          shipnotinvoiced?: number
+        }
+        Update: {
+          budgetamount?: number
+          created_at?: string
+          id?: string
+          monthtotal?: number
+          productgroup?: string
+          shipamount?: number
+          shipnotinvoiced?: number
+        }
+        Relationships: []
+      }
+      mto_status: {
+        Row: {
+          Country: string | null
+          "Cr Override": boolean | null
+          "Credit Hold": boolean | null
+          "Credit Hold Source": string | null
+          "Credit Limit": number | null
+          "Cust. ID": string | null
+          dd: string
+          Description: string | null
+          "Entry Person": string | null
+          FOB: string | null
+          "Memo Description": string | null
+          Name: string | null
+          NextRelDt: string | null
+          "On Hold": boolean | null
+          Order: number | null
+          "Order Amount": number | null
+          "Order Date": string | null
+          PO: string | null
+          "Ship By": string | null
+          Site: number | null
+          Terms: string | null
+        }
+        Insert: {
+          Country?: string | null
+          "Cr Override"?: boolean | null
+          "Credit Hold"?: boolean | null
+          "Credit Hold Source"?: string | null
+          "Credit Limit"?: number | null
+          "Cust. ID"?: string | null
+          dd?: string
+          Description?: string | null
+          "Entry Person"?: string | null
+          FOB?: string | null
+          "Memo Description"?: string | null
+          Name?: string | null
+          NextRelDt?: string | null
+          "On Hold"?: boolean | null
+          Order?: number | null
+          "Order Amount"?: number | null
+          "Order Date"?: string | null
+          PO?: string | null
+          "Ship By"?: string | null
+          Site?: number | null
+          Terms?: string | null
+        }
+        Update: {
+          Country?: string | null
+          "Cr Override"?: boolean | null
+          "Credit Hold"?: boolean | null
+          "Credit Hold Source"?: string | null
+          "Credit Limit"?: number | null
+          "Cust. ID"?: string | null
+          dd?: string
+          Description?: string | null
+          "Entry Person"?: string | null
+          FOB?: string | null
+          "Memo Description"?: string | null
+          Name?: string | null
+          NextRelDt?: string | null
+          "On Hold"?: boolean | null
+          Order?: number | null
+          "Order Amount"?: number | null
+          "Order Date"?: string | null
+          PO?: string | null
+          "Ship By"?: string | null
+          Site?: number | null
+          Terms?: string | null
+        }
+        Relationships: []
+      }
+      OCW_magwiz: {
+        Row: {
+          ambient_temperature_A: number | null
+          ambient_temperature_B: number | null
+          ambient_temperature_C: number | null
+          backbar_dimension: string | null
+          backbar_mass: number | null
+          coil_height: number | null
+          cold_ampere_turns_A: number | null
+          cold_ampere_turns_B: number | null
+          cold_ampere_turns_C: number | null
+          cold_current_A: number | null
+          cold_current_B: number | null
+          cold_current_C: number | null
+          conservator_dimension: string | null
+          conservator_mass: number | null
+          coolant_mass: number | null
+          core_backbar_dimension: string | null
+          core_backbar_mass: number | null
+          core_dimension: string | null
+          core_insulator_dimension: string | null
+          core_insulator_mass: number | null
+          core_mass: number | null
+          diameter: number | null
+          expected_rise_A: number | null
+          expected_rise_B: number | null
+          expected_rise_C: number | null
+          filename: string
+          hot_ampere_turns_A: number | null
+          hot_ampere_turns_B: number | null
+          hot_ampere_turns_C: number | null
+          hot_current_A: number | null
+          hot_current_B: number | null
+          hot_current_C: number | null
+          magnet_dimension: string | null
+          maximum_rise_A: number | null
+          maximum_rise_B: number | null
+          maximum_rise_C: number | null
+          mean_length_of_turn: number | null
+          number_of_sections: number | null
+          number_of_turns: string | null
+          radial_depth: number | null
+          resistance_A: number | null
+          resistance_B: number | null
+          resistance_C: number | null
+          sealing_plate_dimension: string | null
+          sealing_plate_mass: number | null
+          side_pole_dimension: string | null
+          side_pole_mass: number | null
+          surface_area: number | null
+          temperature_rise_A: number | null
+          temperature_rise_B: number | null
+          temperature_rise_C: number | null
+          total_mass: number | null
+          voltage_A: number | null
+          voltage_B: number | null
+          voltage_C: number | null
+          watts_A: number | null
+          watts_B: number | null
+          watts_C: number | null
+          winding_dimension: string | null
+          winding_mass: number | null
+          wires_in_parallel: number | null
+        }
+        Insert: {
+          ambient_temperature_A?: number | null
+          ambient_temperature_B?: number | null
+          ambient_temperature_C?: number | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_A?: number | null
+          cold_ampere_turns_B?: number | null
+          cold_ampere_turns_C?: number | null
+          cold_current_A?: number | null
+          cold_current_B?: number | null
+          cold_current_C?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: number | null
+          core_mass?: number | null
+          diameter?: number | null
+          expected_rise_A?: number | null
+          expected_rise_B?: number | null
+          expected_rise_C?: number | null
+          filename: string
+          hot_ampere_turns_A?: number | null
+          hot_ampere_turns_B?: number | null
+          hot_ampere_turns_C?: number | null
+          hot_current_A?: number | null
+          hot_current_B?: number | null
+          hot_current_C?: number | null
+          magnet_dimension?: string | null
+          maximum_rise_A?: number | null
+          maximum_rise_B?: number | null
+          maximum_rise_C?: number | null
+          mean_length_of_turn?: number | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          radial_depth?: number | null
+          resistance_A?: number | null
+          resistance_B?: number | null
+          resistance_C?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: number | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          surface_area?: number | null
+          temperature_rise_A?: number | null
+          temperature_rise_B?: number | null
+          temperature_rise_C?: number | null
+          total_mass?: number | null
+          voltage_A?: number | null
+          voltage_B?: number | null
+          voltage_C?: number | null
+          watts_A?: number | null
+          watts_B?: number | null
+          watts_C?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Update: {
+          ambient_temperature_A?: number | null
+          ambient_temperature_B?: number | null
+          ambient_temperature_C?: number | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_A?: number | null
+          cold_ampere_turns_B?: number | null
+          cold_ampere_turns_C?: number | null
+          cold_current_A?: number | null
+          cold_current_B?: number | null
+          cold_current_C?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: number | null
+          core_mass?: number | null
+          diameter?: number | null
+          expected_rise_A?: number | null
+          expected_rise_B?: number | null
+          expected_rise_C?: number | null
+          filename?: string
+          hot_ampere_turns_A?: number | null
+          hot_ampere_turns_B?: number | null
+          hot_ampere_turns_C?: number | null
+          hot_current_A?: number | null
+          hot_current_B?: number | null
+          hot_current_C?: number | null
+          magnet_dimension?: string | null
+          maximum_rise_A?: number | null
+          maximum_rise_B?: number | null
+          maximum_rise_C?: number | null
+          mean_length_of_turn?: number | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          radial_depth?: number | null
+          resistance_A?: number | null
+          resistance_B?: number | null
+          resistance_C?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: number | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          surface_area?: number | null
+          temperature_rise_A?: number | null
+          temperature_rise_B?: number | null
+          temperature_rise_C?: number | null
+          total_mass?: number | null
+          voltage_A?: number | null
+          voltage_B?: number | null
+          voltage_C?: number | null
+          watts_A?: number | null
+          watts_B?: number | null
+          watts_C?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Relationships: []
+      }
+      OCW_units: {
+        Row: {
+          ambient_temperature_A: number | null
+          ambient_temperature_B: number | null
+          ambient_temperature_C: number | null
+          backbar_dimension: string | null
+          backbar_mass: number | null
+          coil_height: number | null
+          cold_ampere_turns_A: number | null
+          cold_ampere_turns_B: number | null
+          cold_ampere_turns_C: number | null
+          cold_current_A: number | null
+          cold_current_B: number | null
+          cold_current_C: number | null
+          conservator_dimension: string | null
+          conservator_mass: number | null
+          coolant_mass: number | null
+          core_backbar_dimension: string | null
+          core_backbar_mass: number | null
+          core_dimension: string | null
+          core_insulator_dimension: string | null
+          core_insulator_mass: number | null
+          core_mass: number | null
+          diameter: number | null
+          expected_rise_A: number | null
+          expected_rise_B: number | null
+          expected_rise_C: number | null
+          filename: string
+          hot_ampere_turns_A: number | null
+          hot_ampere_turns_B: number | null
+          hot_ampere_turns_C: number | null
+          hot_current_A: number | null
+          hot_current_B: number | null
+          hot_current_C: number | null
+          magnet_dimension: string | null
+          maximum_rise_A: number | null
+          maximum_rise_B: number | null
+          maximum_rise_C: number | null
+          mean_length_of_turn: number | null
+          number_of_sections: number | null
+          number_of_turns: string | null
+          radial_depth: number | null
+          resistance_A: number | null
+          resistance_B: number | null
+          resistance_C: number | null
+          sealing_plate_dimension: string | null
+          sealing_plate_mass: number | null
+          side_pole_dimension: string | null
+          side_pole_mass: number | null
+          surface_area: number | null
+          temperature_rise_A: number | null
+          temperature_rise_B: number | null
+          temperature_rise_C: number | null
+          total_mass: number | null
+          voltage_A: number | null
+          voltage_B: number | null
+          voltage_C: number | null
+          watts_A: number | null
+          watts_B: number | null
+          watts_C: number | null
+          winding_dimension: string | null
+          winding_mass: number | null
+          wires_in_parallel: number | null
+        }
+        Insert: {
+          ambient_temperature_A?: number | null
+          ambient_temperature_B?: number | null
+          ambient_temperature_C?: number | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_A?: number | null
+          cold_ampere_turns_B?: number | null
+          cold_ampere_turns_C?: number | null
+          cold_current_A?: number | null
+          cold_current_B?: number | null
+          cold_current_C?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: number | null
+          core_mass?: number | null
+          diameter?: number | null
+          expected_rise_A?: number | null
+          expected_rise_B?: number | null
+          expected_rise_C?: number | null
+          filename: string
+          hot_ampere_turns_A?: number | null
+          hot_ampere_turns_B?: number | null
+          hot_ampere_turns_C?: number | null
+          hot_current_A?: number | null
+          hot_current_B?: number | null
+          hot_current_C?: number | null
+          magnet_dimension?: string | null
+          maximum_rise_A?: number | null
+          maximum_rise_B?: number | null
+          maximum_rise_C?: number | null
+          mean_length_of_turn?: number | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          radial_depth?: number | null
+          resistance_A?: number | null
+          resistance_B?: number | null
+          resistance_C?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: number | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          surface_area?: number | null
+          temperature_rise_A?: number | null
+          temperature_rise_B?: number | null
+          temperature_rise_C?: number | null
+          total_mass?: number | null
+          voltage_A?: number | null
+          voltage_B?: number | null
+          voltage_C?: number | null
+          watts_A?: number | null
+          watts_B?: number | null
+          watts_C?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Update: {
+          ambient_temperature_A?: number | null
+          ambient_temperature_B?: number | null
+          ambient_temperature_C?: number | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_A?: number | null
+          cold_ampere_turns_B?: number | null
+          cold_ampere_turns_C?: number | null
+          cold_current_A?: number | null
+          cold_current_B?: number | null
+          cold_current_C?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: number | null
+          core_mass?: number | null
+          diameter?: number | null
+          expected_rise_A?: number | null
+          expected_rise_B?: number | null
+          expected_rise_C?: number | null
+          filename?: string
+          hot_ampere_turns_A?: number | null
+          hot_ampere_turns_B?: number | null
+          hot_ampere_turns_C?: number | null
+          hot_current_A?: number | null
+          hot_current_B?: number | null
+          hot_current_C?: number | null
+          magnet_dimension?: string | null
+          maximum_rise_A?: number | null
+          maximum_rise_B?: number | null
+          maximum_rise_C?: number | null
+          mean_length_of_turn?: number | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          radial_depth?: number | null
+          resistance_A?: number | null
+          resistance_B?: number | null
+          resistance_C?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: number | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          surface_area?: number | null
+          temperature_rise_A?: number | null
+          temperature_rise_B?: number | null
+          temperature_rise_C?: number | null
+          total_mass?: number | null
+          voltage_A?: number | null
+          voltage_B?: number | null
+          voltage_C?: number | null
+          watts_A?: number | null
+          watts_B?: number | null
+          watts_C?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Relationships: []
+      }
+      photos: {
+        Row: {
+          content_type: string
+          created_at: string | null
+          filename: string
+          id: string
+          test_result_id: string
+          url: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string | null
+          filename: string
+          id: string
+          test_result_id: string
+          url: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string | null
+          filename?: string
+          id?: string
+          test_result_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_test_result_id_fkey"
+            columns: ["test_result_id"]
+            isOneToOne: false
+            referencedRelation: "test_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_knowledge_embeddings: {
+        Row: {
+          chunk_title: string
+          content_md: string
+          created_at: string | null
+          embedding: string
+          id: string
+          is_quiz_question: boolean | null
+          product_line: string
+          source_doc: string | null
+          source_page: number | null
+          tags: string[] | null
+          training_level: string | null
+        }
+        Insert: {
+          chunk_title: string
+          content_md: string
+          created_at?: string | null
+          embedding: string
+          id?: string
+          is_quiz_question?: boolean | null
+          product_line: string
+          source_doc?: string | null
+          source_page?: number | null
+          tags?: string[] | null
+          training_level?: string | null
+        }
+        Update: {
+          chunk_title?: string
+          content_md?: string
+          created_at?: string | null
+          embedding?: string
+          id?: string
+          is_quiz_question?: boolean | null
+          product_line?: string
+          source_doc?: string | null
+          source_page?: number | null
+          tags?: string[] | null
+          training_level?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          conversation_preferences: string | null
+          created_at: string
+          encryption_salt: string | null
+          first_name: string | null
+          id: string
+          is_demo_user: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          conversation_preferences?: string | null
+          created_at?: string
+          encryption_salt?: string | null
+          first_name?: string | null
+          id: string
+          is_demo_user?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          conversation_preferences?: string | null
+          created_at?: string
+          encryption_salt?: string | null
+          first_name?: string | null
+          id?: string
+          is_demo_user?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prospector: {
+        Row: {
+          csv: string | null
+          cust_Latitude: string | null
+          cust_Longitude: string | null
+          cust_name: string | null
+          customer_address: string | null
+          group: string | null
+          order: number | null
+          part: string | null
+          part_desc: string | null
+          qty: number | null
+          ship_date: string | null
+          shipto_address: string | null
+          shipto_Latitude: string | null
+          shipto_Longitude: string | null
+          terrotory: string | null
+          uuid: string
+          value: number | null
+        }
+        Insert: {
+          csv?: string | null
+          cust_Latitude?: string | null
+          cust_Longitude?: string | null
+          cust_name?: string | null
+          customer_address?: string | null
+          group?: string | null
+          order?: number | null
+          part?: string | null
+          part_desc?: string | null
+          qty?: number | null
+          ship_date?: string | null
+          shipto_address?: string | null
+          shipto_Latitude?: string | null
+          shipto_Longitude?: string | null
+          terrotory?: string | null
+          uuid?: string
+          value?: number | null
+        }
+        Update: {
+          csv?: string | null
+          cust_Latitude?: string | null
+          cust_Longitude?: string | null
+          cust_name?: string | null
+          customer_address?: string | null
+          group?: string | null
+          order?: number | null
+          part?: string | null
+          part_desc?: string | null
+          qty?: number | null
+          ship_date?: string | null
+          shipto_address?: string | null
+          shipto_Latitude?: string | null
+          shipto_Longitude?: string | null
+          terrotory?: string | null
+          uuid?: string
+          value?: number | null
+        }
+        Relationships: []
+      }
+      pt_entities: {
         Row: {
           address: string | null
           contact_email: string | null
@@ -547,28 +2320,7 @@ export type Database = {
         }
         Relationships: []
       }
-      inspectors: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      locations: {
+      pt_locations: {
         Row: {
           created_at: string | null
           description: string | null
@@ -595,105 +2347,321 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_entity"
+            foreignKeyName: "pt_locations_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "locations_entity_id_fkey"
-            columns: ["entity_id"]
-            isOneToOne: false
-            referencedRelation: "entities"
+            referencedRelation: "pt_entities"
             referencedColumns: ["id"]
           },
         ]
       }
-      manufacturing_jobs: {
+      pt_test_results: {
         Row: {
-          asm: string
-          complete: boolean
-          created_at: string
-          customer: string
-          dept: string
-          due_date: string
-          est_prod_hours: number
+          attachment: string | null
+          avg_pull: number | null
+          comment: string | null
+          created_at: string | null
+          expected_max: number | null
+          expected_min: number | null
           id: string
-          job_num: string
+          inspector_name: string | null
+          location_id: string | null
+          magnet_id: string | null
+          photo_path: string | null
+          photo_url: string | null
+          pull_test_1: number | null
+          pull_test_2: number | null
+          pull_test_3: number | null
+          pull_test_4: number | null
+          pull_test_5: number | null
+          pull_test_6: number | null
+          serial_number: string | null
+          status: string | null
+          test_date: string | null
+          test_equipment: string | null
+          test_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attachment?: string | null
+          avg_pull?: number | null
+          comment?: string | null
+          created_at?: string | null
+          expected_max?: number | null
+          expected_min?: number | null
+          id: string
+          inspector_name?: string | null
+          location_id?: string | null
+          magnet_id?: string | null
+          photo_path?: string | null
+          photo_url?: string | null
+          pull_test_1?: number | null
+          pull_test_2?: number | null
+          pull_test_3?: number | null
+          pull_test_4?: number | null
+          pull_test_5?: number | null
+          pull_test_6?: number | null
+          serial_number?: string | null
+          status?: string | null
+          test_date?: string | null
+          test_equipment?: string | null
+          test_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attachment?: string | null
+          avg_pull?: number | null
+          comment?: string | null
+          created_at?: string | null
+          expected_max?: number | null
+          expected_min?: number | null
+          id?: string
+          inspector_name?: string | null
+          location_id?: string | null
+          magnet_id?: string | null
+          photo_path?: string | null
+          photo_url?: string | null
+          pull_test_1?: number | null
+          pull_test_2?: number | null
+          pull_test_3?: number | null
+          pull_test_4?: number | null
+          pull_test_5?: number | null
+          pull_test_6?: number | null
+          serial_number?: string | null
+          status?: string | null
+          test_date?: string | null
+          test_equipment?: string | null
+          test_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pt_test_results_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "pt_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pto_requests: {
+        Row: {
+          approved_by: string | null
+          approved_date: string | null
+          created_at: string
+          employee_id: string
+          end_date: string
+          hours_requested: number
+          id: string
           notes: string | null
-          op_desc: string
-          opr: string
-          part: string
-          part_desc: string
-          prod_qty: number
+          request_type: string
           start_date: string
+          status: string
           updated_at: string
         }
         Insert: {
-          asm: string
-          complete?: boolean
+          approved_by?: string | null
+          approved_date?: string | null
           created_at?: string
-          customer: string
-          dept: string
-          due_date: string
-          est_prod_hours: number
+          employee_id: string
+          end_date: string
+          hours_requested: number
           id?: string
-          job_num: string
           notes?: string | null
-          op_desc: string
-          opr: string
-          part: string
-          part_desc: string
-          prod_qty: number
+          request_type: string
           start_date: string
+          status?: string
           updated_at?: string
         }
         Update: {
-          asm?: string
-          complete?: boolean
+          approved_by?: string | null
+          approved_date?: string | null
           created_at?: string
-          customer?: string
-          dept?: string
-          due_date?: string
-          est_prod_hours?: number
+          employee_id?: string
+          end_date?: string
+          hours_requested?: number
           id?: string
-          job_num?: string
           notes?: string | null
-          op_desc?: string
-          opr?: string
-          part?: string
-          part_desc?: string
-          prod_qty?: number
+          request_type?: string
           start_date?: string
+          status?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pto_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pulltest_entities: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
-      photos: {
+      reports: {
         Row: {
-          content_type: string | null
+          access_token: string | null
+          coming_soon: boolean | null
           created_at: string | null
-          filename: string | null
+          description: string
+          icon_path: string | null
           id: string
-          test_result_id: string | null
-          url: string | null
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          url: string
+          video_url: string | null
         }
         Insert: {
-          content_type?: string | null
+          access_token?: string | null
+          coming_soon?: boolean | null
           created_at?: string | null
-          filename?: string | null
-          id: string
-          test_result_id?: string | null
-          url?: string | null
+          description: string
+          icon_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          url: string
+          video_url?: string | null
         }
         Update: {
-          content_type?: string | null
+          access_token?: string | null
+          coming_soon?: boolean | null
           created_at?: string | null
-          filename?: string | null
+          description?: string
+          icon_path?: string | null
           id?: string
-          test_result_id?: string | null
-          url?: string | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          url?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      sales_tools: {
+        Row: {
+          coming_soon: boolean | null
+          created_at: string | null
+          description: string
+          icon_path: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          token: string | null
+          updated_at: string | null
+          url: string
+          video_url: string | null
+        }
+        Insert: {
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description: string
+          icon_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          token?: string | null
+          updated_at?: string | null
+          url: string
+          video_url?: string | null
+        }
+        Update: {
+          coming_soon?: boolean | null
+          created_at?: string | null
+          description?: string
+          icon_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          token?: string | null
+          updated_at?: string | null
+          url?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      search_analytics: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          geocoded_lat: number | null
+          geocoded_lng: number | null
+          google_results_count: number | null
+          id: string
+          ip_address: unknown | null
+          prospector_results_count: number | null
+          search_duration_ms: number | null
+          search_location: string
+          search_query: string | null
+          search_radius: number
+          total_results_count: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          geocoded_lat?: number | null
+          geocoded_lng?: number | null
+          google_results_count?: number | null
+          id?: string
+          ip_address?: unknown | null
+          prospector_results_count?: number | null
+          search_duration_ms?: number | null
+          search_location: string
+          search_query?: string | null
+          search_radius?: number
+          total_results_count?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          geocoded_lat?: number | null
+          geocoded_lng?: number | null
+          google_results_count?: number | null
+          id?: string
+          ip_address?: unknown | null
+          prospector_results_count?: number | null
+          search_duration_ms?: number | null
+          search_location?: string
+          search_query?: string | null
+          search_radius?: number
+          total_results_count?: number | null
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -701,7 +2669,7 @@ export type Database = {
         Row: {
           attachment: string | null
           comments: string | null
-          created_at: string
+          created_at: string | null
           entity_id: string | null
           equipment: string
           expected_max: string | null
@@ -710,36 +2678,36 @@ export type Database = {
           inspector_name: string
           is_passed: boolean | null
           location: string | null
-          location_id: string | null
           photo_urls: string[] | null
-          serial_number: string | null
-          test_average: string | null
+          serial_number: string
+          test_average: string
           test_type: string
           test_values: string[]
+          updated_at: string | null
         }
         Insert: {
           attachment?: string | null
           comments?: string | null
-          created_at?: string
+          created_at?: string | null
           entity_id?: string | null
           equipment: string
           expected_max?: string | null
           expected_min?: string | null
-          id: string
+          id?: string
           inspector_name: string
           is_passed?: boolean | null
           location?: string | null
-          location_id?: string | null
           photo_urls?: string[] | null
-          serial_number?: string | null
-          test_average?: string | null
+          serial_number: string
+          test_average: string
           test_type: string
           test_values: string[]
+          updated_at?: string | null
         }
         Update: {
           attachment?: string | null
           comments?: string | null
-          created_at?: string
+          created_at?: string | null
           entity_id?: string | null
           equipment?: string
           expected_max?: string | null
@@ -748,12 +2716,12 @@ export type Database = {
           inspector_name?: string
           is_passed?: boolean | null
           location?: string | null
-          location_id?: string | null
           photo_urls?: string[] | null
-          serial_number?: string | null
-          test_average?: string | null
+          serial_number?: string
+          test_average?: string
           test_type?: string
           test_values?: string[]
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -763,27 +2731,604 @@ export type Database = {
             referencedRelation: "entities"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      training_data: {
+        Row: {
+          content: Json
+          created_at: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          embedding: string | null
+          exact_match_fields: string[] | null
+          id: string
+          scope: Database["public"]["Enums"]["training_data_scope"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          embedding?: string | null
+          exact_match_fields?: string[] | null
+          id?: string
+          scope?: Database["public"]["Enums"]["training_data_scope"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          embedding?: string | null
+          exact_match_fields?: string[] | null
+          id?: string
+          scope?: Database["public"]["Enums"]["training_data_scope"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transcriptions: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          id: string
+          recording_id: string | null
+          text: string
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          recording_id?: string | null
+          text: string
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          recording_id?: string | null
+          text?: string
+          user_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "test_results_location_id_fkey"
-            columns: ["location_id"]
+            foreignKeyName: "transcriptions_recording_id_fkey"
+            columns: ["recording_id"]
             isOneToOne: false
-            referencedRelation: "locations"
+            referencedRelation: "meeting_recordings"
             referencedColumns: ["id"]
           },
         ]
       }
+      user_conversations_embeddings: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          parent_conversation_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          parent_conversation_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          parent_conversation_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_conversations_embeddings_parent_conversation_id_fkey"
+            columns: ["parent_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_favorite_app_items: {
+        Row: {
+          app_item_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          app_item_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          app_item_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_favorite_app_items_app_item_id_fkey"
+            columns: ["app_item_id"]
+            isOneToOne: false
+            referencedRelation: "app_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_feedback: {
+        Row: {
+          content: string
+          created_at: string
+          feedback_type: string
+          id: string
+          is_anonymous: boolean
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          is_anonymous?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          is_anonymous?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message_type: string
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          default_location: string
+          enabled_functions: string[] | null
+          id: string
+          theme: string | null
+          updated_at: string | null
+          user_guide_progress: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_location?: string
+          enabled_functions?: string[] | null
+          id?: string
+          theme?: string | null
+          updated_at?: string | null
+          user_guide_progress?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          default_location?: string
+          enabled_functions?: string[] | null
+          id?: string
+          theme?: string | null
+          updated_at?: string | null
+          user_guide_progress?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_training_submissions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          content: Json
+          document_type: string
+          embedding: string | null
+          id: string
+          scope: Database["public"]["Enums"]["training_data_scope"] | null
+          status: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content: Json
+          document_type: string
+          embedding?: string | null
+          id?: string
+          scope?: Database["public"]["Enums"]["training_data_scope"] | null
+          status?: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content?: Json
+          document_type?: string
+          embedding?: string | null
+          id?: string
+          scope?: Database["public"]["Enums"]["training_data_scope"] | null
+          status?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      user_unread_messages: {
+        Row: {
+          recipient_id: string | null
+          unread_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      assign_user_role: {
+        Args: { role_to_assign: string; target_user_id: string }
+        Returns: boolean
+      }
+      backfill_training_data_embeddings: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      calculate_rolling_points: {
+        Args: { emp_id: string }
+        Returns: number
+      }
+      check_embedding_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          entries_missing_embeddings: number
+          entries_with_embeddings: number
+          total_entries: number
+        }[]
+      }
+      clean_old_weather_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_admin_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_license: {
+        Args: {
+          company_name_param: string
+          contact_email_param: string
+          contact_name_param?: string
+        }
+        Returns: {
+          license_code: string
+          license_id: string
+        }[]
+      }
+      expire_old_points: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_license_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_available_employees: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          displayname: string
+          employee_id: string
+          userprincipalname: string
+        }[]
+      }
+      get_employee_by_user_id: {
+        Args: { user_id_param: string }
+        Returns: {
+          city: string
+          country: string
+          department: string
+          displayname: string
+          employee_id: string
+          jobtitle: string
+          officelocation: string
+          state: string
+          user_id: string
+          userprincipalname: string
+        }[]
+      }
+      get_or_create_conversation_id: {
+        Args: { user1_id: string; user2_id: string }
+        Returns: string
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      has_user_role: {
+        Args: { role_param: string; user_id_param: string }
+        Returns: boolean
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      is_demo_user: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
+      log_admin_action: {
+        Args: {
+          action_type: string
+          new_values?: Json
+          old_values?: Json
+          record_id?: string
+          table_name: string
+        }
+        Returns: undefined
+      }
+      log_application_usage: {
+        Args:
+          | { action: string; app_id: string }
+          | { action: string; app_id: string; session_id?: string }
+        Returns: string
+      }
+      match_documents: {
+        Args: {
+          match_count: number
+          match_threshold: number
+          query_embedding: string
+        }
+        Returns: {
+          content: Json
+          id: string
+          similarity: number
+        }[]
+      }
+      match_documents_with_scope: {
+        Args: {
+          include_user_scope: boolean
+          match_count: number
+          match_threshold: number
+          query_embedding: string
+          user_id: string
+        }
+        Returns: {
+          content: Json
+          document_type: string
+          id: string
+          scope: string
+          similarity: number
+          user_id: string
+        }[]
+      }
+      search_product_knowledge: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_text: string
+        }
+        Returns: {
+          chunk_title: string
+          content_md: string
+          id: string
+          product_line: string
+          similarity: number
+          source_doc: string
+        }[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      update_employee_data: {
+        Args: {
+          city_param: string
+          country_param: string
+          department_param: string
+          jobtitle_param: string
+          officelocation_param: string
+          state_param: string
+          user_id_param: string
+        }
+        Returns: undefined
+      }
+      validate_iframe_session: {
+        Args: { token_hash_param: string }
+        Returns: {
+          is_valid: boolean
+          user_data: Json
+          user_id: string
+        }[]
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_type: "application" | "calculator" | "sales_tool" | "report"
+      document_type: "contact" | "company" | "sales" | "purchase_order"
+      function_type:
+        | "magnetism_calculator"
+        | "five_why"
+        | "equipment_selection"
+        | "sales_map"
+        | "stock_calculator"
+        | "qr_generator"
+        | "prospect_finder"
+        | "bath_rail_designer"
+        | "md_flow_calculator"
+        | "five_s"
+        | "fmea"
+      scroll_pattern_type: "continuous" | "fade" | "slide"
+      training_data_scope: "user" | "global"
+      vote_type: "up" | "down"
     }
     CompositeTypes: {
-      [_ in never]: never
+      metadata_type: {
+        title: string | null
+        description: string | null
+        source: string | null
+        timestamp: string | null
+      }
     }
   }
 }
@@ -907,6 +3452,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_type: ["application", "calculator", "sales_tool", "report"],
+      document_type: ["contact", "company", "sales", "purchase_order"],
+      function_type: [
+        "magnetism_calculator",
+        "five_why",
+        "equipment_selection",
+        "sales_map",
+        "stock_calculator",
+        "qr_generator",
+        "prospect_finder",
+        "bath_rail_designer",
+        "md_flow_calculator",
+        "five_s",
+        "fmea",
+      ],
+      scroll_pattern_type: ["continuous", "fade", "slide"],
+      training_data_scope: ["user", "global"],
+      vote_type: ["up", "down"],
+    },
   },
 } as const
