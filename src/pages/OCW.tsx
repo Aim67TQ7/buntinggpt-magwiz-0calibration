@@ -205,7 +205,7 @@ const OCW = () => {
               Back to Calculator
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">OCW Magnet Specifications</h1>
+          <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
         </div>
       </div>
 
@@ -216,7 +216,7 @@ const OCW = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">OCW</span>
+              <span className="text-sm font-medium">BMR</span>
               <Select value={selectedPrefix?.toString()} onValueChange={(value) => setSelectedPrefix(Number(value))}>
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="000" />
