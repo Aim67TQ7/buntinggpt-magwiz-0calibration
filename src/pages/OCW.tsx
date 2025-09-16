@@ -5,9 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Download } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
-import { downloadOCWWindingSheet } from "@/components/OCWWindingSheetPDF";
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -112,26 +111,25 @@ const OCW = () => {
   const fetchOCWData = async () => {
     try {
       setLoading(true);
-      
-      // Use type assertion to access BMR_magwiz table
-      const { data, error } = await (supabase as any).from('BMR_magwiz').select('*');
-      
+      const {
+        data,
+        error
+      } = await supabase.from('OCW_magwiz').select('*');
       if (error) throw error;
       setOcwData(data || []);
-      
-      // Extract unique prefixes and suffixes
+
+      // Extract unique prefixes and suffixes from database columns
       const prefixSet = new Set<number>();
       const suffixSet = new Set<number>();
-      (data || []).forEach((record: any) => {
+      (data || []).forEach(record => {
         if (record.prefix !== null && record.prefix !== undefined) prefixSet.add(record.prefix);
         if (record.suffix !== null && record.suffix !== undefined) suffixSet.add(record.suffix);
       });
-
       setPrefixes(Array.from(prefixSet).sort((a, b) => a - b));
       setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
       setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
     } catch (error) {
-      console.error('Error fetching BMR data:', error);
+      console.error('Error fetching OCW data:', error);
     } finally {
       setLoading(false);
     }
@@ -205,7 +203,7 @@ const OCW = () => {
               Back to Calculator
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
+          <h1 className="text-3xl font-bold">OCW Magnet Specifications</h1>
         </div>
       </div>
 
@@ -216,19 +214,10 @@ const OCW = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">BMR</span>
-              <Select value={selectedPrefix?.toString()} onValueChange={(value) => setSelectedPrefix(Number(value))}>
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder="000" />
-                </SelectTrigger>
-                <SelectContent>
-                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
-                      {prefix}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
+              <span className="text-sm font-medium">OCW</span>
+              
               <span className="text-sm">-</span>
-              <Select value={selectedSuffix?.toString()} onValueChange={(value) => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
+              <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="00" />
                 </SelectTrigger>
@@ -240,23 +229,10 @@ const OCW = () => {
               </Select>
             </div>
             {selectedRecord && <div className="mt-4 p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Selected: {selectedRecord.filename}</p>
-                    <p className="text-lg font-semibold text-primary mt-2">
-                      Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={() => downloadOCWWindingSheet(selectedRecord)}
-                    className="flex items-center gap-2"
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Download size={16} />
-                    Download Winding Sheet
-                  </Button>
-                </div>
+                <p className="font-medium">Selected: {selectedRecord.filename}</p>
+                <p className="text-lg font-semibold text-primary mt-2">
+                  Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
+                </p>
               </div>}
           </CardContent>
         </Card>
