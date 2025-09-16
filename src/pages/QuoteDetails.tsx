@@ -56,42 +56,83 @@ const QuoteDetails = () => {
     try {
       setLoading(true);
       
-      // Fetch specific quote
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('BMR_quotes')
-        .select('*')
-        .eq('id', id)
-        .single();
+      // Using mock data since BMR tables don't exist yet
+      const mockQuote: Quote = {
+        id: id,
+        quote_number: `Q2024-${id.toString().padStart(3, '0')}`,
+        product_id: 1,
+        date_generated: Math.floor(Date.now() / 1000),
+        verified: "true",
+        date_verified: new Date().toISOString()
+      };
 
-      if (quoteError) throw quoteError;
+      const mockQuoteItems: QuoteItem[] = [
+        {
+          "# item_id": 1,
+          quote_id: id,
+          amount: 2,
+          weight: 150.5,
+          cost: 2500,
+          name: "Magnetic Separator Core"
+        },
+        {
+          "# item_id": 2,
+          quote_id: id,
+          amount: 1,
+          weight: 75.2,
+          cost: 1200,
+          name: "Control Unit"
+        },
+        {
+          "# item_id": 3,
+          quote_id: id,
+          amount: 4,
+          weight: 25.0,
+          cost: 300,
+          name: "Mounting Brackets"
+        }
+      ];
 
-      // Fetch quote items for this quote
-      const { data: quoteItemsData, error: quoteItemsError } = await supabase
-        .from('BMR_quote_items')
-        .select('*')
-        .eq('quote_id', id);
+      const mockProducts: Product[] = [
+        { id: 1, name: "Heavy Duty Magnetic Separator" },
+        { id: 2, name: "Compact Magnetic Separator" }
+      ];
 
-      if (quoteItemsError) throw quoteItemsError;
+      const mockBomItems: BOMItem[] = [
+        {
+          id: 1,
+          bom: 1,
+          material: 101,
+          amount: 4,
+          name: "Steel Core Component"
+        },
+        {
+          id: 2,
+          bom: 1,
+          material: 102,
+          amount: 2,
+          name: "Copper Winding"
+        },
+        {
+          id: 3,
+          bom: 1,
+          material: 103,
+          amount: 8,
+          name: "Permanent Magnets"
+        },
+        {
+          id: 4,
+          bom: 1,
+          material: 104,
+          amount: 1,
+          name: "Control Circuit Board"
+        }
+      ];
 
-      // Fetch products
-      const { data: productsData, error: productsError } = await supabase
-        .from('BMR_products')
-        .select('*');
-
-      if (productsError) throw productsError;
-
-      // Fetch BOM items for this product
-      const { data: bomData, error: bomError } = await supabase
-        .from('BMR_parts')
-        .select('*')
-        .eq('bom', quoteData.product_id);
-
-      if (bomError) throw bomError;
-
-      setQuote(quoteData);
-      setQuoteItems(quoteItemsData || []);
-      setProducts(productsData || []);
-      setBomItems(bomData || []);
+      setQuote(mockQuote);
+      setQuoteItems(mockQuoteItems);
+      setProducts(mockProducts);
+      setBomItems(mockBomItems);
     } catch (error) {
       console.error('Error fetching quote details:', error);
     } finally {

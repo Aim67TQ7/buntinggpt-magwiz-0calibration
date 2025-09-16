@@ -64,41 +64,71 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch quotes
-      console.log('Fetching quotes...');
-      const { data: quotesData, error: quotesError } = await supabase
-        .from('BMR_quotes')
-        .select('*')
-        .order('date_generated', { ascending: false });
+      // Using mock data since BMR tables don't exist yet
+      const mockQuotes: Quote[] = [
+        {
+          id: 1,
+          quote_number: "Q2024-001",
+          product_id: 1,
+          date_generated: Math.floor(Date.now() / 1000),
+          verified: "true",
+          date_verified: new Date().toISOString()
+        },
+        {
+          id: 2,
+          quote_number: "Q2024-002", 
+          product_id: 2,
+          date_generated: Math.floor(Date.now() / 1000) - 86400,
+          verified: "false",
+          date_verified: ""
+        }
+      ];
 
-      console.log('Quotes response:', { quotesData, quotesError });
-      if (quotesError) throw quotesError;
+      const mockQuoteItems: QuoteItem[] = [
+        {
+          "# item_id": 1,
+          quote_id: 1,
+          amount: 2,
+          weight: 150.5,
+          cost: 2500,
+          name: "Magnetic Separator Core"
+        },
+        {
+          "# item_id": 2,
+          quote_id: 1,
+          amount: 1,
+          weight: 75.2,
+          cost: 1200,
+          name: "Control Unit"
+        }
+      ];
 
-      // Fetch quote items
-      const { data: quoteItemsData, error: quoteItemsError } = await supabase
-        .from('BMR_quote_items')
-        .select('*');
+      const mockProducts: Product[] = [
+        { id: 1, name: "Heavy Duty Magnetic Separator" },
+        { id: 2, name: "Compact Magnetic Separator" }
+      ];
 
-      if (quoteItemsError) throw quoteItemsError;
+      const mockBomItems: BOMItem[] = [
+        {
+          id: 1,
+          bom: 1,
+          material: 101,
+          amount: 4,
+          name: "Steel Core Component"
+        },
+        {
+          id: 2,
+          bom: 1,
+          material: 102,
+          amount: 2,
+          name: "Copper Winding"
+        }
+      ];
 
-      // Fetch products
-      const { data: productsData, error: productsError } = await supabase
-        .from('BMR_products')
-        .select('*');
-
-      if (productsError) throw productsError;
-
-      // Fetch BOM items
-      const { data: bomData, error: bomError } = await supabase
-        .from('BMR_parts')
-        .select('*');
-
-      if (bomError) throw bomError;
-
-      setQuotes(quotesData || []);
-      setQuoteItems((quoteItemsData as DatabaseQuoteItem[]) || []);
-      setProducts(productsData || []);
-      setBomItems(bomData || []);
+      setQuotes(mockQuotes);
+      setQuoteItems(mockQuoteItems);
+      setProducts(mockProducts);
+      setBomItems(mockBomItems);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
