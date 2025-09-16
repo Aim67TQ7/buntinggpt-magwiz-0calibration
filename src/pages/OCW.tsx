@@ -295,9 +295,9 @@ const OCW = () => {
           </Collapsible>
 
           {/* Winding Information and Temperature/Electrical Properties - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Winding Information */}
-            <Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Winding Information - 33% width */}
+            <Card className="lg:col-span-1">
               <CardHeader>
                 <CardTitle>Winding Information</CardTitle>
               </CardHeader>
@@ -342,102 +342,86 @@ const OCW = () => {
               </CardContent>
             </Card>
 
-            {/* Temperature and Electrical Properties */}
-            <Card>
+            {/* Temperature and Electrical Properties - 66% width */}
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Temperature and Electrical Properties</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-8">
-                  {/* Temperature Data */}
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Temperature Data</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-4 gap-2 text-xs font-medium">
-                        <span></span>
-                        <span>20</span>
-                        <span>30</span>
-                        <span>40</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Ambient Temperature:</span>
-                        <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
-                        <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
-                        <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Temperature Rise:</span>
-                        <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
-                        <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
-                        <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Maximum Rise:</span>
-                        <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
-                        <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
-                        <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Expected Rise:</span>
-                        <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
-                      </div>
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Temperature and Electrical Data</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="grid grid-cols-4 gap-2 text-xs font-medium">
+                      <span></span>
+                      <span>A/20°C</span>
+                      <span>B/30°C</span>
+                      <span>C/40°C</span>
                     </div>
-                  </div>
-
-                  {/* Electrical Properties */}
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Electrical Properties</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-4 gap-2 text-xs font-medium">
-                        <span></span>
-                        <span>A</span>
-                        <span>B</span>
-                        <span>C</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Voltage:</span>
-                        <span>{selectedRecord.voltage_A || 'N/A'}</span>
-                        <span>{selectedRecord.voltage_B || 'N/A'}</span>
-                        <span>{selectedRecord.voltage_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Resistance:</span>
-                        <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Watts:</span>
-                        <span>{selectedRecord.watts_A || 'N/A'}</span>
-                        <span>{selectedRecord.watts_B || 'N/A'}</span>
-                        <span>{selectedRecord.watts_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Cold Current:</span>
-                        <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Hot Current:</span>
-                        <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
-                        <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Cold Ampere Turns:</span>
-                        <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
-                        <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
-                        <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Hot Ampere Turns:</span>
-                        <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
-                        <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
-                        <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
-                      </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Ambient Temperature:</span>
+                      <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
+                      <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
+                      <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Temperature Rise:</span>
+                      <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
+                      <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
+                      <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Maximum Rise:</span>
+                      <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
+                      <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
+                      <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Expected Rise:</span>
+                      <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Voltage:</span>
+                      <span>{selectedRecord.voltage_A || 'N/A'}</span>
+                      <span>{selectedRecord.voltage_B || 'N/A'}</span>
+                      <span>{selectedRecord.voltage_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Resistance:</span>
+                      <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Watts:</span>
+                      <span>{selectedRecord.watts_A || 'N/A'}</span>
+                      <span>{selectedRecord.watts_B || 'N/A'}</span>
+                      <span>{selectedRecord.watts_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Cold Current:</span>
+                      <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Hot Current:</span>
+                      <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
+                      <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Cold Ampere Turns:</span>
+                      <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
+                      <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
+                      <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      <span>Hot Ampere Turns:</span>
+                      <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
+                      <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
+                      <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
