@@ -224,12 +224,12 @@ const OCW = () => {
           <CardHeader>
             <CardTitle>Select Configuration</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Prefix</label>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">OCW</span>
               <Select value={selectedPrefix} onValueChange={setSelectedPrefix}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select prefix" />
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="000" />
                 </SelectTrigger>
                 <SelectContent>
                   {prefixes.map(prefix => <SelectItem key={prefix} value={prefix}>
@@ -237,12 +237,10 @@ const OCW = () => {
                     </SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Suffix</label>
+              <span className="text-sm">-</span>
               <Select value={selectedSuffix} onValueChange={setSelectedSuffix} disabled={!selectedPrefix}>
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedPrefix ? "Select suffix" : "Select prefix first"} />
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="00" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix}>
