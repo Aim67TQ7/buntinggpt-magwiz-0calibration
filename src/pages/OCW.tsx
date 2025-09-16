@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 
 interface OCWData {
   filename: string;
+  prefix?: string;
+  suffix?: string;
   core_dimension?: string;
   winding_dimension?: string;
   backbar_dimension?: string;
@@ -87,9 +89,8 @@ const OCW = () => {
 
   useEffect(() => {
     if (selectedPrefix && selectedSuffix) {
-      const targetFilename = `${selectedPrefix} OCW ${selectedSuffix}`;
       const matchingRecord = ocwData.find(record => 
-        record.filename === targetFilename
+        (record as any).prefix === selectedPrefix && (record as any).suffix === selectedSuffix
       );
       setSelectedRecord(matchingRecord || null);
     } else {
@@ -101,7 +102,7 @@ const OCW = () => {
   useEffect(() => {
     if (selectedPrefix) {
       const validSuffixes = suffixes.filter(suffix => 
-        ocwData.some(record => record.filename === `${selectedPrefix} OCW ${suffix}`)
+        ocwData.some(record => (record as any).prefix === selectedPrefix && (record as any).suffix === suffix)
       );
       setAvailableSuffixes(validSuffixes);
       // Reset suffix if current selection is not valid for the new prefix
@@ -125,18 +126,13 @@ const OCW = () => {
 
       setOcwData(data || []);
       
-      // Extract unique prefixes and suffixes from filenames that follow "XXX OCW YYY" pattern
+      // Extract unique prefixes and suffixes from database columns
       const prefixSet = new Set<string>();
       const suffixSet = new Set<string>();
       
       (data || []).forEach(record => {
-        const parts = record.filename.split(' OCW ');
-        if (parts.length === 2) {
-          const prefix = parts[0].trim();
-          const suffix = parts[1].trim();
-          if (prefix) prefixSet.add(prefix);
-          if (suffix) suffixSet.add(suffix);
-        }
+        if ((record as any).prefix) prefixSet.add((record as any).prefix);
+        if ((record as any).suffix) suffixSet.add((record as any).suffix);
       });
 
       // Sort numerically instead of alphabetically
