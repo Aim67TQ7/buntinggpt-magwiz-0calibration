@@ -112,26 +112,45 @@ const OCW = () => {
   const fetchOCWData = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('OCW_magwiz').select('*');
-      if (error) throw error;
-      setOcwData(data || []);
+      
+      // Use direct SQL query to access BMR_magwiz table
+      const { data, error } = await supabase.rpc('get_bmr_magwiz_data');
+      
+      if (error) {
+        console.log('RPC failed, trying direct query...', error);
+        // Fallback to direct query using any
+        const result = await (supabase as any).from('BMR_magwiz').select('*');
+        if (result.error) throw result.error;
+        setOcwData(result.data || []);
+        
+        // Extract unique prefixes and suffixes
+        const prefixSet = new Set<number>();
+        const suffixSet = new Set<number>();
+        (result.data || []).forEach((record: any) => {
+          if (record.prefix !== null && record.prefix !== undefined) prefixSet.add(record.prefix);
+          if (record.suffix !== null && record.suffix !== undefined) suffixSet.add(record.suffix);
+        });
 
-      // Extract unique prefixes and suffixes from database columns
-      const prefixSet = new Set<number>();
-      const suffixSet = new Set<number>();
-      (data || []).forEach(record => {
-        if (record.prefix !== null && record.prefix !== undefined) prefixSet.add(record.prefix);
-        if (record.suffix !== null && record.suffix !== undefined) suffixSet.add(record.suffix);
-      });
+        setPrefixes(Array.from(prefixSet).sort((a, b) => a - b));
+        setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+        setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+      } else {
+        setOcwData(data || []);
+        
+        // Extract unique prefixes and suffixes
+        const prefixSet = new Set<number>();
+        const suffixSet = new Set<number>();
+        (data || []).forEach((record: any) => {
+          if (record.prefix !== null && record.prefix !== undefined) prefixSet.add(record.prefix);
+          if (record.suffix !== null && record.suffix !== undefined) suffixSet.add(record.suffix);
+        });
 
-      setPrefixes(Array.from(prefixSet).sort((a, b) => a - b));
-      setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
-      setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+        setPrefixes(Array.from(prefixSet).sort((a, b) => a - b));
+        setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+        setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+      }
     } catch (error) {
-      console.error('Error fetching OCW data:', error);
+      console.error('Error fetching BMR data:', error);
     } finally {
       setLoading(false);
     }
