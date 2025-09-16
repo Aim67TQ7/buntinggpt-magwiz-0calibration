@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface OCWData {
@@ -82,6 +83,7 @@ const OCW = () => {
   const [selectedPrefix, setSelectedPrefix] = useState<string>("");
   const [selectedSuffix, setSelectedSuffix] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [isComponentsOpen, setIsComponentsOpen] = useState(true);
 
   useEffect(() => {
     fetchOCWData();
@@ -237,7 +239,7 @@ const OCW = () => {
             {selectedRecord && (
               <div className="mt-4 p-4 bg-muted rounded-lg">
                 <p className="font-medium">Selected: {selectedRecord.filename}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-lg font-semibold text-primary mt-2">
                   Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
                 </p>
               </div>
@@ -248,40 +250,49 @@ const OCW = () => {
 
       {selectedRecord && (
         <div className="space-y-6">
-          {/* Component Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Component Specifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Dimension</TableHead>
-                    <TableHead>Mass</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {componentData.map((component, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{component.name}</TableCell>
-                      <TableCell>{component.amount}</TableCell>
-                      <TableCell>{component.material}</TableCell>
-                      <TableCell>{component.dimension || 'N/A'}</TableCell>
-                      <TableCell>{component.mass?.toFixed(2) || 'N/A'}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="font-bold">
-                    <TableCell colSpan={4}>Total</TableCell>
-                    <TableCell>{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          {/* Component Table - Collapsible */}
+          <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Component Specifications</CardTitle>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isComponentsOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Dimension</TableHead>
+                        <TableHead>Mass</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {componentData.map((component, index) => (
+                        <TableRow key={index} className="h-10">
+                          <TableCell className="font-medium py-2">{component.name}</TableCell>
+                          <TableCell className="py-2">{component.amount}</TableCell>
+                          <TableCell className="py-2">{component.material}</TableCell>
+                          <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
+                          <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="font-bold h-10">
+                        <TableCell colSpan={4} className="py-2">Total</TableCell>
+                        <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           {/* Winding Information */}
           <Card>
@@ -289,46 +300,53 @@ const OCW = () => {
               <CardTitle>Winding Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Physical Properties */}
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Physical Properties</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Radial Depth:</span>
-                      <span>{selectedRecord.radial_depth || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Coil Height:</span>
-                      <span>{selectedRecord.coil_height || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Number of Sections:</span>
-                      <span>{selectedRecord.number_of_sections || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Diameter:</span>
-                      <span>{selectedRecord.diameter || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Mean Length of Turn:</span>
-                      <span>{selectedRecord.mean_length_of_turn || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Number of Turns:</span>
-                      <span>{selectedRecord.number_of_turns || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Surface Area:</span>
-                      <span>{selectedRecord.surface_area || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Wires in Parallel:</span>
-                      <span>{selectedRecord.wires_in_parallel || 'N/A'}</span>
-                    </div>
+              <div className="space-y-4">
+                <h4 className="font-semibold">Physical Properties</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span>Radial Depth:</span>
+                    <span>{selectedRecord.radial_depth || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Coil Height:</span>
+                    <span>{selectedRecord.coil_height || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Number of Sections:</span>
+                    <span>{selectedRecord.number_of_sections || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Diameter:</span>
+                    <span>{selectedRecord.diameter || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Mean Length of Turn:</span>
+                    <span>{selectedRecord.mean_length_of_turn || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Number of Turns:</span>
+                    <span>{selectedRecord.number_of_turns || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Surface Area:</span>
+                    <span>{selectedRecord.surface_area || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Wires in Parallel:</span>
+                    <span>{selectedRecord.wires_in_parallel || 'N/A'}</span>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Temperature and Electrical Properties */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Temperature and Electrical Properties</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
                 {/* Temperature Data */}
                 <div className="space-y-4">
                   <h4 className="font-semibold">Temperature Data</h4>
