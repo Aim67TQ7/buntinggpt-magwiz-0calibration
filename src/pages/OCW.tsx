@@ -76,6 +76,7 @@ const OCW = () => {
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
   const [prefixes, setPrefixes] = useState<string[]>([]);
   const [suffixes, setSuffixes] = useState<string[]>([]);
+  const [availableSuffixes, setAvailableSuffixes] = useState<string[]>([]);
   const [selectedPrefix, setSelectedPrefix] = useState<string>("");
   const [selectedSuffix, setSelectedSuffix] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -86,13 +87,32 @@ const OCW = () => {
 
   useEffect(() => {
     if (selectedPrefix && selectedSuffix) {
+      const targetFilename = `${selectedPrefix} OCW ${selectedSuffix}`;
       const matchingRecord = ocwData.find(record => 
-        record.filename.startsWith(selectedPrefix) && 
-        record.filename.includes(selectedSuffix)
+        record.filename === targetFilename
       );
       setSelectedRecord(matchingRecord || null);
+    } else {
+      setSelectedRecord(null);
     }
   }, [selectedPrefix, selectedSuffix, ocwData]);
+
+  // Update available suffixes when prefix changes
+  useEffect(() => {
+    if (selectedPrefix) {
+      const validSuffixes = suffixes.filter(suffix => 
+        ocwData.some(record => record.filename === `${selectedPrefix} OCW ${suffix}`)
+      );
+      setAvailableSuffixes(validSuffixes);
+      // Reset suffix if current selection is not valid for the new prefix
+      if (selectedSuffix && !validSuffixes.includes(selectedSuffix)) {
+        setSelectedSuffix("");
+      }
+    } else {
+      setAvailableSuffixes(suffixes);
+      setSelectedSuffix("");
+    }
+  }, [selectedPrefix, suffixes, ocwData, selectedSuffix]);
 
   const fetchOCWData = async () => {
     try {
@@ -105,18 +125,36 @@ const OCW = () => {
 
       setOcwData(data || []);
       
-      // Extract unique prefixes and suffixes from filenames
-      const uniquePrefixes = [...new Set((data || []).map(record => 
-        record.filename.split(' ')[0] || record.filename.substring(0, 3)
-      ))];
+      // Extract unique prefixes and suffixes from filenames that follow "XXX OCW YYY" pattern
+      const prefixSet = new Set<string>();
+      const suffixSet = new Set<string>();
       
-      const uniqueSuffixes = [...new Set((data || []).map(record => {
-        const parts = record.filename.split(' ');
-        return parts[parts.length - 1] || record.filename.substring(record.filename.length - 3);
-      }))];
+      (data || []).forEach(record => {
+        const parts = record.filename.split(' OCW ');
+        if (parts.length === 2) {
+          const prefix = parts[0].trim();
+          const suffix = parts[1].trim();
+          if (prefix) prefixSet.add(prefix);
+          if (suffix) suffixSet.add(suffix);
+        }
+      });
 
-      setPrefixes(uniquePrefixes.sort());
-      setSuffixes(uniqueSuffixes.sort());
+      // Sort numerically instead of alphabetically
+      const sortedPrefixes = Array.from(prefixSet).sort((a, b) => {
+        const numA = parseInt(a);
+        const numB = parseInt(b);
+        return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
+      });
+      
+      const sortedSuffixes = Array.from(suffixSet).sort((a, b) => {
+        const numA = parseInt(a);
+        const numB = parseInt(b);
+        return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
+      });
+
+      setPrefixes(sortedPrefixes);
+      setSuffixes(sortedSuffixes);
+      setAvailableSuffixes(sortedSuffixes);
     } catch (error) {
       console.error('Error fetching OCW data:', error);
     } finally {
@@ -181,12 +219,18 @@ const OCW = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Suffix</label>
-              <Select value={selectedSuffix} onValueChange={setSelectedSuffix}>
+              <Select 
+                value={selectedSuffix} 
+                onValueChange={setSelectedSuffix}
+                disabled={!selectedPrefix}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select suffix" />
+                  <SelectValue 
+                    placeholder={selectedPrefix ? "Select suffix" : "Select prefix first"} 
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {suffixes.map((suffix) => (
+                  {availableSuffixes.map((suffix) => (
                     <SelectItem key={suffix} value={suffix}>
                       {suffix}
                     </SelectItem>
