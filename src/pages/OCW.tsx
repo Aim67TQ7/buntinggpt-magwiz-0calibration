@@ -5,8 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download } from "lucide-react";
 import { Link } from "react-router-dom";
+import { downloadOCWWindingSheet } from "@/components/OCWWindingSheetPDF";
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -239,10 +240,23 @@ const OCW = () => {
               </Select>
             </div>
             {selectedRecord && <div className="mt-4 p-4 bg-muted rounded-lg">
-                <p className="font-medium">Selected: {selectedRecord.filename}</p>
-                <p className="text-lg font-semibold text-primary mt-2">
-                  Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Selected: {selectedRecord.filename}</p>
+                    <p className="text-lg font-semibold text-primary mt-2">
+                      Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => downloadOCWWindingSheet(selectedRecord)}
+                    className="flex items-center gap-2"
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download size={16} />
+                    Download Winding Sheet
+                  </Button>
+                </div>
               </div>}
           </CardContent>
         </Card>
