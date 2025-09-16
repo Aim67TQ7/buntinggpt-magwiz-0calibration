@@ -9,8 +9,8 @@ import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 interface OCWData {
   filename: string;
-  prefix?: string;
-  suffix?: string;
+  prefix?: number;
+  suffix?: number;
   core_dimension?: string;
   winding_dimension?: string;
   backbar_dimension?: string;
@@ -75,19 +75,19 @@ interface OCWData {
 const OCW = () => {
   const [ocwData, setOcwData] = useState<OCWData[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
-  const [prefixes, setPrefixes] = useState<string[]>([]);
-  const [suffixes, setSuffixes] = useState<string[]>([]);
-  const [availableSuffixes, setAvailableSuffixes] = useState<string[]>([]);
-  const [selectedPrefix, setSelectedPrefix] = useState<string>("");
-  const [selectedSuffix, setSelectedSuffix] = useState<string>("");
+  const [prefixes, setPrefixes] = useState<number[]>([]);
+  const [suffixes, setSuffixes] = useState<number[]>([]);
+  const [availableSuffixes, setAvailableSuffixes] = useState<number[]>([]);
+  const [selectedPrefix, setSelectedPrefix] = useState<number | undefined>(undefined);
+  const [selectedSuffix, setSelectedSuffix] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [isComponentsOpen, setIsComponentsOpen] = useState(true);
   useEffect(() => {
     fetchOCWData();
   }, []);
   useEffect(() => {
-    if (selectedPrefix && selectedSuffix) {
-      const matchingRecord = ocwData.find(record => (record as any).prefix === selectedPrefix && (record as any).suffix === selectedSuffix);
+    if (selectedPrefix !== undefined && selectedSuffix !== undefined) {
+      const matchingRecord = ocwData.find(record => record.prefix === selectedPrefix && record.suffix === selectedSuffix);
       setSelectedRecord(matchingRecord || null);
     } else {
       setSelectedRecord(null);
@@ -96,16 +96,16 @@ const OCW = () => {
 
   // Update available suffixes when prefix changes
   useEffect(() => {
-    if (selectedPrefix) {
-      const validSuffixes = suffixes.filter(suffix => ocwData.some(record => (record as any).prefix === selectedPrefix && (record as any).suffix === suffix));
+    if (selectedPrefix !== undefined) {
+      const validSuffixes = suffixes.filter(suffix => ocwData.some(record => record.prefix === selectedPrefix && record.suffix === suffix));
       setAvailableSuffixes(validSuffixes);
       // Reset suffix if current selection is not valid for the new prefix
-      if (selectedSuffix && !validSuffixes.includes(selectedSuffix)) {
-        setSelectedSuffix("");
+      if (selectedSuffix !== undefined && !validSuffixes.includes(selectedSuffix)) {
+        setSelectedSuffix(undefined);
       }
     } else {
       setAvailableSuffixes(suffixes);
-      setSelectedSuffix("");
+      setSelectedSuffix(undefined);
     }
   }, [selectedPrefix, suffixes, ocwData, selectedSuffix]);
   const fetchOCWData = async () => {
@@ -119,27 +119,16 @@ const OCW = () => {
       setOcwData(data || []);
 
       // Extract unique prefixes and suffixes from database columns
-      const prefixSet = new Set<string>();
-      const suffixSet = new Set<string>();
+      const prefixSet = new Set<number>();
+      const suffixSet = new Set<number>();
       (data || []).forEach(record => {
-        if ((record as any).prefix) prefixSet.add((record as any).prefix);
-        if ((record as any).suffix) suffixSet.add((record as any).suffix);
+        if (record.prefix !== null && record.prefix !== undefined) prefixSet.add(record.prefix);
+        if (record.suffix !== null && record.suffix !== undefined) suffixSet.add(record.suffix);
       });
 
-      // Sort numerically instead of alphabetically
-      const sortedPrefixes = Array.from(prefixSet).sort((a, b) => {
-        const numA = parseInt(a);
-        const numB = parseInt(b);
-        return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
-      });
-      const sortedSuffixes = Array.from(suffixSet).sort((a, b) => {
-        const numA = parseInt(a);
-        const numB = parseInt(b);
-        return isNaN(numA) || isNaN(numB) ? a.localeCompare(b) : numA - numB;
-      });
-      setPrefixes(sortedPrefixes);
-      setSuffixes(sortedSuffixes);
-      setAvailableSuffixes(sortedSuffixes);
+      setPrefixes(Array.from(prefixSet).sort((a, b) => a - b));
+      setSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
+      setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
     } catch (error) {
       console.error('Error fetching OCW data:', error);
     } finally {
@@ -227,23 +216,23 @@ const OCW = () => {
           <CardContent>
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium">OCW</span>
-              <Select value={selectedPrefix} onValueChange={setSelectedPrefix}>
+              <Select value={selectedPrefix?.toString()} onValueChange={(value) => setSelectedPrefix(Number(value))}>
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="000" />
                 </SelectTrigger>
                 <SelectContent>
-                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix}>
+                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
                       {prefix}
                     </SelectItem>)}
                 </SelectContent>
               </Select>
               <span className="text-sm">-</span>
-              <Select value={selectedSuffix} onValueChange={setSelectedSuffix} disabled={!selectedPrefix}>
+              <Select value={selectedSuffix?.toString()} onValueChange={(value) => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="00" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix}>
+                  {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
                       {suffix}
                     </SelectItem>)}
                 </SelectContent>

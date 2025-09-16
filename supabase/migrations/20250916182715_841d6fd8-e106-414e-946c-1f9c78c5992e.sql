@@ -1,0 +1,1 @@
+-- Regenerate types by querying the schema
