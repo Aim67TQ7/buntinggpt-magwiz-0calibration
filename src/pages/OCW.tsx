@@ -4,13 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator } from "lucide-react";
 import { Link } from "react-router-dom";
 interface OCWData {
   filename: string;
   prefix?: number;
   suffix?: number;
+  belt_width?: number;
   core_dimension?: string;
   winding_dimension?: string;
   backbar_dimension?: string;
@@ -82,6 +85,11 @@ const OCW = () => {
   const [selectedSuffix, setSelectedSuffix] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [isComponentsOpen, setIsComponentsOpen] = useState(true);
+  
+  // Calculation inputs
+  const [beltWidth, setBeltWidth] = useState<number>(1200);
+  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.5);
+  const [recommendations, setRecommendations] = useState<Array<{prefix: number, suffix: number, distance: number, belt_width: number}>>([]);
   useEffect(() => {
     fetchOCWData();
   }, []);
@@ -134,6 +142,34 @@ const OCW = () => {
       setLoading(false);
     }
   };
+
+  const calculateRecommendations = () => {
+    const targetValue = beltWidth * coreBeltRatio;
+    
+    // Find 3-4 closest prefixes
+    const prefixDistances = prefixes.map(prefix => ({
+      prefix,
+      distance: Math.abs(prefix - targetValue)
+    })).sort((a, b) => a.distance - b.distance).slice(0, 4);
+    
+    // For each selected prefix, find the 2 nearest suffixes based on belt_width
+    const allRecommendations: Array<{prefix: number, suffix: number, distance: number, belt_width: number}> = [];
+    
+    prefixDistances.forEach(({prefix}) => {
+      const prefixRecords = ocwData.filter(record => record.prefix === prefix && record.belt_width);
+      const suffixDistances = prefixRecords.map(record => ({
+        prefix: record.prefix!,
+        suffix: record.suffix!,
+        belt_width: record.belt_width!,
+        distance: Math.abs(record.belt_width! - beltWidth)
+      })).sort((a, b) => a.distance - b.distance).slice(0, 2);
+      
+      allRecommendations.push(...suffixDistances);
+    });
+    
+    setRecommendations(allRecommendations.sort((a, b) => a.distance - b.distance));
+  };
+
   const componentData = selectedRecord ? [{
     name: "Core",
     amount: 1,
@@ -207,10 +243,81 @@ const OCW = () => {
         </div>
       </div>
 
+      {/* Smart Selection Tool */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="w-5 h-5" />
+            Smart BMR Selection Calculator
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <Label htmlFor="belt-width">Belt Width (mm)</Label>
+              <Input
+                id="belt-width"
+                type="number"
+                value={beltWidth}
+                onChange={(e) => setBeltWidth(Number(e.target.value))}
+                min="450"
+                max="2400"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="core-belt-ratio">Core:Belt Ratio</Label>
+              <Input
+                id="core-belt-ratio"
+                type="number"
+                value={coreBeltRatio}
+                onChange={(e) => setCoreBeltRatio(Number(e.target.value))}
+                min="0.1"
+                max="0.9"
+                step="0.1"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button onClick={calculateRecommendations} className="w-full">
+                Calculate Recommendations
+              </Button>
+            </div>
+          </div>
+          
+          {recommendations.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-medium mb-2">Recommended Configurations:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                {recommendations.map((rec, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedPrefix(rec.prefix);
+                      setSelectedSuffix(rec.suffix);
+                    }}
+                    className="text-left justify-start"
+                  >
+                    <div>
+                      <div className="font-medium">BMR {rec.prefix}-{rec.suffix}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Belt: {rec.belt_width}mm (Δ{rec.distance.toFixed(0)}mm)
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>Select Configuration</CardTitle>
+            <CardTitle>Manual Configuration Selection</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
