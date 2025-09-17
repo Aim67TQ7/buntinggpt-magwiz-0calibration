@@ -454,12 +454,6 @@ const OCW = () => {
                 <div className="space-y-4">
                   
                   <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-4 gap-2 text-xs font-medium">
-                      <span></span>
-                      <span>A/20°C</span>
-                      <span>B/30°C</span>
-                      <span>C/40°C</span>
-                    </div>
                     <div className="grid grid-cols-4 gap-2 text-xs">
                       <span>Ambient Temperature:</span>
                       <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
