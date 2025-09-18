@@ -54,6 +54,7 @@ const Dashboard = () => {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [bomItems, setBomItems] = useState<BOMItem[]>([]);
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +100,11 @@ const Dashboard = () => {
       .reduce((total, item) => total + (item.cost * item.amount), 0);
   };
 
+  const getSelectedQuoteItems = () => {
+    if (!selectedQuote) return [];
+    return quoteItems.filter(item => item.quote_id === selectedQuote.id);
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString();
   };
@@ -125,123 +131,109 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Quotes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+        {/* Left side - Quotes List (25%) */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Quotes / Workups</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{quotes.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${quotes.reduce((total, quote) => total + getQuoteTotal(quote.id), 0).toLocaleString()}
+          <CardContent className="p-0">
+            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+              <Table>
+                <TableBody>
+                  {quotes.map((quote) => (
+                    <TableRow 
+                      key={quote.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
+                      onClick={() => setSelectedQuote(quote)}
+                    >
+                      <TableCell className="p-4">
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">
+                            {quote.quote_number || `MW${quote.id}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getProductName(quote.product_id)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDate(quote.date_generated)}
+                          </div>
+                          {quote.verified === "1" && (
+                            <Badge variant="default" className="text-xs">
+                              Verified
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+        {/* Right side - BOM Details (75%) */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>
+              {selectedQuote ? (
+                <div className="flex items-center justify-between">
+                  <span>{selectedQuote.quote_number || `MW${selectedQuote.id}`}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-normal">{getProductName(selectedQuote.product_id)}</span>
+                    {selectedQuote.verified === "1" && (
+                      <Badge variant="default">Verified</Badge>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                "Select a quote to view BOM details"
+              )}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{products.length}</div>
+          <CardContent className="p-0">
+            {selectedQuote ? (
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Weight</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getSelectedQuoteItems().map((item) => (
+                      <TableRow key={item["# item_id"]}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-right">{item.amount}</TableCell>
+                        <TableCell className="text-right">
+                          {item.weight ? `${item.weight.toFixed(2)}` : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'Unknown'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 font-semibold">
+                      <TableCell colSpan={3} className="text-right">Total</TableCell>
+                      <TableCell className="text-right">
+                        ${getQuoteTotal(selectedQuote.id).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                Click on a quote from the left to view its BOM details
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="quotes" className="w-full">
-        <TabsList>
-          <TabsTrigger value="quotes">Quotes</TabsTrigger>
-          <TabsTrigger value="bom">Bill of Materials</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="quotes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Quotes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Quote Number</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Date Generated</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total Cost</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quotes.map((quote) => (
-                    <TableRow key={quote.id}>
-                      <TableCell className="font-medium">{quote.quote_number}</TableCell>
-                      <TableCell>{getProductName(quote.product_id)}</TableCell>
-                      <TableCell>{formatDate(quote.date_generated)}</TableCell>
-                      <TableCell>
-                        <Badge variant={quote.verified === "true" ? "default" : "secondary"}>
-                          {quote.verified === "true" ? "Verified" : "Pending"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>${getQuoteTotal(quote.id).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/quote/${quote.id}`)}
-                        >
-                          View Details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-        </TabsContent>
-
-        <TabsContent value="bom" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bill of Materials</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Part Name</TableHead>
-                    <TableHead>BOM ID</TableHead>
-                    <TableHead>Material ID</TableHead>
-                    <TableHead>Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bomItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.bom}</TableCell>
-                      <TableCell>{item.material}</TableCell>
-                      <TableCell>{item.amount}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };
