@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,6 +77,7 @@ interface OCWData {
   expected_rise_C?: number;
 }
 const OCW = () => {
+  const navigate = useNavigate();
   const [ocwData, setOcwData] = useState<OCWData[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
   const [prefixes, setPrefixes] = useState<number[]>([]);
@@ -521,6 +523,23 @@ const OCW = () => {
                       <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-6">
+                  <Button 
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        prefix: selectedRecord.prefix?.toString() || '',
+                        suffix: selectedRecord.suffix?.toString() || '',
+                        data: encodeURIComponent(JSON.stringify(selectedRecord))
+                      });
+                      navigate(`/winding-sheet?${params.toString()}`);
+                    }}
+                    className="flex-1"
+                  >
+                    View Winding Sheet
+                  </Button>
                 </div>
               </CardContent>
             </Card>

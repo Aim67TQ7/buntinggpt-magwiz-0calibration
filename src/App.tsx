@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import QuoteDetails from "./pages/QuoteDetails";
 import OCW from "./pages/OCW";
+import WindingSheet from "./pages/WindingSheet";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/quote/:quoteId" element={<QuoteDetails />} />
           <Route path="/ocw" element={<OCW />} />
+          <Route path="/winding-sheet" element={<WindingSheet />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
