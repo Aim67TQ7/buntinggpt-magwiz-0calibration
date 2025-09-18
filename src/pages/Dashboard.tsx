@@ -64,71 +64,23 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Using mock data since BMR tables don't exist yet
-      const mockQuotes: Quote[] = [
-        {
-          id: 1,
-          quote_number: "Q2024-001",
-          product_id: 1,
-          date_generated: Math.floor(Date.now() / 1000),
-          verified: "true",
-          date_verified: new Date().toISOString()
-        },
-        {
-          id: 2,
-          quote_number: "Q2024-002", 
-          product_id: 2,
-          date_generated: Math.floor(Date.now() / 1000) - 86400,
-          verified: "false",
-          date_verified: ""
-        }
-      ];
+      // Fetch real data from database
+      const [quotesResponse, quoteItemsResponse, productsResponse, bomItemsResponse] = await Promise.all([
+        supabase.from('BMR_quotes').select('*'),
+        supabase.from('BMR_quote_items').select('*'),
+        supabase.from('BMR_products').select('*'),
+        supabase.from('BMR_parts').select('*')
+      ]);
 
-      const mockQuoteItems: QuoteItem[] = [
-        {
-          "# item_id": 1,
-          quote_id: 1,
-          amount: 2,
-          weight: 150.5,
-          cost: 2500,
-          name: "Magnetic Separator Core"
-        },
-        {
-          "# item_id": 2,
-          quote_id: 1,
-          amount: 1,
-          weight: 75.2,
-          cost: 1200,
-          name: "Control Unit"
-        }
-      ];
+      if (quotesResponse.error) throw quotesResponse.error;
+      if (quoteItemsResponse.error) throw quoteItemsResponse.error;
+      if (productsResponse.error) throw productsResponse.error;
+      if (bomItemsResponse.error) throw bomItemsResponse.error;
 
-      const mockProducts: Product[] = [
-        { id: 1, name: "Heavy Duty Magnetic Separator" },
-        { id: 2, name: "Compact Magnetic Separator" }
-      ];
-
-      const mockBomItems: BOMItem[] = [
-        {
-          id: 1,
-          bom: 1,
-          material: 101,
-          amount: 4,
-          name: "Steel Core Component"
-        },
-        {
-          id: 2,
-          bom: 1,
-          material: 102,
-          amount: 2,
-          name: "Copper Winding"
-        }
-      ];
-
-      setQuotes(mockQuotes);
-      setQuoteItems(mockQuoteItems);
-      setProducts(mockProducts);
-      setBomItems(mockBomItems);
+      setQuotes(quotesResponse.data || []);
+      setQuoteItems(quoteItemsResponse.data || []);
+      setProducts(productsResponse.data || []);
+      setBomItems(bomItemsResponse.data || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
