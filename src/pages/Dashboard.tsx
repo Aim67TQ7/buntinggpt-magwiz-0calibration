@@ -78,6 +78,11 @@ const Dashboard = () => {
       if (productsResponse.error) throw productsResponse.error;
       if (bomItemsResponse.error) throw bomItemsResponse.error;
 
+      console.log('Quotes data:', quotesResponse.data);
+      console.log('Quote items data:', quoteItemsResponse.data);
+      console.log('Products data:', productsResponse.data);
+      console.log('BOM items data:', bomItemsResponse.data);
+      
       setQuotes(quotesResponse.data || []);
       setQuoteItems(quoteItemsResponse.data || []);
       setProducts(productsResponse.data || []);
@@ -102,7 +107,11 @@ const Dashboard = () => {
 
   const getSelectedQuoteItems = () => {
     if (!selectedQuote) return [];
-    return quoteItems.filter(item => item.quote_id === selectedQuote.id);
+    console.log('Selected quote:', selectedQuote);
+    console.log('All quote items:', quoteItems);
+    const filteredItems = quoteItems.filter(item => item.quote_id === selectedQuote.id);
+    console.log('Filtered items for quote:', filteredItems);
+    return filteredItems;
   };
 
   const formatDate = (timestamp: number) => {
