@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tableColHeader: {
-    width: '25%',
+    width: '50%',
     borderRightWidth: 1,
     borderRightColor: '#000',
     borderRightStyle: 'solid',
@@ -79,14 +79,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tableCol: {
-    width: '25%',
+    width: '50%',
     borderRightWidth: 1,
     borderRightColor: '#000',
     borderRightStyle: 'solid',
     padding: 3,
   },
   lastCol: {
-    width: '25%',
+    width: '50%',
     padding: 3,
   },
   bold: {
@@ -117,93 +117,183 @@ const OCWWindingSheetPDF: React.FC<OCWWindingSheetPDFProps> = ({ data }) => (
       </Text>
       
       <Text style={styles.footer}>
-        Date: {new Date().toLocaleDateString()}
+        {new Date().toLocaleDateString('en-GB')}
       </Text>
 
-      {/* Basic Information Section */}
+      {/* Top Section - Conductor Information - Two Columns */}
       <View style={styles.row}>
         <View style={styles.leftColumn}>
-          <Text style={styles.title}>Conductor Information</Text>
-          <Text>Material: {data.winding_dimension || 'N/A'}</Text>
-          <Text>Diameter: {data.diameter || 'N/A'} mm</Text>
-          <Text>Parallel Wires: {data.wires_in_parallel || 'N/A'}</Text>
-          <Text>Number of Turns: {data.number_of_turns || 'N/A'}</Text>
-        </View>
-        
-        <View style={styles.rightColumn}>
-          <Text style={styles.title}>Specifications</Text>
-          <Text>Magnet Dimension: {data.magnet_dimension || 'N/A'}</Text>
-          <Text>Core Mass: {data.core_mass || 'N/A'} kg</Text>
-          <Text>Winding Mass: {data.winding_mass || 'N/A'} kg</Text>
-          <Text>Total Mass: {data.total_mass || 'N/A'} kg</Text>
-        </View>
-      </View>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Conductor Material</Text>
+              <Text style={styles.tableCol}>{data.winding_dimension || 'Aluminium'}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Conductor Insulation</Text>
+              <Text style={styles.tableCol}>Nomex</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>No. of Coils</Text>
+              <Text style={styles.lastCol}>1</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Wires in Parallel</Text>
+              <Text style={styles.lastCol}>{data.wires_in_parallel || 'N/A'}</Text>
+            </View>
+          </View>
 
-      {/* Electrical Data Table */}
-      <View style={styles.section}>
-        <Text style={styles.title}>Electrical Characteristics</Text>
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableColHeader}>Phase</Text>
-            <Text style={styles.tableColHeader}>Volts</Text>
-            <Text style={styles.tableColHeader}>Amps</Text>
-            <Text style={styles.lastCol}>Ohms</Text>
-          </View>
-          
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCol}>A</Text>
-            <Text style={styles.tableCol}>{data.voltage_A || 'N/A'}</Text>
-            <Text style={styles.tableCol}>{data.cold_current_A?.toFixed(2) || 'N/A'}</Text>
-            <Text style={styles.lastCol}>{data.resistance_A?.toFixed(4) || 'N/A'}</Text>
-          </View>
-          
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCol}>B</Text>
-            <Text style={styles.tableCol}>{data.voltage_B || 'N/A'}</Text>
-            <Text style={styles.tableCol}>{data.cold_current_B?.toFixed(2) || 'N/A'}</Text>
-            <Text style={styles.lastCol}>{data.resistance_B?.toFixed(4) || 'N/A'}</Text>
-          </View>
-          
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCol}>C</Text>
-            <Text style={styles.tableCol}>{data.voltage_C || 'N/A'}</Text>
-            <Text style={styles.tableCol}>{data.cold_current_C?.toFixed(2) || 'N/A'}</Text>
-            <Text style={styles.lastCol}>{data.resistance_C?.toFixed(4) || 'N/A'}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Test Data Section (Empty Template) */}
-      <View style={styles.section}>
-        <Text style={styles.title}>Test Data (To be filled manually)</Text>
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableColHeader}>Time</Text>
-            <Text style={styles.tableColHeader}>Hrs</Text>
-            <Text style={styles.tableColHeader}>Volts</Text>
-            <Text style={styles.tableColHeader}>Amps</Text>
-            <Text style={styles.lastCol}>Amb °C</Text>
-          </View>
-          
-          {[...Array(5)].map((_, i) => (
-            <View key={i} style={styles.tableRow}>
-              <Text style={styles.tableCol}></Text>
-              <Text style={styles.tableCol}></Text>
-              <Text style={styles.tableCol}></Text>
-              <Text style={styles.tableCol}></Text>
+          {/* Electrical Values Table */}
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Volts</Text>
+              <Text style={styles.tableColHeader}>Amps</Text>
+              <Text style={styles.tableColHeader}>Ohms</Text>
+              <Text style={styles.tableColHeader}>Per Coil</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableCol}>{data.voltage_A || 'N/A'}</Text>
+              <Text style={styles.tableCol}>{data.cold_current_A?.toFixed(2) || 'N/A'}</Text>
+              <Text style={styles.tableCol}>{data.resistance_A?.toFixed(4) || 'N/A'}</Text>
               <Text style={styles.lastCol}></Text>
             </View>
-          ))}
+            <View style={styles.tableRow}>
+              <Text style={styles.tableCol}></Text>
+              <Text style={styles.tableCol}></Text>
+              <Text style={styles.tableCol}></Text>
+              <Text style={styles.tableColHeader}>Total</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.rightColumn}>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Size</Text>
+              <Text style={styles.tableCol}>{data.diameter || 'N/A'}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Weight</Text>
+              <Text style={styles.tableCol}>{data.winding_mass || 'N/A'}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Number of Turns</Text>
+              <Text style={styles.tableCol}>{data.number_of_turns || 'N/A'}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableColHeader}>Wound on Core</Text>
+              <Text style={styles.lastCol}>Yes</Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      {/* Footer Information */}
+      {/* Test Section */}
       <View style={styles.section}>
-        <Text style={styles.title}>Notes</Text>
-        <Text>Actual Turns: _______________</Text>
-        <Text>Resistance Measurements: _______________</Text>
-        <Text>Test Results: _______________</Text>
-        <Text>Inspector: _______________  Date: _______________</Text>
+        <Text style={styles.title}>Test - Continuous 8 hours minimum or until current remains constant for 3 hours</Text>
+        
+        <View style={styles.row}>
+          {/* First Table */}
+          <View style={styles.leftColumn}>
+            <View style={styles.table}>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableColHeader}>Time</Text>
+                <Text style={styles.tableColHeader}>Hrs</Text>
+                <Text style={styles.tableColHeader}>Volts</Text>
+                <Text style={styles.tableColHeader}>Amps</Text>
+                <Text style={styles.tableColHeader}>Amb °C</Text>
+              </View>
+              
+              {[0, 1, 2, 3, 4, 5].map((hour) => (
+                <View key={hour} style={styles.tableRow}>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.tableCol}>{hour}</Text>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.lastCol}></Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Second Table */}
+          <View style={styles.rightColumn}>
+            <View style={styles.table}>
+              <View style={styles.tableRow}>
+                <Text style={styles.tableColHeader}>Time</Text>
+                <Text style={styles.tableColHeader}>Hrs</Text>
+                <Text style={styles.tableColHeader}>Volts</Text>
+                <Text style={styles.tableColHeader}>Amps</Text>
+                <Text style={styles.tableColHeader}>Amb °C</Text>
+              </View>
+              
+              {[6, 7, 8, 9, 10, 11].map((hour) => (
+                <View key={hour} style={styles.tableRow}>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.tableCol}>{hour}</Text>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.tableCol}></Text>
+                  <Text style={styles.lastCol}></Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Bottom Section - Test Results */}
+      <View style={styles.section}>
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Actual Turns</Text>
+            <Text style={styles.lastCol}></Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Prior to Test Resistance to Earth</Text>
+            <Text style={styles.tableCol}>MΩ</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>After Test Resistance to Earth</Text>
+            <Text style={styles.tableCol}>MΩ</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Temperature Rise by Resistance</Text>
+            <Text style={styles.tableCol}>°C</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Insulation Type</Text>
+            <Text style={styles.tableCol}>Class</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Passed by Works</Text>
+            <Text style={styles.tableCol}>Date</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Checked & Passed by Office</Text>
+            <Text style={styles.tableCol}>Date</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Gauss Test</Text>
+            <Text style={styles.tableCol}>Yes/No</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Unit Weight</Text>
+            <Text style={styles.tableCol}>Kgs</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Winding Hours</Text>
+            <Text style={styles.lastCol}></Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableColHeader}>Nomex Used</Text>
+            <Text style={styles.lastCol}>M</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Special Instructions */}
+      <View style={styles.section}>
+        <Text style={styles.title}>Special Instructions</Text>
+        <View style={{ border: '1px solid #000', height: 30, padding: 3 }}></View>
       </View>
 
       <Text style={styles.footer}>

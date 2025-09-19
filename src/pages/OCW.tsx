@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,6 +78,7 @@ interface OCWData {
 }
 const OCW = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [ocwData, setOcwData] = useState<OCWData[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
   const [prefixes, setPrefixes] = useState<number[]>([]);
@@ -94,7 +95,18 @@ const OCW = () => {
   const [recommendations, setRecommendations] = useState<Array<{prefix: number, suffix: number, distance: number, belt_width: number}>>([]);
   useEffect(() => {
     fetchOCWData();
-  }, []);
+    
+    // Check for URL parameters to restore selection
+    const prefixParam = searchParams.get('prefix');
+    const suffixParam = searchParams.get('suffix');
+    
+    if (prefixParam) {
+      setSelectedPrefix(Number(prefixParam));
+    }
+    if (suffixParam) {
+      setSelectedSuffix(Number(suffixParam));
+    }
+  }, [searchParams]);
   useEffect(() => {
     if (selectedPrefix !== undefined && selectedSuffix !== undefined) {
       const matchingRecord = ocwData.find(record => record.prefix === selectedPrefix && record.suffix === selectedSuffix);

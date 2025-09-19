@@ -46,7 +46,7 @@ const WindingSheet = () => {
   return (
     <div className="container mx-auto p-2 max-w-4xl">
       <div className="mb-2 flex justify-between items-center">
-        <Button variant="outline" onClick={() => navigate('/ocw')}>
+        <Button variant="outline" onClick={() => navigate(`/ocw?prefix=${prefix}&suffix=${suffix}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to OCW
         </Button>
