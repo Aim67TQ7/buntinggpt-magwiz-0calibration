@@ -28,30 +28,30 @@ const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    fontSize: 10,
+    padding: 15,
+    fontSize: 9,
     fontFamily: 'Helvetica',
   },
   header: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 14,
+    marginBottom: 12,
     textAlign: 'center',
     fontWeight: 'bold',
   },
   section: {
-    marginBottom: 15,
+    marginBottom: 8,
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   leftColumn: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 6,
   },
   rightColumn: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 6,
   },
   table: {
     display: 'flex',
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#000',
     borderBottomStyle: 'solid',
-    minHeight: 25,
+    minHeight: 18,
     alignItems: 'center',
   },
   tableColHeader: {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     borderRightColor: '#000',
     borderRightStyle: 'solid',
     backgroundColor: '#f0f0f0',
-    padding: 5,
+    padding: 3,
     fontWeight: 'bold',
   },
   tableCol: {
@@ -83,23 +83,23 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#000',
     borderRightStyle: 'solid',
-    padding: 5,
+    padding: 3,
   },
   lastCol: {
     width: '25%',
-    padding: 5,
+    padding: 3,
   },
   bold: {
     fontWeight: 'bold',
   },
   title: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 3,
   },
   footer: {
-    marginTop: 20,
-    fontSize: 8,
+    marginTop: 10,
+    fontSize: 7,
     textAlign: 'center',
   },
 });
@@ -110,7 +110,7 @@ interface OCWWindingSheetPDFProps {
 
 const OCWWindingSheetPDF: React.FC<OCWWindingSheetPDFProps> = ({ data }) => (
   <Document>
-    <Page size="A4" style={styles.page}>
+    <Page size="LETTER" style={styles.page}>
       {/* Header */}
       <Text style={styles.header}>
         Winding Sheet for {data.prefix || 'N/A'} OCW {data.suffix || 'N/A'}
