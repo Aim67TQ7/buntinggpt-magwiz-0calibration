@@ -143,8 +143,8 @@ const Dashboard = () => {
       <div className="grid grid-cols-4 gap-6 h-[calc(100vh-200px)]">
         {/* Left side - Quotes List (25%) */}
         <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Quotes / Workups</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quotes / Workups</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -158,11 +158,8 @@ const Dashboard = () => {
                     >
                       <TableCell className="p-4">
                         <div className="space-y-1">
-                          <div className="font-medium text-sm">
+                          <div className="font-medium text-base">
                             {quote.quote_number || `MW${quote.id}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {getProductName(quote.product_id)}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(quote.date_generated)}
@@ -184,13 +181,12 @@ const Dashboard = () => {
 
         {/* Right side - BOM Details (75%) */}
         <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
-                  <span>{selectedQuote.quote_number || `MW${selectedQuote.id}`}</span>
+                  <span>BOM Items for {selectedQuote.quote_number || `MW${selectedQuote.id}`}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-normal">{getProductName(selectedQuote.product_id)}</span>
                     {selectedQuote.verified === "1" && (
                       <Badge variant="default">Verified</Badge>
                     )}
