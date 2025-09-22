@@ -102,7 +102,11 @@ const Dashboard = () => {
   const getQuoteTotal = (quoteId: number) => {
     return quoteItems
       .filter(item => item.quote_id === quoteId)
-      .reduce((total, item) => total + (item.cost * item.amount), 0);
+      .reduce((total, item) => {
+        // Only add to total if cost is positive (some items have -1 or null cost)
+        const cost = item.cost > 0 ? item.cost : 0;
+        return total + (cost * item.amount);
+      }, 0);
   };
 
   const getSelectedQuoteItems = () => {
@@ -159,7 +163,7 @@ const Dashboard = () => {
                       <TableCell className="p-4">
                         <div className="space-y-1">
                           <div className="font-medium text-base">
-                            {quote.quote_number || `MW${quote.id}`}
+                            {quote.quote_number || `MW${String(quote.id).padStart(6, '0')}`}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(quote.date_generated)}
@@ -185,7 +189,7 @@ const Dashboard = () => {
             <CardTitle className="text-lg">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
-                  <span>BOM Items for {selectedQuote.quote_number || `MW${selectedQuote.id}`}</span>
+                  <span>BOM Items for {selectedQuote.quote_number || `MW${String(selectedQuote.id).padStart(6, '0')}`}</span>
                   <div className="flex items-center gap-2">
                     {selectedQuote.verified === "1" && (
                       <Badge variant="default">Verified</Badge>
@@ -218,7 +222,7 @@ const Dashboard = () => {
                           {item.weight ? `${item.weight.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'Unknown'}
+                          {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'TBD'}
                         </TableCell>
                       </TableRow>
                     ))}
