@@ -73,20 +73,33 @@ const Dashboard = () => {
         supabase.from('BMR_parts').select('*')
       ]);
 
-      if (quotesResponse.error) throw quotesResponse.error;
-      if (quoteItemsResponse.error) throw quoteItemsResponse.error;
-      if (productsResponse.error) throw productsResponse.error;
-      if (bomItemsResponse.error) throw bomItemsResponse.error;
+      if (quotesResponse.error) {
+        console.error('Quotes query error:', quotesResponse.error);
+        throw quotesResponse.error;
+      }
+      if (quoteItemsResponse.error) {
+        console.error('Quote items query error:', quoteItemsResponse.error);
+        throw quoteItemsResponse.error;
+      }
+      if (productsResponse.error) {
+        console.error('Products query error:', productsResponse.error);
+        throw productsResponse.error;
+      }
+      if (bomItemsResponse.error) {
+        console.error('BOM items query error:', bomItemsResponse.error);
+        throw bomItemsResponse.error;
+      }
 
       console.log('Quotes data:', quotesResponse.data);
       console.log('Quote items data:', quoteItemsResponse.data);
       console.log('Products data:', productsResponse.data);
       console.log('BOM items data:', bomItemsResponse.data);
       
-      setQuotes(quotesResponse.data || []);
-      setQuoteItems(quoteItemsResponse.data || []);
-      setProducts(productsResponse.data || []);
-      setBomItems(bomItemsResponse.data || []);
+      // Type-safe assignments with fallbacks
+      setQuotes((quotesResponse.data as Quote[]) || []);
+      setQuoteItems((quoteItemsResponse.data as QuoteItem[]) || []);
+      setProducts((productsResponse.data as Product[]) || []);
+      setBomItems((bomItemsResponse.data as BOMItem[]) || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -112,14 +125,18 @@ const Dashboard = () => {
   const getSelectedQuoteItems = () => {
     if (!selectedQuote) return [];
     console.log('Selected quote:', selectedQuote);
-    console.log('All quote items:', quoteItems);
+    console.log('All quote items count:', quoteItems.length);
     console.log('Quote items sample:', quoteItems.slice(0, 3));
-    // Ensure we're comparing the right data types
+    
+    // Ensure we're comparing the right data types - convert both to numbers
     const filteredItems = quoteItems.filter(item => {
-      console.log(`Comparing item.quote_id ${item.quote_id} (${typeof item.quote_id}) with selectedQuote.id ${selectedQuote.id} (${typeof selectedQuote.id})`);
-      return Number(item.quote_id) === Number(selectedQuote.id);
+      const itemQuoteId = Number(item.quote_id);
+      const selectedQuoteId = Number(selectedQuote.id);
+      console.log(`Comparing item.quote_id ${itemQuoteId} with selectedQuote.id ${selectedQuoteId}`);
+      return itemQuoteId === selectedQuoteId;
     });
-    console.log('Filtered items for quote:', filteredItems);
+    
+    console.log(`Filtered ${filteredItems.length} items for quote ${selectedQuote.id}:`, filteredItems);
     return filteredItems;
   };
 
@@ -214,36 +231,48 @@ const Dashboard = () => {
           <CardContent className="p-0">
             {selectedQuote ? (
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Weight</TableHead>
-                      <TableHead className="text-right">Cost</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getSelectedQuoteItems().map((item) => (
-                      <TableRow key={item["# item_id"]}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right">{item.amount}</TableCell>
+                {getSelectedQuoteItems().length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <p>No BOM items found for Quote {selectedQuote.id}</p>
+                    <p className="text-sm mt-2">
+                      Total quote items in database: {quoteItems.length}
+                    </p>
+                    <p className="text-sm">
+                      Quote items for this quote ID: {quoteItems.filter(item => Number(item.quote_id) === Number(selectedQuote.id)).length}
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-right">Quantity</TableHead>
+                        <TableHead className="text-right">Weight</TableHead>
+                        <TableHead className="text-right">Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getSelectedQuoteItems().map((item) => (
+                        <TableRow key={item["# item_id"]}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="text-right">{item.amount}</TableCell>
+                          <TableCell className="text-right">
+                            {item.weight ? `${item.weight.toFixed(2)}` : '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'TBD'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-2 font-semibold">
+                        <TableCell colSpan={3} className="text-right">Total</TableCell>
                         <TableCell className="text-right">
-                          {item.weight ? `${item.weight.toFixed(2)}` : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'TBD'}
+                          ${getQuoteTotal(selectedQuote.id).toFixed(2)}
                         </TableCell>
                       </TableRow>
-                    ))}
-                    <TableRow className="border-t-2 font-semibold">
-                      <TableCell colSpan={3} className="text-right">Total</TableCell>
-                      <TableCell className="text-right">
-                        ${getQuoteTotal(selectedQuote.id).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground">
