@@ -113,7 +113,12 @@ const Dashboard = () => {
     if (!selectedQuote) return [];
     console.log('Selected quote:', selectedQuote);
     console.log('All quote items:', quoteItems);
-    const filteredItems = quoteItems.filter(item => item.quote_id === selectedQuote.id);
+    console.log('Quote items sample:', quoteItems.slice(0, 3));
+    // Ensure we're comparing the right data types
+    const filteredItems = quoteItems.filter(item => {
+      console.log(`Comparing item.quote_id ${item.quote_id} (${typeof item.quote_id}) with selectedQuote.id ${selectedQuote.id} (${typeof selectedQuote.id})`);
+      return Number(item.quote_id) === Number(selectedQuote.id);
+    });
     console.log('Filtered items for quote:', filteredItems);
     return filteredItems;
   };
@@ -166,7 +171,7 @@ const Dashboard = () => {
                             Quote {quote.id}
                             {quote.quote_number && (
                               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                (Q{quote.quote_number})
+                                ({quote.quote_number})
                               </span>
                             )}
                           </div>
@@ -194,7 +199,7 @@ const Dashboard = () => {
             <CardTitle className="text-lg">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
-                  <span>BOM Items for Quote {selectedQuote.id}{selectedQuote.quote_number && ` (Q${selectedQuote.quote_number})`}</span>
+                  <span>BOM Items for Quote {selectedQuote.id}{selectedQuote.quote_number && ` (${selectedQuote.quote_number})`}</span>
                   <div className="flex items-center gap-2">
                     {selectedQuote.verified === "1" && (
                       <Badge variant="default">Verified</Badge>
