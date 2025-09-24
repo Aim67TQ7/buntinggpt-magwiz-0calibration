@@ -160,10 +160,15 @@ const Dashboard = () => {
                       className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
                       onClick={() => setSelectedQuote(quote)}
                     >
-                      <TableCell className="p-4">
+                       <TableCell className="p-4">
                         <div className="space-y-1">
                           <div className="font-medium text-base">
-                            {quote.quote_number || `MW${String(quote.id).padStart(6, '0')}`}
+                            Quote {quote.id}
+                            {quote.quote_number && (
+                              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                (Q{quote.quote_number})
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(quote.date_generated)}
@@ -189,7 +194,7 @@ const Dashboard = () => {
             <CardTitle className="text-lg">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
-                  <span>BOM Items for {selectedQuote.quote_number || `MW${String(selectedQuote.id).padStart(6, '0')}`}</span>
+                  <span>BOM Items for Quote {selectedQuote.id}{selectedQuote.quote_number && ` (Q${selectedQuote.quote_number})`}</span>
                   <div className="flex items-center gap-2">
                     {selectedQuote.verified === "1" && (
                       <Badge variant="default">Verified</Badge>
