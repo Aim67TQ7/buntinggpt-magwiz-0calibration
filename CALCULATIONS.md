@@ -76,10 +76,10 @@ B₀ = min((μ₀ × NI) / g_eff, B_SAT)
 
 **Example Calculation:**
 - μ₀ = 1.2566370614359173 × 10⁻⁶ H/m
-- NI = 792 A·turns (for 0.6m belt width, 0.6 core ratio)
+- NI = 79,200 A·turns (for 0.6m belt width, 0.6 core ratio, corrected constant)
 - g_eff = 0.062 m (50mm gap + 12mm leakage)
-- B₀ = min((1.2566370614359173 × 10⁻⁶ × 792) / 0.062, 1.8)
-- B₀ = min(0.01605, 1.8) = **0.01605 Tesla**
+- B₀ = min((1.2566370614359173 × 10⁻⁶ × 79,200) / 0.062, 1.8)
+- B₀ = min(1.605, 1.8) = **1.605 Tesla** (saturation-limited)
 
 ### Ampere-Turns Estimation
 When detailed coil data is not available:
@@ -89,10 +89,10 @@ NI = CAL_NI_PER_RATIO_PER_M × coreBeltRatio × max(0.4, width_m)
 ```
 
 **Example:**
-- CAL_NI_PER_RATIO_PER_M = 2200
+- CAL_NI_PER_RATIO_PER_M = 2.2e5 (220,000)
 - coreBeltRatio = 0.6
 - width_m = 0.6 (600mm belt)
-- NI = 2200 × 0.6 × 0.6 = **792 A·turns**
+- NI = 220,000 × 0.6 × 0.6 = **79,200 A·turns**
 
 ### Effective Gap Calculation
 ```
@@ -106,7 +106,7 @@ g_eff = max(0.01, gap_input + LEAKAGE_MM/1000)
 
 ### Field Conversion
 - **Tesla to Gauss**: Gauss = Tesla × 10,000
-- **Example**: 0.01605 Tesla = **161 Gauss**
+- **Example**: 1.605 Tesla = **16,050 Gauss**
 
 ### Penetration Depth
 Field penetration into the burden material:
@@ -402,11 +402,11 @@ overallCompliance = powerCompliance AND thermalCompliance AND magneticCompliance
 ### Calculated Results
 
 #### Magnetic Field
-- NI = 2200 × 0.6 × 0.6 = **792 A·turns**
+- NI = 220,000 × 0.6 × 0.6 = **79,200 A·turns**
 - g_eff = max(0.01, 0.05 + 0.012) = **0.062m**
-- B₀ = min((1.2566 × 10⁻⁶ × 792) / 0.062, 1.8) = **0.01605 Tesla**
-- Gauss = 0.01605 × 10,000 = **161 Gauss**
-- Penetration = 0.062 × (10^0.4 - 1) = **94mm**
+- B₀ = min((1.2566 × 10⁻⁶ × 79,200) / 0.062, 1.8) = **1.605 Tesla** (saturation-limited)
+- Gauss = 1.605 × 10,000 = **16,050 Gauss**
+- Penetration = 0.062 × (10^0.4 - 1) = **94mm** with B(94mm) ≈ **0.16 Tesla**
 
 #### Removal Efficiency
 - Base efficiency from capture index: ~30%
