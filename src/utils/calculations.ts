@@ -78,12 +78,33 @@ function deepClone<T>(x: T): T {
 function estimateNI(inputs: CalculatorInputs): number {
   const { magnet, conveyor } = inputs;
   const width_m = (conveyor.beltWidth || 1000) / 1000; // m
-  return CAL_NI_PER_RATIO_PER_M * Math.max(0, magnet.coreBeltRatio) * Math.max(0.4, width_m);
+  const result = CAL_NI_PER_RATIO_PER_M * Math.max(0, magnet.coreBeltRatio) * Math.max(0.4, width_m);
+  
+  console.log('estimateNI calculation:', {
+    CAL_NI_PER_RATIO_PER_M,
+    coreBeltRatio: magnet.coreBeltRatio,
+    beltWidth_mm: conveyor.beltWidth,
+    width_m,
+    formula: `${CAL_NI_PER_RATIO_PER_M} * ${Math.max(0, magnet.coreBeltRatio)} * ${Math.max(0.4, width_m)}`,
+    result
+  });
+  
+  return result;
 }
 
 function effectiveGap_m(inputs: CalculatorInputs): number {
   const g_m = (inputs.magnet.gap ?? 100) / 1000;
-  return Math.max(0.01, g_m + LEAKAGE_MM / 1000); // >=1 cm for stability
+  const result = Math.max(0.01, g_m + LEAKAGE_MM / 1000); // >=1 cm for stability
+  
+  console.log('effectiveGap_m calculation:', {
+    gap_input_mm: inputs.magnet.gap,
+    g_m,
+    LEAKAGE_MM,
+    formula: `max(0.01, ${g_m} + ${LEAKAGE_MM / 1000})`,
+    result
+  });
+  
+  return result;
 }
 
 /** Coil parameters (use provided values if available; else reasonable defaults). */
@@ -103,12 +124,34 @@ function coilParamsFor(inputs: CalculatorInputs) {
 export function calculateMagneticField(
   inputs: CalculatorInputs
 ): CalculationResults['magneticFieldStrength'] {
+  // Debug logging: Log all input values
+  console.log('=== MAGNETIC FIELD CALCULATION DEBUG ===');
+  console.log('Input values:', {
+    gap: inputs.magnet.gap,
+    coreBeltRatio: inputs.magnet.coreBeltRatio,
+    beltWidth: inputs.conveyor.beltWidth,
+    position: inputs.magnet.position,
+    ampereTurns: inputs.advanced?.magneticSystem?.ampereTurns
+  });
+
   const NI = estimateNI(inputs);
   const g_eff = effectiveGap_m(inputs);
 
   const B0 = Math.min((μ0 * NI) / g_eff, B_SAT);
 
-  const tesla = roundSig(B0, 3);
+  // Debug logging: Show intermediate calculations with high precision
+  console.log('Intermediate calculations:', {
+    NI: NI,
+    g_eff_meters: g_eff,
+    g_eff_mm: g_eff * 1000,
+    μ0: μ0,
+    B_SAT: B_SAT,
+    B0_unrounded: B0,
+    formula: `B0 = min((${μ0} * ${NI}) / ${g_eff}, ${B_SAT}) = ${B0}`
+  });
+
+  // Use higher precision for debugging
+  const tesla = roundSig(B0, 6); // Increased from 3 to 6 significant figures
   const gauss = Math.round(tesla * 10000);
 
   // Penetration depth: B(d) = 0.1*B0 for B(d)=B0*(g/(g+d))^n ⇒ δ = g*(10^(1/n)-1)
@@ -116,7 +159,11 @@ export function calculateMagneticField(
   const penetrationDepth_m = g_eff * (tenPow - 1);
   const penetrationDepth = Math.max(0, Math.round(penetrationDepth_m * 1000)); // mm
 
-  return { tesla, gauss, penetrationDepth };
+  const result = { tesla, gauss, penetrationDepth };
+  console.log('Final magnetic field result:', result);
+  console.log('=== END MAGNETIC FIELD DEBUG ===');
+
+  return result;
 }
 
 /* ─────────────────────── Tramp Metal Removal Efficiency ─────────────────────── */

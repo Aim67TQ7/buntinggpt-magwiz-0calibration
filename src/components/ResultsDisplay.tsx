@@ -9,11 +9,61 @@ import { ValidationToolsRecommendation } from './ValidationToolsRecommendation';
 
 interface ResultsDisplayProps {
   results: EnhancedCalculationResults;
+  inputs?: any; // Add inputs prop for debugging
 }
 
-export function ResultsDisplay({ results }: ResultsDisplayProps) {
+export function ResultsDisplay({ results, inputs }: ResultsDisplayProps) {
   return (
     <div className="space-y-6">
+      {/* Debug: Input Values Display */}
+      {inputs && (
+        <Card className="shadow-card border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-800">
+              <Info size={20} />
+              Current Input Values (Debug)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <div className="font-semibold text-yellow-800">Gap:</div>
+                <div>{inputs.magnet?.gap || 'N/A'} mm</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Core:Belt Ratio:</div>
+                <div>{inputs.magnet?.coreBeltRatio || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Belt Width:</div>
+                <div>{inputs.conveyor?.beltWidth || 'N/A'} mm</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Position:</div>
+                <div>{inputs.magnet?.position || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Ampere-Turns:</div>
+                <div>{inputs.advanced?.magneticSystem?.ampereTurns || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Belt Speed:</div>
+                <div>{inputs.conveyor?.beltSpeed || 'N/A'} m/s</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Feed Depth:</div>
+                <div>{inputs.burden?.feedDepth || 'N/A'} mm</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-800">Calculation Time:</div>
+                <div>{new Date().toLocaleTimeString()}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Enhanced Magnetic Field Strength with more precision */}
       {/* Magnetic Field Strength */}
       <Card className="shadow-card">
         <CardHeader className="bg-gradient-to-r from-engineering-secondary to-engineering-accent text-white">
@@ -29,18 +79,27 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
                 {results.magneticFieldStrength.tesla}
               </div>
               <div className="text-sm text-muted-foreground">Tesla</div>
+              <div className="text-xs text-gray-500 mt-1">
+                (High precision for debugging)
+              </div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-engineering-secondary">
                 {results.magneticFieldStrength.gauss}
               </div>
               <div className="text-sm text-muted-foreground">Gauss</div>
+              <div className="text-xs text-gray-500 mt-1">
+                ({results.magneticFieldStrength.tesla} × 10,000)
+              </div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-engineering-accent">
                 {results.magneticFieldStrength.penetrationDepth}
               </div>
               <div className="text-sm text-muted-foreground">Penetration (mm)</div>
+              <div className="text-xs text-gray-500 mt-1">
+                (Check console for intermediate values)
+              </div>
             </div>
           </div>
         </CardContent>

@@ -497,6 +497,52 @@ export function MagneticSeparatorCalculator() {
                   Export CSV
                 </Button>
               )}
+
+              {/* Debug Testing Buttons */}
+              <div className="border-t pt-4">
+                <div className="text-sm font-medium text-muted-foreground mb-2">Debug: Test Dramatic Changes</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <Button 
+                    onClick={() => {
+                      setInputs(prev => ({
+                        ...prev,
+                        magnet: { ...prev.magnet, gap: 300 } // Double the gap
+                      }));
+                      toast({ title: "Gap doubled to 300mm", description: "Run calculation to see the difference" });
+                    }}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Test: Double Gap
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setInputs(prev => ({
+                        ...prev,
+                        magnet: { ...prev.magnet, coreBeltRatio: 1.2 } // Double the ratio
+                      }));
+                      toast({ title: "Core:Belt ratio set to 1.2", description: "Run calculation to see the difference" });
+                    }}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Test: High Ratio
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setInputs(prev => ({
+                        ...prev,
+                        conveyor: { ...prev.conveyor, beltWidth: 600 } // Half the width
+                      }));
+                      toast({ title: "Belt width halved to 600mm", description: "Run calculation to see the difference" });
+                    }}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Test: Half Width
+                  </Button>
+                </div>
+              </div>
               
               <div className="flex items-center space-x-2">
                 <Switch
@@ -692,7 +738,7 @@ export function MagneticSeparatorCalculator() {
           {/* Results Display */}
           <div className="lg:sticky lg:top-8 lg:h-fit">
             {results ? (
-              <ResultsDisplay results={results} />
+              <ResultsDisplay results={results} inputs={inputs} />
             ) : (
               <Card className="p-8 text-center">
                 <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
