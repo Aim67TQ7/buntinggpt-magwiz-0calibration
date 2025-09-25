@@ -56,6 +56,7 @@ const Dashboard = () => {
   const [bomItems, setBomItems] = useState<BOMItem[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingQuoteItems, setLoadingQuoteItems] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -65,67 +66,21 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // First get all quotes to determine which quote items we need
-      const quotesResponse = await supabase.from('BMR_quotes').select('*').order('id', { ascending: true });
-      
-      if (quotesResponse.error) {
-        console.error('Quotes query error:', quotesResponse.error);
-        throw quotesResponse.error;
-      }
-
-      const quotes = quotesResponse.data as Quote[];
-      const quoteIds = quotes.map(q => q.id);
-      
-      console.log('Found quotes:', quotes.length, 'Quote IDs:', quoteIds);
-
-      // Get quote items for all our quotes (with explicit count to ensure we get all data)
-      const quoteItemsResponse = await supabase
-        .from('BMR_quote_items')
-        .select('*', { count: 'exact' })
-        .in('quote_id', quoteIds)
-        .order('quote_id', { ascending: true });
-
-      // Get other data
-      const [productsResponse, bomItemsResponse] = await Promise.all([
+      // Fetch quotes, products, and BOM items (but not all quote items)
+      const [quotesResponse, productsResponse, bomItemsResponse] = await Promise.all([
+        supabase.from('BMR_quotes').select('*').order('id', { ascending: true }),
         supabase.from('BMR_products').select('*'),
         supabase.from('BMR_parts').select('*')
       ]);
 
-      if (quoteItemsResponse.error) {
-        console.error('Quote items query error:', quoteItemsResponse.error);
-        throw quoteItemsResponse.error;
-      }
-      if (productsResponse.error) {
-        console.error('Products query error:', productsResponse.error);
-        throw productsResponse.error;
-      }
-      if (bomItemsResponse.error) {
-        console.error('BOM items query error:', bomItemsResponse.error);
-        throw bomItemsResponse.error;
-      }
+      if (quotesResponse.error) throw quotesResponse.error;
+      if (productsResponse.error) throw productsResponse.error;
+      if (bomItemsResponse.error) throw bomItemsResponse.error;
 
-      const quoteItems = quoteItemsResponse.data as QuoteItem[];
+      const quotes = quotesResponse.data as Quote[];
+      console.log('Found quotes:', quotes.length);
       
-      console.log('Loaded quote items:', quoteItems.length, 'Expected total count:', quoteItemsResponse.count);
-      console.log('Quote items by quote_id:', quoteItems.reduce((acc, item) => {
-        acc[item.quote_id] = (acc[item.quote_id] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>));
-      
-      // Validate that we have items for our quotes
-      const itemsByQuote = quoteItems.reduce((acc, item) => {
-        acc[item.quote_id] = (acc[item.quote_id] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>);
-
-      quoteIds.forEach(quoteId => {
-        const itemCount = itemsByQuote[quoteId] || 0;
-        console.log(`Quote ${quoteId}: ${itemCount} items`);
-      });
-      
-      // Type-safe assignments with fallbacks
       setQuotes(quotes || []);
-      setQuoteItems(quoteItems || []);
       setProducts((productsResponse.data as Product[]) || []);
       setBomItems((bomItemsResponse.data as BOMItem[]) || []);
     } catch (error) {
@@ -133,6 +88,39 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchQuoteItems = async (quoteId: number) => {
+    try {
+      setLoadingQuoteItems(true);
+      console.log('Fetching items for quote:', quoteId);
+      
+      const response = await supabase
+        .from('BMR_quote_items')
+        .select('*', { count: 'exact' })
+        .eq('quote_id', quoteId)
+        .order('name', { ascending: true });
+
+      if (response.error) {
+        console.error('Quote items query error:', response.error);
+        throw response.error;
+      }
+
+      const items = response.data as QuoteItem[];
+      console.log(`Loaded ${items.length} items for quote ${quoteId}:`, items);
+      
+      setQuoteItems(items || []);
+    } catch (error) {
+      console.error('Error fetching quote items:', error);
+      setQuoteItems([]);
+    } finally {
+      setLoadingQuoteItems(false);
+    }
+  };
+
+  const handleQuoteSelection = (quote: Quote) => {
+    setSelectedQuote(quote);
+    fetchQuoteItems(quote.id);
   };
 
   const getProductName = (productId: number) => {
@@ -152,20 +140,7 @@ const Dashboard = () => {
 
   const getSelectedQuoteItems = () => {
     if (!selectedQuote) return [];
-    console.log('Selected quote:', selectedQuote);
-    console.log('All quote items count:', quoteItems.length);
-    console.log('Quote items sample:', quoteItems.slice(0, 3));
-    
-    // Ensure we're comparing the right data types - convert both to numbers
-    const filteredItems = quoteItems.filter(item => {
-      const itemQuoteId = Number(item.quote_id);
-      const selectedQuoteId = Number(selectedQuote.id);
-      console.log(`Comparing item.quote_id ${itemQuoteId} with selectedQuote.id ${selectedQuoteId}`);
-      return itemQuoteId === selectedQuoteId;
-    });
-    
-    console.log(`Filtered ${filteredItems.length} items for quote ${selectedQuote.id}:`, filteredItems);
-    return filteredItems;
+    return quoteItems;
   };
 
   const formatDate = (timestamp: number) => {
@@ -208,7 +183,7 @@ const Dashboard = () => {
                     <TableRow 
                       key={quote.id}
                       className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
-                      onClick={() => setSelectedQuote(quote)}
+                      onClick={() => handleQuoteSelection(quote)}
                     >
                        <TableCell className="p-4">
                         <div className="space-y-1">
@@ -259,15 +234,13 @@ const Dashboard = () => {
           <CardContent className="p-0">
             {selectedQuote ? (
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                {getSelectedQuoteItems().length === 0 ? (
+                {loadingQuoteItems ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Loading BOM items for Quote {selectedQuote.id}...
+                  </div>
+                ) : getSelectedQuoteItems().length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     <p>No BOM items found for Quote {selectedQuote.id}</p>
-                    <p className="text-sm mt-2">
-                      Total quote items in database: {quoteItems.length}
-                    </p>
-                    <p className="text-sm">
-                      Quote items for this quote ID: {quoteItems.filter(item => Number(item.quote_id) === Number(selectedQuote.id)).length}
-                    </p>
                   </div>
                 ) : (
                   <Table>
