@@ -54,6 +54,59 @@ const materialTypes = [
   { item: "Appliance Parts", source: "White goods", typicalSize: "100-1000mm (4-40\") components", weightRange: "1-50 kg (2-110 lbs)" }
 ];
 
+const burdenMaterials = [
+  { material: "E-Waste Shred", industry: "Recycling", tph: "50-200", bulkDensity: "50-80", moisture: "1-5%", roiDriver: "Precious metal recovery" },
+  { material: "Battery Recycling", industry: "Energy Storage", tph: "50-200", bulkDensity: "60-90", moisture: "1-5%", roiDriver: "Critical material recovery" },
+  { material: "Mill Scale", industry: "Steel", tph: "500-1500", bulkDensity: "200-250", moisture: "2-5%", roiDriver: "Iron recovery" },
+  { material: "Lead Slag", industry: "Lead", tph: "200-600", bulkDensity: "180-220", moisture: "2-6%", roiDriver: "Lead recovery" },
+  { material: "Scrap Metal Shred", industry: "Recycling", tph: "200-1000", bulkDensity: "40-60", moisture: "2-8%", roiDriver: "Product separation" },
+  { material: "Solar Panel Recycling", industry: "Renewable", tph: "25-100", bulkDensity: "45-70", moisture: "2-8%", roiDriver: "Silicon/metal recovery" },
+  { material: "Copper Slag", industry: "Copper", tph: "400-1000", bulkDensity: "140-170", moisture: "3-8%", roiDriver: "Copper recovery" },
+  { material: "Foundry Sand", industry: "Foundry", tph: "400-1200", bulkDensity: "80-100", moisture: "3-8%", roiDriver: "Sand reclamation" },
+  { material: "Zinc Calcine", industry: "Zinc", tph: "300-800", bulkDensity: "90-120", moisture: "3-8%", roiDriver: "Process protection" },
+  { material: "Catalyst Recovery", industry: "Chemical", tph: "50-150", bulkDensity: "80-120", moisture: "3-10%", roiDriver: "Precious metal recovery" },
+  { material: "Tungsten Ore", industry: "Alloys", tph: "150-400", bulkDensity: "180-220", moisture: "5-8%", roiDriver: "Strategic metal recovery" },
+  { material: "Silver Ore", industry: "Precious Metals", tph: "400-1200", bulkDensity: "95-115", moisture: "5-10%", roiDriver: "Recovery optimization" },
+  { material: "Wind Turbine Recycling", industry: "Renewable", tph: "100-300", bulkDensity: "30-50", moisture: "5-12%", roiDriver: "Steel/rare earth recovery" },
+  { material: "Blast Furnace Dust", industry: "Steel", tph: "300-800", bulkDensity: "60-80", moisture: "5-12%", roiDriver: "Iron recovery" },
+  { material: "Auto Shredder Residue", industry: "Recycling", tph: "300-800", bulkDensity: "25-40", moisture: "5-12%", roiDriver: "Metal recovery" },
+  { material: "Smelter Dust", industry: "Various Metals", tph: "100-400", bulkDensity: "70-100", moisture: "5-15%", roiDriver: "Metal recovery" },
+  { material: "Uranium Ore", industry: "Nuclear", tph: "200-600", bulkDensity: "100-120", moisture: "8-15%", roiDriver: "Radiation safety" },
+  { material: "Incinerator Ash", industry: "Waste-to-Energy", tph: "200-600", bulkDensity: "65-85", moisture: "8-18%", roiDriver: "Metal recovery" },
+  { material: "Lithium Ore", industry: "Battery", tph: "300-800", bulkDensity: "85-105", moisture: "8-18%", roiDriver: "Battery grade purity" },
+  { material: "Construction Debris", industry: "Recycling", tph: "300-1000", bulkDensity: "90-130", moisture: "8-20%", roiDriver: "Metal separation" },
+  { material: "Coal Ash", industry: "Power", tph: "400-1200", bulkDensity: "55-75", moisture: "10-20%", roiDriver: "Iron/carbon recovery" },
+  { material: "Iron Ore Concentrate", industry: "Steel/Mining", tph: "2000-8000", bulkDensity: "140-160", moisture: "12-15%", roiDriver: "$500K+ mill protection" },
+  { material: "Coal Run-of-Mine", industry: "Power/Steel", tph: "1500-5000", bulkDensity: "45-55", moisture: "12-15%", roiDriver: "$200K belt + downtime" },
+  { material: "Bauxite Ore", industry: "Aluminum", tph: "1000-2500", bulkDensity: "75-95", moisture: "12-15%", roiDriver: "Refinery protection" },
+  { material: "Magnetite Concentrate", industry: "Steel", tph: "1000-3000", bulkDensity: "150-180", moisture: "10-15%", roiDriver: "Pellet plant protection" },
+  { material: "Coal ROM (Metallurgical)", industry: "Steel", tph: "1000-3000", bulkDensity: "50-60", moisture: "10-18%", roiDriver: "Coking plant protection" },
+  { material: "Heavy Media Coal", industry: "Coal Prep", tph: "500-2000", bulkDensity: "95-115", moisture: "12-18%", roiDriver: "Media circuit protection" },
+  { material: "Nickel Ore", industry: "Smelting", tph: "800-2000", bulkDensity: "95-120", moisture: "12-20%", roiDriver: "Smelter feed quality" },
+  { material: "Taconite Pellets", industry: "Steel", tph: "1200-3500", bulkDensity: "120-140", moisture: "1-3%", roiDriver: "Blast furnace protection" },
+  { material: "Ferrosilicon Fines", industry: "Ferroalloy", tph: "200-500", bulkDensity: "110-140", moisture: "1-4%", roiDriver: "Alloy recovery" },
+  { material: "Coal Fines", industry: "Power", tph: "800-2000", bulkDensity: "40-50", moisture: "15-25%", roiDriver: "Boiler protection" },
+  { material: "Iron Sand", industry: "Steel", tph: "800-2000", bulkDensity: "110-130", moisture: "15-25%", roiDriver: "Direct reduction feed" },
+  { material: "Cobalt Ore", industry: "Battery", tph: "200-500", bulkDensity: "110-130", moisture: "15-25%", roiDriver: "High-value recovery" },
+  { material: "Mining Tailings", industry: "Various", tph: "500-2000", bulkDensity: "85-120", moisture: "15-35%", roiDriver: "Resource recovery" },
+  { material: "Coal Refuse", industry: "Coal Prep", tph: "600-1500", bulkDensity: "55-70", moisture: "20-35%", roiDriver: "Environmental compliance" },
+  { material: "Steel Slag", industry: "Steel", tph: "800-2500", bulkDensity: "120-180", moisture: "2-5%", roiDriver: "Product purity specs" },
+  { material: "Municipal Solid Waste", industry: "Waste Management", tph: "200-800", bulkDensity: "20-40", moisture: "25-45%", roiDriver: "Ferrous recovery" },
+  { material: "Titanium Ore (Ilmenite)", industry: "Pigment", tph: "500-1200", bulkDensity: "140-170", moisture: "3-8%", roiDriver: "TiO2 process protection" },
+  { material: "Chrome Ore", industry: "Ferrochrome", tph: "800-2200", bulkDensity: "140-170", moisture: "5-8%", roiDriver: "Product quality assurance" },
+  { material: "Lead-Zinc Ore", industry: "Smelting", tph: "600-1500", bulkDensity: "120-140", moisture: "6-10%", roiDriver: "Flotation optimization" },
+  { material: "Hematite Ore", industry: "Steel", tph: "1500-4000", bulkDensity: "130-150", moisture: "6-10%", roiDriver: "Downstream process protection" },
+  { material: "Vanadium Ore", industry: "Steel", tph: "300-800", bulkDensity: "110-130", moisture: "6-12%", roiDriver: "Alloy grade protection" },
+  { material: "Rare Earth Ore", industry: "Electronics", tph: "100-400", bulkDensity: "120-150", moisture: "6-12%", roiDriver: "High-value concentrate" },
+  { material: "Gold Ore", industry: "Precious Metals", tph: "500-1500", bulkDensity: "90-110", moisture: "6-12%", roiDriver: "Cyanide circuit protection" },
+  { material: "Iron Ore Pellet Feed", industry: "Steel", tph: "1500-4000", bulkDensity: "110-130", moisture: "7-12%", roiDriver: "Pelletizing protection" },
+  { material: "Manganese Ore", industry: "Ferroalloy", tph: "600-1800", bulkDensity: "120-150", moisture: "8-12%", roiDriver: "Furnace feed preparation" },
+  { material: "Copper Ore (Primary)", industry: "Mining", tph: "1000-4000", bulkDensity: "100-130", moisture: "8-15%", roiDriver: "Flotation circuit protection" },
+  { material: "Platinum Ore", industry: "PGM", tph: "300-800", bulkDensity: "120-140", moisture: "8-15%", roiDriver: "High-value protection" },
+  { material: "Tin Ore", industry: "Smelting", tph: "400-1000", bulkDensity: "160-200", moisture: "8-15%", roiDriver: "Concentrate purity" },
+  { material: "Molybdenum Ore", industry: "Steel", tph: "200-600", bulkDensity: "85-105", moisture: "8-15%", roiDriver: "Concentrate quality" }
+];
+
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
   const [inputs, setInputs] = useState<CalculatorInputs>({
@@ -107,6 +160,33 @@ export function MagneticSeparatorCalculator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showMaterialTypes, setShowMaterialTypes] = useState(false);
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<string[]>([]);
+  const [showBurdenMaterials, setShowBurdenMaterials] = useState(false);
+
+  const handleBurdenMaterialSelect = (material: typeof burdenMaterials[0]) => {
+    // Parse TPH range and take average
+    const tphRange = material.tph.split('-').map(Number);
+    const avgTph = tphRange.length === 2 ? (tphRange[0] + tphRange[1]) / 2 : tphRange[0];
+    
+    // Parse bulk density range and take average, convert from lb/ft³ to t/m³
+    const densityRange = material.bulkDensity.split('-').map(Number);
+    const avgDensityLbFt3 = densityRange.length === 2 ? (densityRange[0] + densityRange[1]) / 2 : densityRange[0];
+    const avgDensityTm3 = avgDensityLbFt3 * 0.016018; // Convert lb/ft³ to t/m³
+    
+    // Parse moisture percentage and take average
+    const moistureStr = material.moisture.replace('%', '');
+    const moistureRange = moistureStr.split('-').map(Number);
+    const avgMoisture = moistureRange.length === 2 ? (moistureRange[0] + moistureRange[1]) / 2 : moistureRange[0];
+    
+    setInputs(prev => ({
+      ...prev,
+      burden: {
+        ...prev.burden,
+        throughPut: Math.round(avgTph),
+        density: Number(avgDensityTm3.toFixed(2)),
+        waterContent: Number(avgMoisture.toFixed(1))
+      }
+    }));
+  };
 
   const handleCalculate = async () => {
     console.log('handleCalculate started with inputs:', inputs);
@@ -370,6 +450,48 @@ export function MagneticSeparatorCalculator() {
                   step={0.1}
                   unit="%"
                 />
+              </div>
+              
+              {/* Burden Materials Collapsible */}
+              <div className="mt-4">
+                <Collapsible open={showBurdenMaterials} onOpenChange={setShowBurdenMaterials}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span>Material Selection (auto-populates burden values)</span>
+                      {showBurdenMaterials ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm">Select material type to auto-populate values</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-1 gap-1 max-h-64 overflow-y-auto">
+                          {burdenMaterials.map((material) => (
+                            <button
+                              key={material.material}
+                              onClick={() => handleBurdenMaterialSelect(material)}
+                              className="flex items-center justify-between text-xs p-3 hover:bg-muted/50 rounded cursor-pointer border-b border-border/50 last:border-b-0"
+                            >
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{material.material}</div>
+                                <div className="text-muted-foreground text-xs">{material.industry} • TPH: {material.tph} • Density: {material.bulkDensity} lb/ft³ • Moisture: {material.moisture}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-3 text-xs text-muted-foreground">
+                          Click any material to auto-populate TPH, density, and moisture values. Values can be manually adjusted after selection.
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </ParameterSection>
 
