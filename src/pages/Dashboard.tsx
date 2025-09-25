@@ -132,10 +132,28 @@ const Dashboard = () => {
     return quoteItems
       .filter(item => item.quote_id === quoteId)
       .reduce((total, item) => {
-        // Only add to total if cost is positive (some items have -1 or null cost)
-        const cost = item.cost > 0 ? item.cost : 0;
-        return total + (cost * item.amount);
+        if (item.cost <= 0) return total;
+        
+        // For coolant and labor items, use cost directly from database
+        const isLaborOrCoolant = item.name.toLowerCase().includes('coolant') || 
+                                item.name.toLowerCase().includes('labour') || 
+                                item.name.toLowerCase().includes('labor');
+        
+        const itemTotal = isLaborOrCoolant ? item.cost : (item.cost * item.amount);
+        return total + itemTotal;
       }, 0);
+  };
+
+  const getItemDisplayCost = (item: QuoteItem) => {
+    if (item.cost <= 0) return 'TBD';
+    
+    // For coolant and labor items, use cost directly from database
+    const isLaborOrCoolant = item.name.toLowerCase().includes('coolant') || 
+                            item.name.toLowerCase().includes('labour') || 
+                            item.name.toLowerCase().includes('labor');
+    
+    const displayCost = isLaborOrCoolant ? item.cost : (item.cost * item.amount);
+    return `$${displayCost.toFixed(2)}`;
   };
 
   const getSelectedQuoteItems = () => {
@@ -165,15 +183,15 @@ const Dashboard = () => {
               Back to Calculator
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">BMR Quotes Dashboard</h1>
+          <h1 className="text-2xl font-bold">BMR Quotes Dashboard</h1>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-6 h-[calc(100vh-200px)]">
         {/* Left side - Quotes List (25%) */}
         <Card className="col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quotes / Workups</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Quotes / Workups</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -187,10 +205,10 @@ const Dashboard = () => {
                     >
                        <TableCell className="p-4">
                         <div className="space-y-1">
-                          <div className="font-medium text-base">
+                          <div className="font-medium text-sm">
                             Quote {quote.id}
                             {quote.quote_number && (
-                              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                              <span className="ml-2 text-xs font-normal text-muted-foreground">
                                 ({quote.quote_number})
                               </span>
                             )}
@@ -215,8 +233,8 @@ const Dashboard = () => {
 
         {/* Right side - BOM Details (75%) */}
         <Card className="col-span-3">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
                   <span>BOM Items for Quote {selectedQuote.id}{selectedQuote.quote_number && ` (${selectedQuote.quote_number})`}</span>
@@ -246,28 +264,28 @@ const Dashboard = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead className="text-right">Weight</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
+                        <TableHead className="text-sm">Item</TableHead>
+                        <TableHead className="text-right text-sm">Quantity</TableHead>
+                        <TableHead className="text-right text-sm">Weight</TableHead>
+                        <TableHead className="text-right text-sm">Cost</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getSelectedQuoteItems().map((item) => (
                         <TableRow key={item["# item_id"]}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">{item.amount}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="font-medium text-sm">{item.name}</TableCell>
+                          <TableCell className="text-right text-sm">{item.amount}</TableCell>
+                          <TableCell className="text-right text-sm">
                             {item.weight ? `${item.weight.toFixed(2)}` : '-'}
                           </TableCell>
-                          <TableCell className="text-right">
-                            {item.cost > 0 ? `$${(item.cost * item.amount).toFixed(2)}` : 'TBD'}
+                          <TableCell className="text-right text-sm">
+                            {getItemDisplayCost(item)}
                           </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="border-t-2 font-semibold">
-                        <TableCell colSpan={3} className="text-right">Total</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell colSpan={3} className="text-right text-sm">Total</TableCell>
+                        <TableCell className="text-right text-sm">
                           ${getQuoteTotal(selectedQuote.id).toFixed(2)}
                         </TableCell>
                       </TableRow>
