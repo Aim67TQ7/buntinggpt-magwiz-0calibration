@@ -68,7 +68,7 @@ const Dashboard = () => {
       
       // Fetch quotes, products, and BOM items (but not all quote items)
       const [quotesResponse, productsResponse, bomItemsResponse] = await Promise.all([
-        supabase.from('BMR_quotes').select('*').order('id', { ascending: true }),
+        supabase.from('BMR_quotes').select('*').order('date_generated', { ascending: false }),
         supabase.from('BMR_products').select('*'),
         supabase.from('BMR_parts').select('*')
       ]);
