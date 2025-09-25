@@ -161,6 +161,7 @@ export function MagneticSeparatorCalculator() {
   const [showMaterialTypes, setShowMaterialTypes] = useState(false);
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<string[]>([]);
   const [showBurdenMaterials, setShowBurdenMaterials] = useState(false);
+  const [showMagnetRecommendation, setShowMagnetRecommendation] = useState(false);
 
   const handleBurdenMaterialSelect = (material: typeof burdenMaterials[0]) => {
     // Parse TPH range and take average
@@ -186,6 +187,20 @@ export function MagneticSeparatorCalculator() {
         waterContent: Number(avgMoisture.toFixed(1))
       }
     }));
+  };
+
+  const handleMagnetRecommendationSelect = (recommendation: any) => {
+    if (recommendation?.ui_autofill) {
+      setInputs(prev => ({
+        ...prev,
+        magnet: {
+          ...prev.magnet,
+          gap: recommendation.ui_autofill.gap_mm,
+          coreBeltRatio: recommendation.ui_autofill.face_width_factor / 1.5, // Convert face width factor to approx core belt ratio
+          position: recommendation.ui_autofill.position.toLowerCase() as 'overhead' | 'crossbelt' | 'inline' | 'drum'
+        }
+      }));
+    }
   };
 
   const handleCalculate = async () => {
@@ -634,6 +649,95 @@ export function MagneticSeparatorCalculator() {
                     { value: 'drum', label: 'Drum' }
                   ]}
                 />
+              </div>
+
+              {/* Magnet Type Recommendation */}
+              <div className="mt-4">
+                <Collapsible open={showMagnetRecommendation} onOpenChange={setShowMagnetRecommendation}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Magnet Type Recommendation
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showMagnetRecommendation ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <Card>
+                      <CardContent className="p-4">
+                        {results?.recommendationEngine ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <h4 className="font-medium text-sm mb-2">Recommended Configuration</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span>Model:</span>
+                                    <span className="font-medium">{results.recommendationEngine.recommendation_engine.base_recommendation.replace(/_/g, ' ')}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Position:</span>
+                                    <span>{results.recommendationEngine.ui_autofill.position}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Face Width:</span>
+                                    <span>{results.recommendationEngine.ui_autofill.face_width_mm}mm</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Min Length:</span>
+                                    <span>{results.recommendationEngine.ui_autofill.magnet_length_min_mm}mm</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-sm mb-2">Performance Matrix</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span>Pickup Range:</span>
+                                    <span>{results.recommendationEngine.recommendation_engine.matrix_bucket.r_range_mm}mm</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Tramp Size:</span>
+                                    <span>{results.recommendationEngine.recommendation_engine.matrix_bucket.tramp_bucket_mm}mm</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Effective Distance:</span>
+                                    <span>{results.recommendationEngine.derived.effective_pickup_distance_r_mm.toFixed(0)}mm</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {results.recommendationEngine.recommendation_engine.notes.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-sm mb-2">Engineering Notes</h4>
+                                <ul className="text-sm space-y-1">
+                                  {results.recommendationEngine.recommendation_engine.notes.map((note, index) => (
+                                    <li key={index} className="text-muted-foreground">• {note}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <Button 
+                              onClick={() => handleMagnetRecommendationSelect(results.recommendationEngine)}
+                              className="w-full"
+                              size="sm"
+                            >
+                              Apply Recommended Settings
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted-foreground">
+                            <Settings className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>Run calculation to see magnet recommendations</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </ParameterSection>
 

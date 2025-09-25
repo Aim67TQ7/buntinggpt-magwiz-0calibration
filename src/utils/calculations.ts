@@ -5,6 +5,7 @@ import {
   CalculationResults,
   EnhancedCalculationResults,
   OptimizationResult,
+  RecommendationEngine,
 } from '@/types/calculator';
 import { validateCalculationResults, getRecommendedValidationTools } from '@/utils/validation';
 
@@ -279,6 +280,146 @@ export function calculateThermalPerformance(
   };
 }
 
+/* ─────────────────────────── Enhanced Recommendation Engine ─────────────────────────── */
+export function generateRecommendationEngine(inputs: CalculatorInputs): RecommendationEngine {
+  const { conveyor, burden, shape, magnet } = inputs;
+  
+  // Convert inputs to recommendation engine format
+  const engineInputs = {
+    belt_width_mm: conveyor.beltWidth || 1200,
+    belt_speed_mps: conveyor.beltSpeed || 2.5,
+    trough_angle_deg: conveyor.troughAngle || 20,
+    throughput_tph: burden.throughPut || burden.throughput || 550,
+    bulk_density_kg_per_m3: (burden.density || 1.68) * 1000,
+    shape_factor_k: 0.65, // Typical shape factor
+    gap_to_burden_top_mm: magnet.gap || 150,
+    tramp_dims_mm: {
+      width: shape.width || 15,
+      length: shape.length || 25,
+      height: shape.height || 8
+    }
+  };
+
+  // Calculate derived values
+  const beltArea_m2 = (engineInputs.belt_width_mm / 1000) * Math.sin(engineInputs.trough_angle_deg * Math.PI / 180);
+  const volumetricFlow = (engineInputs.throughput_tph / 3.6) / engineInputs.bulk_density_kg_per_m3;
+  const burdenDepth_m = volumetricFlow / (engineInputs.belt_speed_mps * beltArea_m2);
+  const burdenDepth_mm = burdenDepth_m * 1000;
+  const burialAllowance = burdenDepth_mm * 0.5; // 50% burial assumption
+  const effectivePickupDistance = engineInputs.gap_to_burden_top_mm + burialAllowance;
+  const trampMinDimension = Math.min(
+    engineInputs.tramp_dims_mm.width,
+    engineInputs.tramp_dims_mm.length,
+    engineInputs.tramp_dims_mm.height
+  );
+
+  const derived = {
+    volumetric_flow_m3_per_s: roundSig(volumetricFlow, 4),
+    burden_depth_h_m: roundSig(burdenDepth_m, 4),
+    burden_depth_h_mm: roundSig(burdenDepth_mm, 4),
+    burial_allowance_mm: roundSig(burialAllowance, 4),
+    effective_pickup_distance_r_mm: roundSig(effectivePickupDistance, 4),
+    tramp_min_dimension_mm: trampMinDimension
+  };
+
+  // UI Autofill calculations
+  const faceWidthFactor = 1.20;
+  const faceWidth = engineInputs.belt_width_mm * faceWidthFactor;
+  const magnetLengthMin = faceWidth + 160; // Additional length for mounting
+
+  const uiAutofill = {
+    gap_mm: engineInputs.gap_to_burden_top_mm,
+    face_width_factor: faceWidthFactor,
+    face_width_mm: roundSig(faceWidth, 0),
+    magnet_length_min_mm: roundSig(magnetLengthMin, 0),
+    position: magnet.position === 'overhead' ? 'Overhead' : 'Cross-Belt'
+  };
+
+  // Recommendation logic based on pickup distance and tramp size
+  let baseRecommendation = 'PERMANENT';
+  const modifiersApplied: string[] = [];
+  const notes: string[] = [];
+  
+  // Classification matrix
+  let rRange = '100-150';
+  let trampBucket = '5-15';
+  
+  if (effectivePickupDistance > 200) {
+    baseRecommendation = 'OIL_COOLED_ELECTRO_PLUS_PROCESS_CHANGE';
+    rRange = '200+';
+    notes.push(`High pickup distance (${effectivePickupDistance.toFixed(0)}mm) requires process optimization.`);
+  } else if (effectivePickupDistance > 170) {
+    baseRecommendation = 'OIL_COOLED_ELECTRO_UPSIZED';
+    rRange = '150-200';
+    notes.push(`Pickup distance ${effectivePickupDistance.toFixed(0)}mm is challenging for permanent magnets.`);
+  } else if (effectivePickupDistance > 120) {
+    baseRecommendation = 'OIL_COOLED_ELECTRO';
+    rRange = '120-170';
+  } else if (effectivePickupDistance > 80) {
+    baseRecommendation = 'AIR_COOLED_ELECTRO';
+    rRange = '80-120';
+  } else {
+    baseRecommendation = 'PERMANENT';
+    rRange = '50-80';
+  }
+
+  if (trampMinDimension < 5) {
+    trampBucket = '1-5';
+    if (baseRecommendation === 'PERMANENT') {
+      baseRecommendation = 'AIR_COOLED_ELECTRO';
+      modifiersApplied.push('FINE_TRAMP_UPGRADE');
+    }
+  } else if (trampMinDimension > 25) {
+    trampBucket = '25+';
+  } else if (trampMinDimension > 10) {
+    trampBucket = '10-25';
+  }
+
+  const classOrdering = [
+    'PERMANENT',
+    'LARGE_PERMANENT', 
+    'AIR_COOLED_ELECTRO',
+    'OIL_COOLED_ELECTRO',
+    'OIL_COOLED_ELECTRO_UPSIZED',
+    'OIL_COOLED_ELECTRO_PLUS_PROCESS_CHANGE'
+  ];
+
+  // Speed considerations
+  if (engineInputs.belt_speed_mps > 3.0) {
+    if (!modifiersApplied.includes('FINE_TRAMP_UPGRADE')) {
+      const currentIndex = classOrdering.indexOf(baseRecommendation);
+      if (currentIndex < classOrdering.length - 1) {
+        baseRecommendation = classOrdering[currentIndex + 1];
+        modifiersApplied.push('HIGH_SPEED_UPGRADE');
+      }
+    }
+    notes.push(`High belt speed (${engineInputs.belt_speed_mps} m/s) reduces capture efficiency.`);
+  }
+
+  if (trampMinDimension <= 8 && effectivePickupDistance > 150) {
+    notes.push(`Thin ${trampMinDimension}mm material at ~${effectivePickupDistance.toFixed(0)}mm effective pickup is beyond permanent and marginal for air-cooled.`);
+    notes.push(`Consider lowering gap to ~125mm or reducing burial allowance.`);
+  }
+
+  return {
+    inputs: engineInputs,
+    derived,
+    ui_autofill: uiAutofill,
+    recommendation_engine: {
+      matrix_bucket: { r_range_mm: rRange, tramp_bucket_mm: trampBucket },
+      base_recommendation: baseRecommendation,
+      modifiers_applied: modifiersApplied,
+      notes
+    },
+    field_replacement: {
+      replace_core_belt_ratio_with: 'face_width_factor',
+      definition: 'Multiplier applied to conveyor belt width to size magnet face width for lateral coverage.',
+      suggested_range: [1.15, 1.25]
+    },
+    class_ordering: classOrdering
+  };
+}
+
 /* ───────────────────────────── Model Recommendation ───────────────────────────── */
 export function recommendSeparatorModel(
   inputs: CalculatorInputs
@@ -287,8 +428,25 @@ export function recommendSeparatorModel(
   const B = magneticField.tesla;
   const { conveyor, burden, magnet, misc } = inputs;
 
-  // Base scores
+  // Enhanced recommendation using the recommendation engine
+  const recEngine = generateRecommendationEngine(inputs);
+  const baseRecommendation = recEngine.recommendation_engine.base_recommendation;
+  
+  // Map recommendation engine classes to model names
+  const modelMapping: { [key: string]: string } = {
+    'PERMANENT': 'Permanent Magnet Separator',
+    'LARGE_PERMANENT': 'Large Permanent Magnet',
+    'AIR_COOLED_ELECTRO': 'EMAX (Air Cooled)',
+    'OIL_COOLED_ELECTRO': 'OCW (Oil Cooled)',
+    'OIL_COOLED_ELECTRO_UPSIZED': 'OCW Upsized (Oil Cooled)',
+    'OIL_COOLED_ELECTRO_PLUS_PROCESS_CHANGE': 'OCW + Process Optimization'
+  };
+
+  const primaryModel = modelMapping[baseRecommendation] || 'OCW (Oil Cooled)';
+  
+  // Base scores adjusted by recommendation engine
   const models = [
+    { name: primaryModel, base: 95 },
     { name: 'EMAX (Air Cooled)', base: 85 },
     { name: 'OCW (Oil Cooled)', base: 90 },
     { name: 'Suspended Electromagnet', base: 80 },
@@ -298,6 +456,9 @@ export function recommendSeparatorModel(
 
   const scoredModels = models.map(model => {
     let score = model.base;
+
+    // Boost the recommended model
+    if (model.name === primaryModel) score += 10;
 
     // Physics-tied nudges
     if (conveyor.beltWidth >= 1800 && model.name.includes('Cross-Belt')) score += 5;
@@ -315,7 +476,9 @@ export function recommendSeparatorModel(
     if (magnet.coreBeltRatio > 0.7 && model.name.includes('EMAX')) score += 8;
 
     return { model: model.name, score: Math.min(100, score) };
-  }).sort((a, b) => b.score - a.score);
+  })
+  .filter((item, index, self) => index === self.findIndex(t => t.model === item.model)) // Remove duplicates
+  .sort((a, b) => b.score - a.score);
 
   return {
     model: scoredModels[0].model,
@@ -330,12 +493,14 @@ export function performCompleteCalculation(inputs: CalculatorInputs): Calculatio
   const trampMetalRemoval = calculateTrampMetalRemoval(inputs);
   const thermalPerformance = calculateThermalPerformance(inputs);
   const recommendedModel = recommendSeparatorModel(inputs);
+  const recommendationEngine = generateRecommendationEngine(inputs);
 
   return {
     magneticFieldStrength,
     trampMetalRemoval,
     thermalPerformance,
-    recommendedModel
+    recommendedModel,
+    recommendationEngine
   };
 }
 

@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award, TrendingUp, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award, TrendingUp, ArrowRight, Settings } from 'lucide-react';
 import { ValidationToolsRecommendation } from './ValidationToolsRecommendation';
 
 interface ResultsDisplayProps {
@@ -273,6 +273,87 @@ export function ResultsDisplay({ results, inputs }: ResultsDisplayProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommendation Engine Analysis */}
+      {results.recommendationEngine && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Enhanced Recommendation Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-3">System Configuration</h3>
+                <div className="space-y-3">
+                  <div className="bg-muted p-3 rounded-lg">
+                    <div className="font-medium text-sm mb-2">Recommended Model</div>
+                    <div className="text-lg font-bold text-engineering-primary">
+                      {results.recommendationEngine.recommendation_engine.base_recommendation.replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Position:</span>
+                      <span className="font-medium">{results.recommendationEngine.ui_autofill.position}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Face Width:</span>
+                      <span className="font-medium">{results.recommendationEngine.ui_autofill.face_width_mm}mm</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Min Length:</span>
+                      <span className="font-medium">{results.recommendationEngine.ui_autofill.magnet_length_min_mm}mm</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Performance Matrix</h3>
+                <div className="space-y-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Pickup Range:</span>
+                      <Badge variant="outline">{results.recommendationEngine.recommendation_engine.matrix_bucket.r_range_mm}mm</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tramp Size:</span>
+                      <Badge variant="outline">{results.recommendationEngine.recommendation_engine.matrix_bucket.tramp_bucket_mm}mm</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Effective Distance:</span>
+                      <span className="font-medium">{results.recommendationEngine.derived.effective_pickup_distance_r_mm.toFixed(0)}mm</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Burden Depth:</span>
+                      <span className="font-medium">{results.recommendationEngine.derived.burden_depth_h_mm.toFixed(1)}mm</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {results.recommendationEngine.recommendation_engine.notes.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3">Engineering Notes</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <ul className="space-y-2">
+                    {results.recommendationEngine.recommendation_engine.notes.map((note, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <span className="text-engineering-warning mt-1">•</span>
+                        <span>{note}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             )}

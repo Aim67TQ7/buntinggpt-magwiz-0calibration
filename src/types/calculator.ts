@@ -76,6 +76,46 @@ export interface EnvironmentalConstraints {
   atexRating?: string;
 }
 
+export interface RecommendationEngine {
+  inputs: {
+    belt_width_mm: number;
+    belt_speed_mps: number;
+    trough_angle_deg: number;
+    throughput_tph: number;
+    bulk_density_kg_per_m3: number;
+    shape_factor_k: number;
+    gap_to_burden_top_mm: number;
+    tramp_dims_mm: { width: number; length: number; height: number; };
+  };
+  derived: {
+    volumetric_flow_m3_per_s: number;
+    burden_depth_h_m: number;
+    burden_depth_h_mm: number;
+    burial_allowance_mm: number;
+    effective_pickup_distance_r_mm: number;
+    tramp_min_dimension_mm: number;
+  };
+  ui_autofill: {
+    gap_mm: number;
+    face_width_factor: number;
+    face_width_mm: number;
+    magnet_length_min_mm: number;
+    position: string;
+  };
+  recommendation_engine: {
+    matrix_bucket: { r_range_mm: string; tramp_bucket_mm: string; };
+    base_recommendation: string;
+    modifiers_applied: string[];
+    notes: string[];
+  };
+  field_replacement: {
+    replace_core_belt_ratio_with: string;
+    definition: string;
+    suggested_range: number[];
+  };
+  class_ordering: string[];
+}
+
 export interface CalculationResults {
   magneticFieldStrength: {
     tesla: number;
@@ -101,6 +141,7 @@ export interface CalculationResults {
       score: number;
     }>;
   };
+  recommendationEngine?: RecommendationEngine;
 }
 
 export interface ValidationResult {
