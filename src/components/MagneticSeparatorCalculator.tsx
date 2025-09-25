@@ -554,6 +554,104 @@ export function MagneticSeparatorCalculator() {
                 />
               </div>
               
+              {/* Area and Weight Analysis */}
+              <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="font-medium text-primary mb-1">Volume</div>
+                    <div className="text-lg font-semibold">
+                      {((inputs.shape.width * inputs.shape.length * inputs.shape.height) / 1000000000).toFixed(6)} m³
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {inputs.shape.width} × {inputs.shape.length} × {inputs.shape.height} mm
+                    </div>
+                  </div>
+                  
+                  {selectedMaterialTypes.length > 0 && (
+                    <div>
+                      <div className="font-medium text-primary mb-1">Weight Range (KG)</div>
+                      <div className="space-y-1">
+                        {(() => {
+                          const weights = selectedMaterialTypes.map(type => {
+                            const material = materialTypes.find(m => m.item === type);
+                            if (!material) return null;
+                            
+                            // Parse weight range - convert oz/lbs to kg
+                            const weightMatch = material.weightRange.match(/(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\s*(g|kg|oz|lbs)/);
+                            if (!weightMatch) return null;
+                            
+                            let min = parseFloat(weightMatch[1]);
+                            let max = parseFloat(weightMatch[2]);
+                            const unit = weightMatch[3];
+                            
+                            // Convert to kg
+                            if (unit === 'g') {
+                              min /= 1000;
+                              max /= 1000;
+                            } else if (unit === 'oz') {
+                              min *= 0.0283495;
+                              max *= 0.0283495;
+                            } else if (unit === 'lbs') {
+                              min *= 0.453592;
+                              max *= 0.453592;
+                            }
+                            
+                            return { min, max, item: material.item };
+                          }).filter(Boolean);
+                          
+                          if (weights.length === 0) return <div className="text-muted-foreground">No valid weights</div>;
+                          
+                          const overallMin = Math.min(...weights.map(w => w.min));
+                          const overallMax = Math.max(...weights.map(w => w.max));
+                          const avgMid = weights.reduce((sum, w) => sum + (w.min + w.max) / 2, 0) / weights.length;
+                          
+                          return (
+                            <>
+                              <div className="text-sm">
+                                <span className="font-medium">Min:</span> {overallMin.toFixed(3)} kg
+                              </div>
+                              <div className="text-sm">
+                                <span className="font-medium">Nom:</span> {avgMid.toFixed(3)} kg
+                              </div>
+                              <div className="text-sm">
+                                <span className="font-medium">Max:</span> {overallMax.toFixed(3)} kg
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Effective Removal Analysis */}
+                {results && selectedMaterialTypes.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <div className="font-medium text-primary mb-2">Effective Removal by Tramp Size</div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center p-2 bg-background rounded">
+                        <div className="font-medium">Small (≤15mm)</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {results.trampMetalRemoval.fineParticles.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-background rounded">
+                        <div className="font-medium">Medium (15-50mm)</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {results.trampMetalRemoval.mediumParticles.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-background rounded">
+                        <div className="font-medium">Large (&gt;50mm)</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {results.trampMetalRemoval.largeParticles.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               {/* Material Types Collapsible */}
               <div className="mt-4">
                 <Collapsible open={showMaterialTypes} onOpenChange={setShowMaterialTypes}>

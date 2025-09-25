@@ -183,7 +183,7 @@ const Dashboard = () => {
               Back to Calculator
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">BMR Quotes Dashboard</h1>
+          <h1 className="text-2xl font-bold">Quote History</h1>
         </div>
       </div>
 
