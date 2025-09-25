@@ -40,6 +40,55 @@ export const EQUIPMENT_RATINGS: Record<string, EquipmentRating> = {
     maxMagneticField: 1.6,// Tesla
     thermalRating: 2500,  // W/m²
   },
+  'OCW + Process Optimization': {
+    model: 'OCW + Process Optimization',
+    maxPowerLoss: 30,     // kW (upsized for optimization)
+    maxOperatingTemp: 160,// °C absolute
+    maxMagneticField: 1.7,// Tesla
+    thermalRating: 3000,  // W/m²
+  },
+  'OCW Upsized (Oil Cooled)': {
+    model: 'OCW Upsized (Oil Cooled)',
+    maxPowerLoss: 35,     // kW (larger capacity)
+    maxOperatingTemp: 155,// °C absolute
+    maxMagneticField: 1.65,// Tesla
+    thermalRating: 2800,  // W/m²
+  },
+  'Cross-Belt Separator': {
+    model: 'Cross-Belt Separator',
+    maxPowerLoss: 15,     // kW
+    maxOperatingTemp: 140,// °C absolute
+    maxMagneticField: 1.5,// Tesla
+    thermalRating: 1500,  // W/m²
+  },
+  'Permanent Magnet Separator': {
+    model: 'Permanent Magnet Separator',
+    maxPowerLoss: 0,      // kW (no power consumption)
+    maxOperatingTemp: 80, // °C absolute
+    maxMagneticField: 0.8,// Tesla
+    thermalRating: 0,     // W/m²
+  },
+  'Large Permanent Magnet': {
+    model: 'Large Permanent Magnet',
+    maxPowerLoss: 0,      // kW (no power consumption)
+    maxOperatingTemp: 80, // °C absolute
+    maxMagneticField: 1.0,// Tesla
+    thermalRating: 0,     // W/m²
+  },
+  'Suspended Electromagnet': {
+    model: 'Suspended Electromagnet',
+    maxPowerLoss: 20,     // kW
+    maxOperatingTemp: 130,// °C absolute
+    maxMagneticField: 1.3,// Tesla
+    thermalRating: 1800,  // W/m²
+  },
+  'Drum Separator': {
+    model: 'Drum Separator',
+    maxPowerLoss: 5,      // kW
+    maxOperatingTemp: 100,// °C absolute
+    maxMagneticField: 1.1,// Tesla
+    thermalRating: 600,   // W/m²
+  },
 };
 
 /* ------------------------- Professional tools list ---------------------- */
