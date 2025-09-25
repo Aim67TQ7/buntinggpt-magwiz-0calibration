@@ -1,15 +1,58 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ParameterSection, ParameterInput, ParameterSelect } from "./ParameterSection";
 import { ResultsDisplay } from "./ResultsDisplay";
 import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
 import { performEnhancedCalculation } from '@/utils/calculations';
 import { generateValidationExportData } from '@/utils/validation';
-import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download, Atom, Cloud, Zap } from "lucide-react";
+import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download, Atom, Cloud, Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const materialTypes = [
+  { item: "Suspension Parts", source: "Automotive components", typicalSize: "100-600mm (4-24\") assemblies", weightRange: "2-30 kg (4-66 lbs)" },
+  { item: "Steel Grinding Balls", source: "Ball mills", typicalSize: "25-125mm (1-5\") diameter", weightRange: "0.1-8 kg (0.2-18 lbs)" },
+  { item: "Conveyor Splice Bolts", source: "Belt connections", typicalSize: "M16-M24 (5/8\"-1\") dia, 50-150mm (2-6\") long", weightRange: "100-600g (0.2-1.3 lbs)" },
+  { item: "Bottle Caps", source: "Beverage containers", typicalSize: "26-38mm (1-1.5\") diameter", weightRange: "1-3g (0.04-0.1 oz)" },
+  { item: "Drill Steel", source: "Blast hole drilling", typicalSize: "1-6m (3-20 ft) long, 32-89mm (1.25\"-3.5\") dia", weightRange: "8-50 kg (18-110 lbs)" },
+  { item: "Drill Rod Sections", source: "Blast hole equipment", typicalSize: "1-3m (3-10 ft) long, 76-152mm (3-6\") dia", weightRange: "15-80 kg (33-175 lbs)" },
+  { item: "Structural Steel", source: "Building demolition", typicalSize: "1-8m (3-26 ft) beams/angles", weightRange: "20-500 kg (44-1100 lbs)" },
+  { item: "Rebar Sections", source: "Concrete demolition", typicalSize: "3-12m (10-40 ft) long, 10-32mm (#3-#10) dia", weightRange: "2-50 kg (4-110 lbs)" },
+  { item: "Nails/Screws", source: "Construction lumber", typicalSize: "25-150mm (1-6\") long, 2-8mm (1/16\"-5/16\") dia", weightRange: "2-50g (0.07-1.8 oz)" },
+  { item: "Aerosol Cans", source: "Consumer products", typicalSize: "45-75mm (1.75-3\") dia, 100-300mm (4-12\") tall", weightRange: "50-200g (1.8-7 oz)" },
+  { item: "Food Cans", source: "Consumer waste", typicalSize: "65-108mm (2.5-4.25\") dia, 75-180mm (3-7\") tall", weightRange: "15-150g (0.5-5.3 oz)" },
+  { item: "Pick Points", source: "Continuous miners", typicalSize: "75-150mm (3-6\") long, 25-40mm (1-1.5\") dia", weightRange: "200-800g (0.4-1.8 lbs)" },
+  { item: "Mine Cables", source: "Conveyor/power systems", typicalSize: "10-50m (30-165 ft) long, 12-50mm (1/2\"-2\") dia", weightRange: "5-100 kg (10-220 lbs)" },
+  { item: "Hinges/Hardware", source: "Doors/cabinets", typicalSize: "50-200mm (2-8\") pieces", weightRange: "100-2000g (3.5-70 oz)" },
+  { item: "Wire/Cable", source: "Electrical systems", typicalSize: "1-100m (3-330 ft) long, 1-25mm (AWG 18-1/0)", weightRange: "0.1-20 kg (0.2-44 lbs)" },
+  { item: "Hydraulic Cylinders", source: "Equipment components", typicalSize: "200-1000mm (8-40\") long, 75-200mm (3-8\") dia", weightRange: "10-150 kg (22-330 lbs)" },
+  { item: "Bolt/Nut Hardware", source: "Equipment maintenance", typicalSize: "M12-M36 (1/2\"-1.5\") bolts, 20-100mm (3/4\"-4\") long", weightRange: "50-500g (0.1-1 lb)" },
+  { item: "Crusher Wear Plates", source: "Equipment maintenance", typicalSize: "300-1200mm (12-48\") sections", weightRange: "15-200 kg (33-440 lbs)" },
+  { item: "Chain Links", source: "Equipment/rigging", typicalSize: "50-200mm (2-8\") links, 8-25mm (5/16\"-1\") wire", weightRange: "0.5-5 kg (1-11 lbs)" },
+  { item: "Blast Fragments", source: "Explosive steel casings", typicalSize: "50-300mm (2-12\") irregular pieces", weightRange: "0.5-15 kg (1-33 lbs)" },
+  { item: "Conveyor Components", source: "Idler parts, frames", typicalSize: "100-500mm (4-20\") sections", weightRange: "2-50 kg (4-110 lbs)" },
+  { item: "Crusher Hammers", source: "Impact crushers", typicalSize: "200-500mm (8-20\") long", weightRange: "8-40 kg (18-88 lbs)" },
+  { item: "Manholes Covers", source: "Infrastructure", typicalSize: "600-900mm (24-36\") diameter", weightRange: "50-150 kg (110-330 lbs)" },
+  { item: "Bucket Teeth", source: "Loader/excavator", typicalSize: "100-300mm (4-12\") long", weightRange: "2-15 kg (4-33 lbs)" },
+  { item: "Shovel Teeth", source: "Loading equipment", typicalSize: "150-400mm (6-16\") long", weightRange: "5-25 kg (11-55 lbs)" },
+  { item: "Liner Bolts", source: "Mill/crusher liners", typicalSize: "M20-M48 (3/4\"-2\") dia, 100-400mm (4-16\") long", weightRange: "0.5-5 kg (1-11 lbs)" },
+  { item: "Track Shoes", source: "Mobile equipment", typicalSize: "300-600mm (12-24\") sections", weightRange: "20-100 kg (44-220 lbs)" },
+  { item: "Furnace Tools", source: "Operations equipment", typicalSize: "500-2000mm (20-80\") long", weightRange: "5-100 kg (11-220 lbs)" },
+  { item: "Staples/Clips", source: "Packaging materials", typicalSize: "6-50mm (1/4\"-2\") long", weightRange: "1-10g (0.04-0.35 oz)" },
+  { item: "Post-Tension Cables", source: "Prestressed concrete", typicalSize: "10-50m (30-165 ft) long, 12-25mm (1/2\"-1\") dia", weightRange: "5-80 kg (11-175 lbs)" },
+  { item: "Crusher Wear Parts", source: "Primary/secondary crushers", typicalSize: "200-800mm (8-32\") pieces", weightRange: "10-200 kg (22-440 lbs)" },
+  { item: "Wire Mesh", source: "Reinforcing material", typicalSize: "2-6m (6-20 ft) sheets, 4-8mm (5/32\"-5/16\") wire", weightRange: "5-40 kg (11-88 lbs)" },
+  { item: "Mill Rolls", source: "Rolling operations", typicalSize: "1-3m (3-10 ft) long, 200-800mm (8-32\") dia", weightRange: "100-2000 kg (220-4400 lbs)" },
+  { item: "Band Saw Blades", source: "Sawmill operations", typicalSize: "3-10m (10-33 ft) long, 1-3mm (0.04-0.12\") thick", weightRange: "0.5-5 kg (1-11 lbs)" },
+  { item: "Roof Bolts", source: "Underground support", typicalSize: "1.2-2.4m (4-8 ft) long, 19-25mm (3/4\"-1\") dia", weightRange: "2-8 kg (4-18 lbs)" },
+  { item: "Pipe Sections", source: "Utilities", typicalSize: "1-6m (3-20 ft) long, 100-600mm (4-24\") dia", weightRange: "20-300 kg (44-660 lbs)" },
+  { item: "Engine Components", source: "Vehicle dismantling", typicalSize: "200-800mm (8-32\") blocks", weightRange: "20-200 kg (44-440 lbs)" },
+  { item: "Body Panels", source: "Vehicle shredding", typicalSize: "300-2000mm (12-80\") sections", weightRange: "5-50 kg (11-110 lbs)" },
+  { item: "Appliance Parts", source: "White goods", typicalSize: "100-1000mm (4-40\") components", weightRange: "1-50 kg (2-110 lbs)" }
+];
 
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
@@ -62,6 +105,8 @@ export function MagneticSeparatorCalculator() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [targetEfficiency, setTargetEfficiency] = useState(95);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showMaterialTypes, setShowMaterialTypes] = useState(false);
+  const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<string[]>([]);
 
   const handleCalculate = async () => {
     console.log('handleCalculate started with inputs:', inputs);
@@ -370,6 +415,56 @@ export function MagneticSeparatorCalculator() {
                   max={50}
                   unit="mm"
                 />
+              </div>
+              
+              {/* Material Types Collapsible */}
+              <div className="mt-4">
+                <Collapsible open={showMaterialTypes} onOpenChange={setShowMaterialTypes}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span>Material Types (affects magnetic strength calculation)</span>
+                      {showMaterialTypes ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm">Select material types present in feed</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                          {materialTypes.map((material) => (
+                            <label key={material.item} className="flex items-center space-x-2 text-xs p-2 hover:bg-muted/50 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedMaterialTypes.includes(material.item)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedMaterialTypes(prev => [...prev, material.item]);
+                                  } else {
+                                    setSelectedMaterialTypes(prev => prev.filter(item => item !== material.item));
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{material.item}</div>
+                                <div className="text-muted-foreground">{material.source} • {material.typicalSize} • {material.weightRange}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="mt-3 text-xs text-muted-foreground">
+                          Selected: {selectedMaterialTypes.length} material type{selectedMaterialTypes.length !== 1 ? 's' : ''}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </ParameterSection>
 
