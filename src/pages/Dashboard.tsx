@@ -65,18 +65,32 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch real data from database
-      const [quotesResponse, quoteItemsResponse, productsResponse, bomItemsResponse] = await Promise.all([
-        supabase.from('BMR_quotes').select('*'),
-        supabase.from('BMR_quote_items').select('*'),
-        supabase.from('BMR_products').select('*'),
-        supabase.from('BMR_parts').select('*')
-      ]);
-
+      // First get all quotes to determine which quote items we need
+      const quotesResponse = await supabase.from('BMR_quotes').select('*').order('id', { ascending: true });
+      
       if (quotesResponse.error) {
         console.error('Quotes query error:', quotesResponse.error);
         throw quotesResponse.error;
       }
+
+      const quotes = quotesResponse.data as Quote[];
+      const quoteIds = quotes.map(q => q.id);
+      
+      console.log('Found quotes:', quotes.length, 'Quote IDs:', quoteIds);
+
+      // Get quote items for all our quotes (with explicit count to ensure we get all data)
+      const quoteItemsResponse = await supabase
+        .from('BMR_quote_items')
+        .select('*', { count: 'exact' })
+        .in('quote_id', quoteIds)
+        .order('quote_id', { ascending: true });
+
+      // Get other data
+      const [productsResponse, bomItemsResponse] = await Promise.all([
+        supabase.from('BMR_products').select('*'),
+        supabase.from('BMR_parts').select('*')
+      ]);
+
       if (quoteItemsResponse.error) {
         console.error('Quote items query error:', quoteItemsResponse.error);
         throw quoteItemsResponse.error;
@@ -90,14 +104,28 @@ const Dashboard = () => {
         throw bomItemsResponse.error;
       }
 
-      console.log('Quotes data:', quotesResponse.data);
-      console.log('Quote items data:', quoteItemsResponse.data);
-      console.log('Products data:', productsResponse.data);
-      console.log('BOM items data:', bomItemsResponse.data);
+      const quoteItems = quoteItemsResponse.data as QuoteItem[];
+      
+      console.log('Loaded quote items:', quoteItems.length, 'Expected total count:', quoteItemsResponse.count);
+      console.log('Quote items by quote_id:', quoteItems.reduce((acc, item) => {
+        acc[item.quote_id] = (acc[item.quote_id] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>));
+      
+      // Validate that we have items for our quotes
+      const itemsByQuote = quoteItems.reduce((acc, item) => {
+        acc[item.quote_id] = (acc[item.quote_id] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+
+      quoteIds.forEach(quoteId => {
+        const itemCount = itemsByQuote[quoteId] || 0;
+        console.log(`Quote ${quoteId}: ${itemCount} items`);
+      });
       
       // Type-safe assignments with fallbacks
-      setQuotes((quotesResponse.data as Quote[]) || []);
-      setQuoteItems((quoteItemsResponse.data as QuoteItem[]) || []);
+      setQuotes(quotes || []);
+      setQuoteItems(quoteItems || []);
       setProducts((productsResponse.data as Product[]) || []);
       setBomItems((bomItemsResponse.data as BOMItem[]) || []);
     } catch (error) {
