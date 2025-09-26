@@ -3,13 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ParameterSection, ParameterInput, ParameterSelect } from "./ParameterSection";
+import { CompactCalculatorInputs } from "./CompactCalculatorInputs";
 import { ResultsDisplay } from "./ResultsDisplay";
 import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
 import { performEnhancedCalculation } from '@/utils/calculations';
 import { generateValidationExportData } from '@/utils/validation';
-import { Calculator, Settings, Thermometer, Package, Magnet, Box, Download, Atom, Cloud, Zap, ChevronDown, ChevronRight } from "lucide-react";
+import { Calculator, Settings, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const materialTypes = [
@@ -33,25 +32,6 @@ const materialTypes = [
   { item: "Crusher Wear Plates", source: "Equipment maintenance", typicalSize: "300-1200mm (12-48\") sections", weightRange: "15-200 kg (33-440 lbs)" },
   { item: "Chain Links", source: "Equipment/rigging", typicalSize: "50-200mm (2-8\") links, 8-25mm (5/16\"-1\") wire", weightRange: "0.5-5 kg (1-11 lbs)" },
   { item: "Blast Fragments", source: "Explosive steel casings", typicalSize: "50-300mm (2-12\") irregular pieces", weightRange: "0.5-15 kg (1-33 lbs)" },
-  { item: "Conveyor Components", source: "Idler parts, frames", typicalSize: "100-500mm (4-20\") sections", weightRange: "2-50 kg (4-110 lbs)" },
-  { item: "Crusher Hammers", source: "Impact crushers", typicalSize: "200-500mm (8-20\") long", weightRange: "8-40 kg (18-88 lbs)" },
-  { item: "Manholes Covers", source: "Infrastructure", typicalSize: "600-900mm (24-36\") diameter", weightRange: "50-150 kg (110-330 lbs)" },
-  { item: "Bucket Teeth", source: "Loader/excavator", typicalSize: "100-300mm (4-12\") long", weightRange: "2-15 kg (4-33 lbs)" },
-  { item: "Shovel Teeth", source: "Loading equipment", typicalSize: "150-400mm (6-16\") long", weightRange: "5-25 kg (11-55 lbs)" },
-  { item: "Liner Bolts", source: "Mill/crusher liners", typicalSize: "M20-M48 (3/4\"-2\") dia, 100-400mm (4-16\") long", weightRange: "0.5-5 kg (1-11 lbs)" },
-  { item: "Track Shoes", source: "Mobile equipment", typicalSize: "300-600mm (12-24\") sections", weightRange: "20-100 kg (44-220 lbs)" },
-  { item: "Furnace Tools", source: "Operations equipment", typicalSize: "500-2000mm (20-80\") long", weightRange: "5-100 kg (11-220 lbs)" },
-  { item: "Staples/Clips", source: "Packaging materials", typicalSize: "6-50mm (1/4\"-2\") long", weightRange: "1-10g (0.04-0.35 oz)" },
-  { item: "Post-Tension Cables", source: "Prestressed concrete", typicalSize: "10-50m (30-165 ft) long, 12-25mm (1/2\"-1\") dia", weightRange: "5-80 kg (11-175 lbs)" },
-  { item: "Crusher Wear Parts", source: "Primary/secondary crushers", typicalSize: "200-800mm (8-32\") pieces", weightRange: "10-200 kg (22-440 lbs)" },
-  { item: "Wire Mesh", source: "Reinforcing material", typicalSize: "2-6m (6-20 ft) sheets, 4-8mm (5/32\"-5/16\") wire", weightRange: "5-40 kg (11-88 lbs)" },
-  { item: "Mill Rolls", source: "Rolling operations", typicalSize: "1-3m (3-10 ft) long, 200-800mm (8-32\") dia", weightRange: "100-2000 kg (220-4400 lbs)" },
-  { item: "Band Saw Blades", source: "Sawmill operations", typicalSize: "3-10m (10-33 ft) long, 1-3mm (0.04-0.12\") thick", weightRange: "0.5-5 kg (1-11 lbs)" },
-  { item: "Roof Bolts", source: "Underground support", typicalSize: "1.2-2.4m (4-8 ft) long, 19-25mm (3/4\"-1\") dia", weightRange: "2-8 kg (4-18 lbs)" },
-  { item: "Pipe Sections", source: "Utilities", typicalSize: "1-6m (3-20 ft) long, 100-600mm (4-24\") dia", weightRange: "20-300 kg (44-660 lbs)" },
-  { item: "Engine Components", source: "Vehicle dismantling", typicalSize: "200-800mm (8-32\") blocks", weightRange: "20-200 kg (44-440 lbs)" },
-  { item: "Body Panels", source: "Vehicle shredding", typicalSize: "300-2000mm (12-80\") sections", weightRange: "5-50 kg (11-110 lbs)" },
-  { item: "Appliance Parts", source: "White goods", typicalSize: "100-1000mm (4-40\") components", weightRange: "1-50 kg (2-110 lbs)" }
 ];
 
 const burdenMaterials = [
@@ -65,178 +45,79 @@ const burdenMaterials = [
   { material: "Foundry Sand", industry: "Foundry", tph: "400-1200", bulkDensity: "80-100", moisture: "3-8%", roiDriver: "Sand reclamation" },
   { material: "Zinc Calcine", industry: "Zinc", tph: "300-800", bulkDensity: "90-120", moisture: "3-8%", roiDriver: "Process protection" },
   { material: "Catalyst Recovery", industry: "Chemical", tph: "50-150", bulkDensity: "80-120", moisture: "3-10%", roiDriver: "Precious metal recovery" },
-  { material: "Tungsten Ore", industry: "Alloys", tph: "150-400", bulkDensity: "180-220", moisture: "5-8%", roiDriver: "Strategic metal recovery" },
-  { material: "Silver Ore", industry: "Precious Metals", tph: "400-1200", bulkDensity: "95-115", moisture: "5-10%", roiDriver: "Recovery optimization" },
-  { material: "Wind Turbine Recycling", industry: "Renewable", tph: "100-300", bulkDensity: "30-50", moisture: "5-12%", roiDriver: "Steel/rare earth recovery" },
-  { material: "Blast Furnace Dust", industry: "Steel", tph: "300-800", bulkDensity: "60-80", moisture: "5-12%", roiDriver: "Iron recovery" },
-  { material: "Auto Shredder Residue", industry: "Recycling", tph: "300-800", bulkDensity: "25-40", moisture: "5-12%", roiDriver: "Metal recovery" },
-  { material: "Smelter Dust", industry: "Various Metals", tph: "100-400", bulkDensity: "70-100", moisture: "5-15%", roiDriver: "Metal recovery" },
-  { material: "Uranium Ore", industry: "Nuclear", tph: "200-600", bulkDensity: "100-120", moisture: "8-15%", roiDriver: "Radiation safety" },
-  { material: "Incinerator Ash", industry: "Waste-to-Energy", tph: "200-600", bulkDensity: "65-85", moisture: "8-18%", roiDriver: "Metal recovery" },
-  { material: "Lithium Ore", industry: "Battery", tph: "300-800", bulkDensity: "85-105", moisture: "8-18%", roiDriver: "Battery grade purity" },
-  { material: "Construction Debris", industry: "Recycling", tph: "300-1000", bulkDensity: "90-130", moisture: "8-20%", roiDriver: "Metal separation" },
-  { material: "Coal Ash", industry: "Power", tph: "400-1200", bulkDensity: "55-75", moisture: "10-20%", roiDriver: "Iron/carbon recovery" },
   { material: "Iron Ore Concentrate", industry: "Steel/Mining", tph: "2000-8000", bulkDensity: "140-160", moisture: "12-15%", roiDriver: "$500K+ mill protection" },
   { material: "Coal Run-of-Mine", industry: "Power/Steel", tph: "1500-5000", bulkDensity: "45-55", moisture: "12-15%", roiDriver: "$200K belt + downtime" },
   { material: "Bauxite Ore", industry: "Aluminum", tph: "1000-2500", bulkDensity: "75-95", moisture: "12-15%", roiDriver: "Refinery protection" },
   { material: "Magnetite Concentrate", industry: "Steel", tph: "1000-3000", bulkDensity: "150-180", moisture: "10-15%", roiDriver: "Pellet plant protection" },
   { material: "Coal ROM (Metallurgical)", industry: "Steel", tph: "1000-3000", bulkDensity: "50-60", moisture: "10-18%", roiDriver: "Coking plant protection" },
-  { material: "Heavy Media Coal", industry: "Coal Prep", tph: "500-2000", bulkDensity: "95-115", moisture: "12-18%", roiDriver: "Media circuit protection" },
-  { material: "Nickel Ore", industry: "Smelting", tph: "800-2000", bulkDensity: "95-120", moisture: "12-20%", roiDriver: "Smelter feed quality" },
-  { material: "Taconite Pellets", industry: "Steel", tph: "1200-3500", bulkDensity: "120-140", moisture: "1-3%", roiDriver: "Blast furnace protection" },
-  { material: "Ferrosilicon Fines", industry: "Ferroalloy", tph: "200-500", bulkDensity: "110-140", moisture: "1-4%", roiDriver: "Alloy recovery" },
-  { material: "Coal Fines", industry: "Power", tph: "800-2000", bulkDensity: "40-50", moisture: "15-25%", roiDriver: "Boiler protection" },
-  { material: "Iron Sand", industry: "Steel", tph: "800-2000", bulkDensity: "110-130", moisture: "15-25%", roiDriver: "Direct reduction feed" },
-  { material: "Cobalt Ore", industry: "Battery", tph: "200-500", bulkDensity: "110-130", moisture: "15-25%", roiDriver: "High-value recovery" },
-  { material: "Mining Tailings", industry: "Various", tph: "500-2000", bulkDensity: "85-120", moisture: "15-35%", roiDriver: "Resource recovery" },
-  { material: "Coal Refuse", industry: "Coal Prep", tph: "600-1500", bulkDensity: "55-70", moisture: "20-35%", roiDriver: "Environmental compliance" },
-  { material: "Steel Slag", industry: "Steel", tph: "800-2500", bulkDensity: "120-180", moisture: "2-5%", roiDriver: "Product purity specs" },
-  { material: "Municipal Solid Waste", industry: "Waste Management", tph: "200-800", bulkDensity: "20-40", moisture: "25-45%", roiDriver: "Ferrous recovery" },
-  { material: "Titanium Ore (Ilmenite)", industry: "Pigment", tph: "500-1200", bulkDensity: "140-170", moisture: "3-8%", roiDriver: "TiO2 process protection" },
-  { material: "Chrome Ore", industry: "Ferrochrome", tph: "800-2200", bulkDensity: "140-170", moisture: "5-8%", roiDriver: "Product quality assurance" },
-  { material: "Lead-Zinc Ore", industry: "Smelting", tph: "600-1500", bulkDensity: "120-140", moisture: "6-10%", roiDriver: "Flotation optimization" },
-  { material: "Hematite Ore", industry: "Steel", tph: "1500-4000", bulkDensity: "130-150", moisture: "6-10%", roiDriver: "Downstream process protection" },
-  { material: "Vanadium Ore", industry: "Steel", tph: "300-800", bulkDensity: "110-130", moisture: "6-12%", roiDriver: "Alloy grade protection" },
-  { material: "Rare Earth Ore", industry: "Electronics", tph: "100-400", bulkDensity: "120-150", moisture: "6-12%", roiDriver: "High-value concentrate" },
-  { material: "Gold Ore", industry: "Precious Metals", tph: "500-1500", bulkDensity: "90-110", moisture: "6-12%", roiDriver: "Cyanide circuit protection" },
-  { material: "Iron Ore Pellet Feed", industry: "Steel", tph: "1500-4000", bulkDensity: "110-130", moisture: "7-12%", roiDriver: "Pelletizing protection" },
-  { material: "Manganese Ore", industry: "Ferroalloy", tph: "600-1800", bulkDensity: "120-150", moisture: "8-12%", roiDriver: "Furnace feed preparation" },
-  { material: "Copper Ore (Primary)", industry: "Mining", tph: "1000-4000", bulkDensity: "100-130", moisture: "8-15%", roiDriver: "Flotation circuit protection" },
-  { material: "Platinum Ore", industry: "PGM", tph: "300-800", bulkDensity: "120-140", moisture: "8-15%", roiDriver: "High-value protection" },
-  { material: "Tin Ore", industry: "Smelting", tph: "400-1000", bulkDensity: "160-200", moisture: "8-15%", roiDriver: "Concentrate purity" },
-  { material: "Molybdenum Ore", industry: "Steel", tph: "200-600", bulkDensity: "85-105", moisture: "8-15%", roiDriver: "Concentrate quality" }
 ];
 
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
+  
   const [inputs, setInputs] = useState<CalculatorInputs>({
     conveyor: {
       beltSpeed: 2.5,
       troughAngle: 20,
-      beltWidth: 1200,
+      beltWidth: 1200
     },
     burden: {
       feedDepth: 100,
-      throughPut: 100,
-      density: 2.5,
-      waterContent: 8,
+      throughPut: 500,
+      density: 1.8,
+      waterContent: 8
     },
     shape: {
-      width: 15,
-      length: 25,
-      height: 8,
+      width: 50,
+      length: 100,
+      height: 25
     },
     magnet: {
       gap: 150,
-      coreBeltRatio: 0.6,
-      position: 'overhead',
+      coreBeltRatio: 0.7,
+      position: 'overhead'
     },
     misc: {
-      altitude: 1000,
-      ambientTemperature: 25,
-    },
-    advanced: {
-      materialProperties: {
-        magneticSusceptibility: 0.003,
-        particleDistribution: 'uniform',
-        bulkDensity: 1.6
-      },
-      environmental: {
-        humidity: 50,
-        dustExposure: 'medium',
-        vibrationLevel: 0.5
-      },
-      magneticSystem: {
-        ampereTurns: 5000,
-        poleConfiguration: 'double',
-        magneticArrangement: 'overhead'
-      }
+      altitude: 0,
+      ambientTemperature: 25
     }
   });
 
   const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [targetEfficiency, setTargetEfficiency] = useState(95);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showMaterialTypes, setShowMaterialTypes] = useState(false);
+  const [targetEfficiency, setTargetEfficiency] = useState(95);
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<string[]>([]);
-  const [showBurdenMaterials, setShowBurdenMaterials] = useState(false);
-  const [showMagnetRecommendation, setShowMagnetRecommendation] = useState(false);
-
-  const handleBurdenMaterialSelect = (material: typeof burdenMaterials[0]) => {
-    // Parse TPH range and take average
-    const tphRange = material.tph.split('-').map(Number);
-    const avgTph = tphRange.length === 2 ? (tphRange[0] + tphRange[1]) / 2 : tphRange[0];
-    
-    // Parse bulk density range and take average, convert from lb/ft³ to t/m³
-    const densityRange = material.bulkDensity.split('-').map(Number);
-    const avgDensityLbFt3 = densityRange.length === 2 ? (densityRange[0] + densityRange[1]) / 2 : densityRange[0];
-    const avgDensityTm3 = avgDensityLbFt3 * 0.016018; // Convert lb/ft³ to t/m³
-    
-    // Parse moisture percentage and take average
-    const moistureStr = material.moisture.replace('%', '');
-    const moistureRange = moistureStr.split('-').map(Number);
-    const avgMoisture = moistureRange.length === 2 ? (moistureRange[0] + moistureRange[1]) / 2 : moistureRange[0];
-    
-    setInputs(prev => ({
-      ...prev,
-      burden: {
-        ...prev.burden,
-        throughPut: Math.round(avgTph),
-        density: Number(avgDensityTm3.toFixed(2)),
-        waterContent: Number(avgMoisture.toFixed(1))
-      }
-    }));
-  };
-
-  const handleMagnetRecommendationSelect = (recommendation: any) => {
-    if (recommendation?.ui_autofill) {
-      setInputs(prev => ({
-        ...prev,
-        magnet: {
-          ...prev.magnet,
-          gap: recommendation.ui_autofill.gap_mm,
-          coreBeltRatio: recommendation.ui_autofill.face_width_factor / 1.5, // Convert face width factor to approx core belt ratio
-          position: recommendation.ui_autofill.position.toLowerCase() as 'overhead' | 'crossbelt' | 'inline' | 'drum'
-        }
-      }));
-    }
-  };
+  const [showMaterialTypes, setShowMaterialTypes] = useState(false);
 
   const handleCalculate = async () => {
-    console.log('handleCalculate started with inputs:', inputs);
     setIsCalculating(true);
     try {
-      // Simulate calculation time for better UX
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('About to call performEnhancedCalculation');
       const calculationResults = await performEnhancedCalculation(inputs, false);
-      console.log('Calculation results received:', calculationResults);
       setResults(calculationResults);
       
-      // Show appropriate toast based on validation results
       if (calculationResults.validation.severity === 'critical') {
         toast({
-          title: "Calculation Complete - Critical Issues Detected",
-          description: "Review validation errors before proceeding with this design.",
+          title: "Critical Issues Detected",
+          description: "Review validation errors before proceeding.",
           variant: "destructive",
         });
       } else if (calculationResults.validation.severity === 'warning') {
         toast({
-          title: "Calculation Complete - Warnings Present",
+          title: "Warnings Present",
           description: "Design is feasible but please review recommendations.",
         });
       } else {
         toast({
-          title: "Calculation Complete - Design Validated",
-          description: "Your magnetic separator design passes all safety checks.",
+          title: "Design Validated",
+          description: "Your magnetic separator design passes all checks.",
         });
       }
     } catch (error) {
-      console.error('Error in handleCalculate:', error);
       toast({
         title: "Calculation Error",
-        description: "An error occurred during calculation. Please check your inputs.",
+        description: "An error occurred. Please check your inputs.",
         variant: "destructive",
       });
     } finally {
@@ -245,22 +126,14 @@ export function MagneticSeparatorCalculator() {
   };
 
   const handleOptimize = async () => {
-    console.log('handleOptimize started with inputs:', inputs, 'target:', targetEfficiency);
     setIsCalculating(true);
-    
     try {
-      // Simulate calculation time
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('About to call performEnhancedCalculation with optimization');
       const calculationResults = await performEnhancedCalculation(inputs, true, targetEfficiency / 100);
-      console.log('Optimization results received:', calculationResults);
       setResults(calculationResults);
       
       if (calculationResults.optimization?.success) {
-        // Apply optimized parameters to inputs
         const optimized = calculationResults.optimization.optimizedParameters;
-        console.log('Applying optimized parameters:', optimized);
         setInputs(prev => ({
           ...prev,
           magnet: {
@@ -284,15 +157,14 @@ export function MagneticSeparatorCalculator() {
       } else {
         toast({
           title: `Optimization Incomplete`,
-          description: `Reached ${(calculationResults.optimization?.achievedEfficiency || 0 * 100).toFixed(1)}% efficiency. Target ${targetEfficiency}% may not be achievable.`,
+          description: `Reached ${(calculationResults.optimization?.achievedEfficiency || 0 * 100).toFixed(1)}% efficiency.`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error in handleOptimize:', error);
       toast({
         title: "Optimization Error",
-        description: "Failed to perform optimization. Please check your inputs.",
+        description: "Failed to perform optimization.",
         variant: "destructive",
       });
     } finally {
@@ -309,26 +181,9 @@ export function MagneticSeparatorCalculator() {
       ['Parameter', 'Value', 'Unit', 'Status'],
       ['Validation Status', exportData.validation.status, '', ''],
       ['Severity Level', exportData.validation.severity, '', ''],
-      ['Equipment Compliance', exportData.validation.equipmentCompliance, '', ''],
-      ['Error Count', exportData.validation.errorCount.toString(), '', ''],
-      ['Warning Count', exportData.validation.warningCount.toString(), '', ''],
-      [''],
-      ['CALCULATION RESULTS'],
-      ['Magnetic Field Strength (Tesla)', results.magneticFieldStrength.tesla.toString(), 'T', exportData.safetyChecks.magneticFieldCheck ? 'SAFE' : 'UNSAFE'],
-      ['Magnetic Field Strength (Gauss)', results.magneticFieldStrength.gauss.toString(), 'G', ''],
-      ['Penetration Depth', results.magneticFieldStrength.penetrationDepth.toString(), 'mm', ''],
-      ['Overall Removal Efficiency', results.trampMetalRemoval.overallEfficiency.toString(), '%', exportData.safetyChecks.efficiencyCheck ? 'SAFE' : 'UNSAFE'],
-      ['Fine Particles Removal', results.trampMetalRemoval.fineParticles.toString(), '%', ''],
-      ['Medium Particles Removal', results.trampMetalRemoval.mediumParticles.toString(), '%', ''],
-      ['Large Particles Removal', results.trampMetalRemoval.largeParticles.toString(), '%', ''],
-      ['Total Power Loss', results.thermalPerformance.totalPowerLoss.toString(), 'W', ''],
-      ['Temperature Rise', results.thermalPerformance.temperatureRise.toString(), '°C', exportData.safetyChecks.temperatureCheck ? 'SAFE' : 'UNSAFE'],
-      ['Cooling Efficiency', results.thermalPerformance.coolingEfficiency.toString(), '', ''],
-      ['Recommended Model', results.recommendedModel.model, '', ''],
-      ['Model Score', results.recommendedModel.score.toString(), '', ''],
-      [''],
-      ['VALIDATION RECOMMENDATIONS'],
-      ...exportData.recommendations.map((rec, index) => [`Recommendation ${index + 1}`, rec, '', '']),
+      ['Magnetic Field Strength (Tesla)', results.magneticFieldStrength.tesla.toString(), 'T', ''],
+      ['Overall Removal Efficiency', results.trampMetalRemoval.overallEfficiency.toString(), '%', ''],
+      ['Temperature Rise', results.thermalPerformance.temperatureRise.toString(), '°C', ''],
     ];
 
     const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -336,822 +191,136 @@ export function MagneticSeparatorCalculator() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `magnetic-separator-design-validated-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `magnetic-separator-design-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
     toast({
       title: "Export Complete",
-      description: "Your validated calculation results have been exported to CSV.",
+      description: "Results exported to CSV.",
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-engineering-primary mb-4">
-            Magnetic Separator Design Calculator
+      <div className="container mx-auto px-4 py-6">
+        {/* Compact Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-engineering-primary mb-2">
+            Magnetic Separator Calculator
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Comprehensive overband magnetic separator analysis tool for optimizing 
-            tramp metal removal efficiency and thermal performance
+          <p className="text-lg text-muted-foreground">
+            Optimize tramp metal removal efficiency and thermal performance
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Input Parameters */}
-          <div className="space-y-6">
-            {/* Conveyor Parameters */}
-            <ParameterSection 
-              title="Conveyor" 
-              icon={<Settings className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ParameterInput
-                  label="Belt Speed"
-                  value={inputs.conveyor.beltSpeed}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    conveyor: { ...prev.conveyor, beltSpeed: Number(value) }
-                  }))}
-                  type="number"
-                  min={0.5}
-                  max={8}
-                  step={0.1}
-                  unit="m/s"
-                />
-                <ParameterInput
-                  label="Trough Angle"
-                  value={inputs.conveyor.troughAngle}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    conveyor: { ...prev.conveyor, troughAngle: Number(value) }
-                  }))}
-                  type="number"
-                  min={0}
-                  max={45}
-                  unit="°"
-                />
-                <ParameterInput
-                  label="Belt Width"
-                  value={inputs.conveyor.beltWidth}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    conveyor: { ...prev.conveyor, beltWidth: Number(value) }
-                  }))}
-                  type="number"
-                  min={450}
-                  max={2400}
-                  unit="mm"
-                />
-              </div>
-            </ParameterSection>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Compact Input Parameters */}
+          <div className="space-y-4">
+            <CompactCalculatorInputs
+              inputs={inputs}
+              setInputs={setInputs}
+              selectedMaterialTypes={selectedMaterialTypes}
+              setSelectedMaterialTypes={setSelectedMaterialTypes}
+              showMaterialTypes={showMaterialTypes}
+              setShowMaterialTypes={setShowMaterialTypes}
+              materialTypes={materialTypes}
+              burdenMaterials={burdenMaterials}
+              results={results}
+            />
 
-            {/* Burden Parameters */}
-            <ParameterSection 
-              title="Burden" 
-              icon={<Package className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <ParameterInput
-                  label="Feed Depth"
-                  value={inputs.burden.feedDepth}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    burden: { ...prev.burden, feedDepth: Number(value) }
-                  }))}
-                  type="number"
-                  min={10}
-                  max={500}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Through Put"
-                  value={inputs.burden.throughPut}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    burden: { ...prev.burden, throughPut: Number(value) }
-                  }))}
-                  type="number"
-                  min={10}
-                  max={1000}
-                  unit="t/h"
-                />
-                <ParameterInput
-                  label="Density"
-                  value={inputs.burden.density}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    burden: { ...prev.burden, density: Number(value) }
-                  }))}
-                  type="number"
-                  min={0.5}
-                  max={8}
-                  step={0.1}
-                  unit="t/m³"
-                />
-                <ParameterInput
-                  label="Water Content"
-                  value={inputs.burden.waterContent}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    burden: { ...prev.burden, waterContent: Number(value) }
-                  }))}
-                  type="number"
-                  min={0}
-                  max={25}
-                  step={0.1}
-                  unit="%"
-                />
-              </div>
-              
-              {/* Burden Materials Collapsible */}
-              <div className="mt-4">
-                <Collapsible open={showBurdenMaterials} onOpenChange={setShowBurdenMaterials}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span>Material Selection (auto-populates burden values)</span>
-                      {showBurdenMaterials ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Select material type to auto-populate values</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="grid grid-cols-1 gap-1 max-h-64 overflow-y-auto">
-                          {burdenMaterials.map((material) => (
-                            <button
-                              key={material.material}
-                              onClick={() => handleBurdenMaterialSelect(material)}
-                              className="flex items-center justify-between text-xs p-3 hover:bg-muted/50 rounded cursor-pointer border-b border-border/50 last:border-b-0"
-                            >
-                              <div className="flex-1 text-left">
-                                <div className="font-medium">{material.material}</div>
-                                <div className="text-muted-foreground text-xs">{material.industry} • TPH: {material.tph} • Density: {material.bulkDensity} lb/ft³ • Moisture: {material.moisture}</div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Click any material to auto-populate TPH, density, and moisture values. Values can be manually adjusted after selection.
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </ParameterSection>
+            {/* Action Buttons - Compact */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <Button 
+                    onClick={handleCalculate} 
+                    disabled={isCalculating}
+                    className="w-full"
+                  >
+                    {isCalculating ? (
+                      <>
+                        <Calculator className="w-4 h-4 mr-2 animate-spin" />
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="w-4 h-4 mr-2" />
+                        Calculate
+                      </>
+                    )}
+                  </Button>
 
-            {/* Shape Parameters */}
-            <ParameterSection 
-              title="Shape" 
-              icon={<Box className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ParameterInput
-                  label="Width"
-                  value={inputs.shape.width}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    shape: { ...prev.shape, width: Number(value) }
-                  }))}
-                  type="number"
-                  min={1}
-                  max={100}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Length"
-                  value={inputs.shape.length}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    shape: { ...prev.shape, length: Number(value) }
-                  }))}
-                  type="number"
-                  min={1}
-                  max={100}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Height"
-                  value={inputs.shape.height}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    shape: { ...prev.shape, height: Number(value) }
-                  }))}
-                  type="number"
-                  min={1}
-                  max={50}
-                  unit="mm"
-                />
-              </div>
-              
-              {/* Area and Weight Analysis */}
-              <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="font-medium text-primary mb-1">Volume</div>
-                    <div className="text-lg font-semibold">
-                      {((inputs.shape.width * inputs.shape.length * inputs.shape.height) / 1000000000).toFixed(6)} m³
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {inputs.shape.width} × {inputs.shape.length} × {inputs.shape.height} mm
-                    </div>
-                  </div>
-                  
-                  {selectedMaterialTypes.length > 0 && (
-                    <div>
-                      <div className="font-medium text-primary mb-1">Weight Range (KG)</div>
-                      <div className="space-y-1">
-                        {(() => {
-                          const weights = selectedMaterialTypes.map(type => {
-                            const material = materialTypes.find(m => m.item === type);
-                            if (!material) return null;
-                            
-                            // Parse weight range - convert oz/lbs to kg
-                            const weightMatch = material.weightRange.match(/(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\s*(g|kg|oz|lbs)/);
-                            if (!weightMatch) return null;
-                            
-                            let min = parseFloat(weightMatch[1]);
-                            let max = parseFloat(weightMatch[2]);
-                            const unit = weightMatch[3];
-                            
-                            // Convert to kg
-                            if (unit === 'g') {
-                              min /= 1000;
-                              max /= 1000;
-                            } else if (unit === 'oz') {
-                              min *= 0.0283495;
-                              max *= 0.0283495;
-                            } else if (unit === 'lbs') {
-                              min *= 0.453592;
-                              max *= 0.453592;
-                            }
-                            
-                            return { min, max, item: material.item };
-                          }).filter(Boolean);
-                          
-                          if (weights.length === 0) return <div className="text-muted-foreground">No valid weights</div>;
-                          
-                          const overallMin = Math.min(...weights.map(w => w.min));
-                          const overallMax = Math.max(...weights.map(w => w.max));
-                          const avgMid = weights.reduce((sum, w) => sum + (w.min + w.max) / 2, 0) / weights.length;
-                          
-                          return (
-                            <>
-                              <div className="text-sm">
-                                <span className="font-medium">Min:</span> {overallMin.toFixed(3)} kg
-                              </div>
-                              <div className="text-sm">
-                                <span className="font-medium">Nom:</span> {avgMid.toFixed(3)} kg
-                              </div>
-                              <div className="text-sm">
-                                <span className="font-medium">Max:</span> {overallMax.toFixed(3)} kg
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
+                  <Button 
+                    onClick={handleOptimize} 
+                    disabled={isCalculating}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Optimize
+                  </Button>
                 </div>
-                
-                {/* Effective Removal Analysis */}
-                {results && selectedMaterialTypes.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border/50">
-                    <div className="font-medium text-primary mb-2">Effective Removal by Tramp Size</div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center p-2 bg-background rounded">
-                        <div className="font-medium">Small (≤15mm)</div>
-                        <div className="text-lg font-semibold text-primary">
-                          {results.trampMetalRemoval.fineParticles.toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className="text-center p-2 bg-background rounded">
-                        <div className="font-medium">Medium (15-50mm)</div>
-                        <div className="text-lg font-semibold text-primary">
-                          {results.trampMetalRemoval.mediumParticles.toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className="text-center p-2 bg-background rounded">
-                        <div className="font-medium">Large (&gt;50mm)</div>
-                        <div className="text-lg font-semibold text-primary">
-                          {results.trampMetalRemoval.largeParticles.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+
+                {results && (
+                  <Button 
+                    onClick={handleExport} 
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Results
+                  </Button>
                 )}
-              </div>
-              
-              {/* Material Types Collapsible */}
-              <div className="mt-4">
-                <Collapsible open={showMaterialTypes} onOpenChange={setShowMaterialTypes}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span>Material Types (affects magnetic strength calculation)</span>
-                      {showMaterialTypes ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Select material types present in feed</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-                          {materialTypes.map((material) => (
-                            <label key={material.item} className="flex items-center space-x-2 text-xs p-2 hover:bg-muted/50 rounded cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedMaterialTypes.includes(material.item)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedMaterialTypes(prev => [...prev, material.item]);
-                                  } else {
-                                    setSelectedMaterialTypes(prev => prev.filter(item => item !== material.item));
-                                  }
-                                }}
-                                className="rounded"
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium">{material.item}</div>
-                                <div className="text-muted-foreground">{material.source} • {material.typicalSize} • {material.weightRange}</div>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Selected: {selectedMaterialTypes.length} material type{selectedMaterialTypes.length !== 1 ? 's' : ''}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </ParameterSection>
+              </CardContent>
+            </Card>
 
-            {/* Magnet Parameters */}
-            <ParameterSection 
-              title="Magnet" 
-              icon={<Magnet className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ParameterInput
-                  label="Gap"
-                  value={inputs.magnet.gap}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnet: { ...prev.magnet, gap: Number(value) }
-                  }))}
-                  type="number"
-                  min={50}
-                  max={500}
-                  unit="mm"
-                />
-                <ParameterInput
-                  label="Core:Belt Ratio"
-                  value={inputs.magnet.coreBeltRatio}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnet: { ...prev.magnet, coreBeltRatio: Number(value) }
-                  }))}
-                  type="number"
-                  min={0.1}
-                  max={0.9}
-                  step={0.1}
-                />
-                <ParameterSelect
-                  label="Position"
-                  value={inputs.magnet.position}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    magnet: { ...prev.magnet, position: value as 'overhead' | 'crossbelt' | 'inline' | 'drum' }
-                  }))}
-                  options={[
-                    { value: 'overhead', label: 'Overhead' },
-                    { value: 'crossbelt', label: 'Crossbelt' },
-                    { value: 'inline', label: 'Inline' },
-                    { value: 'drum', label: 'Drum' }
-                  ]}
-                />
-              </div>
-
-              {/* Magnet Type Recommendation */}
-              <div className="mt-4">
-                <Collapsible open={showMagnetRecommendation} onOpenChange={setShowMagnetRecommendation}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Magnet Type Recommendation
-                      </span>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${showMagnetRecommendation ? 'rotate-180' : ''}`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    <Card>
-                      <CardContent className="p-4">
-                        {results?.recommendationEngine ? (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="font-medium text-sm mb-2">Recommended Configuration</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span>Model:</span>
-                                    <span className="font-medium">{results.recommendationEngine.recommendation_engine.base_recommendation.replace(/_/g, ' ')}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Position:</span>
-                                    <span>{results.recommendationEngine.ui_autofill.position}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Face Width:</span>
-                                    <span>{results.recommendationEngine.ui_autofill.face_width_mm}mm</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Min Length:</span>
-                                    <span>{results.recommendationEngine.ui_autofill.magnet_length_min_mm}mm</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-sm mb-2">Performance Matrix</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span>Pickup Range:</span>
-                                    <span>{results.recommendationEngine.recommendation_engine.matrix_bucket.r_range_mm}mm</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Tramp Size:</span>
-                                    <span>{results.recommendationEngine.recommendation_engine.matrix_bucket.tramp_bucket_mm}mm</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Effective Distance:</span>
-                                    <span>{results.recommendationEngine.derived.effective_pickup_distance_r_mm.toFixed(0)}mm</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {results.recommendationEngine.recommendation_engine.notes.length > 0 && (
-                              <div>
-                                <h4 className="font-medium text-sm mb-2">Engineering Notes</h4>
-                                <ul className="text-sm space-y-1">
-                                  {results.recommendationEngine.recommendation_engine.notes.map((note, index) => (
-                                    <li key={index} className="text-muted-foreground">• {note}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            <Button 
-                              onClick={() => handleMagnetRecommendationSelect(results.recommendationEngine)}
-                              className="w-full"
-                              size="sm"
-                            >
-                              Apply Recommended Settings
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="text-center text-muted-foreground">
-                            <Settings className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                            <p>Run calculation to see magnet recommendations</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </ParameterSection>
-
-            {/* Misc Parameters */}
-            <ParameterSection 
-              title="Misc" 
-              icon={<Thermometer className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ParameterInput
-                  label="Altitude"
-                  value={inputs.misc.altitude}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    misc: { ...prev.misc, altitude: Number(value) }
-                  }))}
-                  type="number"
-                  min={0}
-                  max={4000}
-                  unit="m"
-                />
-                <ParameterInput
-                  label="Ambient Temperature"
-                  value={inputs.misc.ambientTemperature}
-                  onChange={(value) => setInputs(prev => ({
-                    ...prev,
-                    misc: { ...prev.misc, ambientTemperature: Number(value) }
-                  }))}
-                  type="number"
-                  min={-20}
-                  max={60}
-                  unit="°C"
-                />
-              </div>
-            </ParameterSection>
-
-            {/* Action Buttons */}
-            <div className="space-y-4">
-              <ParameterInput
-                label="Target Efficiency"
-                value={targetEfficiency}
-                onChange={(value) => setTargetEfficiency(Number(value))}
-                type="number"
-                min={50}
-                max={99}
-                step={0.1}
-                unit="%"
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button 
-                  onClick={handleCalculate}
-                  disabled={isCalculating}
-                  className="w-full h-12 text-lg font-semibold"
-                >
-                  <Calculator className="w-5 h-5 mr-2" />
-                  {isCalculating ? "Calculating..." : "Calculate Design"}
-                </Button>
-                
-                <Button 
-                  onClick={handleOptimize}
-                  disabled={isCalculating}
-                  variant="outline"
-                  className="w-full h-12 text-lg font-semibold"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  {isCalculating ? "Optimizing..." : `Optimize for ${targetEfficiency}% Efficiency`}
-                </Button>
-              </div>
-              
-              {results && (
-                <Button 
-                  onClick={handleExport}
-                  variant="secondary"
-                  className="w-full h-12"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Export CSV
-                </Button>
-              )}
-
-              {/* Debug Testing Buttons */}
-              <div className="border-t pt-4">
-                <div className="text-sm font-medium text-muted-foreground mb-2">Debug: Test Dramatic Changes</div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <Button 
-                    onClick={() => {
-                      setInputs(prev => ({
-                        ...prev,
-                        magnet: { ...prev.magnet, gap: 300 } // Double the gap
-                      }));
-                      toast({ title: "Gap doubled to 300mm", description: "Run calculation to see the difference" });
-                    }}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Test: Double Gap
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setInputs(prev => ({
-                        ...prev,
-                        magnet: { ...prev.magnet, coreBeltRatio: 1.2 } // Double the ratio
-                      }));
-                      toast({ title: "Core:Belt ratio set to 1.2", description: "Run calculation to see the difference" });
-                    }}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Test: High Ratio
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setInputs(prev => ({
-                        ...prev,
-                        conveyor: { ...prev.conveyor, beltWidth: 600 } // Half the width
-                      }));
-                      toast({ title: "Belt width halved to 600mm", description: "Run calculation to see the difference" });
-                    }}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Test: Half Width
-                  </Button>
+            {/* Advanced Options Toggle */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Advanced Options</CardTitle>
+                  <Switch 
+                    checked={showAdvanced}
+                    onCheckedChange={setShowAdvanced}
+                  />
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="show-advanced"
-                  checked={showAdvanced}
-                  onCheckedChange={setShowAdvanced}
-                />
-                <Label htmlFor="show-advanced">Show Advanced Parameters</Label>
-              </div>
-            </div>
-            
-            {/* Advanced Parameters */}
-            {showAdvanced && inputs.advanced && (
-              <>
-                <ParameterSection title="Material Properties" icon={<Atom className="h-5 w-5" />}>
-                  <ParameterInput
-                    label="Magnetic Susceptibility"
-                    value={inputs.advanced.materialProperties.magneticSusceptibility}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        materialProperties: {
-                          ...prev.advanced!.materialProperties,
-                          magneticSusceptibility: Number(value)
-                        }
-                      }
-                    }))}
-                    type="number"
-                    step={0.001}
-                  />
-                  
-                  <ParameterSelect
-                    label="Particle Distribution"
-                    value={inputs.advanced.materialProperties.particleDistribution}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        materialProperties: {
-                          ...prev.advanced!.materialProperties,
-                          particleDistribution: value as 'uniform' | 'gaussian' | 'bimodal'
-                        }
-                      }
-                    }))}
-                    options={[
-                      { value: 'uniform', label: 'Uniform' },
-                      { value: 'gaussian', label: 'Gaussian' },
-                      { value: 'bimodal', label: 'Bimodal' }
-                    ]}
-                  />
-                  
-                  <ParameterInput
-                    label="Bulk Density"
-                    value={inputs.advanced.materialProperties.bulkDensity}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        materialProperties: {
-                          ...prev.advanced!.materialProperties,
-                          bulkDensity: Number(value)
-                        }
-                      }
-                    }))}
-                    type="number"
-                    step={0.1}
-                    unit="t/m³"
-                  />
-                </ParameterSection>
-                
-                <ParameterSection title="Environmental" icon={<Cloud className="h-5 w-5" />}>
-                  <ParameterInput
-                    label="Humidity"
-                    value={inputs.advanced.environmental.humidity}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        environmental: {
-                          ...prev.advanced!.environmental,
-                          humidity: Number(value)
-                        }
-                      }
-                    }))}
-                    type="number"
-                    min={0}
-                    max={100}
-                    unit="%"
-                  />
-                  
-                  <ParameterSelect
-                    label="Dust Exposure"
-                    value={inputs.advanced.environmental.dustExposure}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        environmental: {
-                          ...prev.advanced!.environmental,
-                          dustExposure: value as 'low' | 'medium' | 'high'
-                        }
-                      }
-                    }))}
-                    options={[
-                      { value: 'low', label: 'Low' },
-                      { value: 'medium', label: 'Medium' },
-                      { value: 'high', label: 'High' }
-                    ]}
-                  />
-                  
-                  <ParameterInput
-                    label="Vibration Level"
-                    value={inputs.advanced.environmental.vibrationLevel}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        environmental: {
-                          ...prev.advanced!.environmental,
-                          vibrationLevel: Number(value)
-                        }
-                      }
-                    }))}
-                    type="number"
-                    step={0.1}
-                    unit="g"
-                  />
-                </ParameterSection>
-                
-                <ParameterSection title="Magnetic System" icon={<Zap className="h-5 w-5" />}>
-                  <ParameterInput
-                    label="Ampere Turns"
-                    value={inputs.advanced.magneticSystem.ampereTurns}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        magneticSystem: {
-                          ...prev.advanced!.magneticSystem,
-                          ampereTurns: Number(value)
-                        }
-                      }
-                    }))}
-                    type="number"
-                    unit="AT"
-                  />
-                  
-                  <ParameterSelect
-                    label="Pole Configuration"
-                    value={inputs.advanced.magneticSystem.poleConfiguration}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        magneticSystem: {
-                          ...prev.advanced!.magneticSystem,
-                          poleConfiguration: value as 'single' | 'double' | 'multi'
-                        }
-                      }
-                    }))}
-                    options={[
-                      { value: 'single', label: 'Single Pole' },
-                      { value: 'double', label: 'Double Pole' },
-                      { value: 'multi', label: 'Multi Pole' }
-                    ]}
-                  />
-                  
-                  <ParameterSelect
-                    label="Magnetic Arrangement"
-                    value={inputs.advanced.magneticSystem.magneticArrangement}
-                    onChange={(value) => setInputs(prev => ({
-                      ...prev,
-                      advanced: {
-                        ...prev.advanced!,
-                        magneticSystem: {
-                          ...prev.advanced!.magneticSystem,
-                          magneticArrangement: value as 'inline' | 'crossbelt' | 'overhead'
-                        }
-                      }
-                    }))}
-                    options={[
-                      { value: 'inline', label: 'In-line' },
-                      { value: 'crossbelt', label: 'Cross-belt' },
-                      { value: 'overhead', label: 'Overhead' }
-                    ]}
-                  />
-                </ParameterSection>
-              </>
-            )}
+              </CardHeader>
+              {showAdvanced && (
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <Label className="text-xs">Target Efficiency</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="range"
+                          min="80"
+                          max="99"
+                          value={targetEfficiency}
+                          onChange={(e) => setTargetEfficiency(Number(e.target.value))}
+                          className="flex-1"
+                        />
+                        <span className="min-w-[3rem] text-xs">{targetEfficiency}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Altitude</Label>
+                      <input
+                        type="number"
+                        value={inputs.misc.altitude}
+                        onChange={(e) => setInputs(prev => ({
+                          ...prev,
+                          misc: { ...prev.misc, altitude: Number(e.target.value) }
+                        }))}
+                        className="w-full mt-1 p-1 text-xs border rounded"
+                        placeholder="m"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
           </div>
 
           {/* Results Display */}
@@ -1163,7 +332,7 @@ export function MagneticSeparatorCalculator() {
                 <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-xl font-semibold mb-2">Ready to Calculate</h3>
                 <p className="text-muted-foreground">
-                  Enter your parameters and click "Calculate Design" to see the results.
+                  Enter your parameters and click "Calculate" to see the results.
                 </p>
               </Card>
             )}
