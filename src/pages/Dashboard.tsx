@@ -207,11 +207,10 @@ const Dashboard = () => {
                         <div className="space-y-1">
                           <div className="font-medium text-sm">
                             Quote {quote.id}
-                            {quote.quote_number && (
-                              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                                ({quote.quote_number})
-                              </span>
-                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getProductName(quote.product_id)}
+                            {quote.quote_number && ` - ${quote.quote_number}`}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(quote.date_generated)}
@@ -237,7 +236,7 @@ const Dashboard = () => {
             <CardTitle className="text-base">
               {selectedQuote ? (
                 <div className="flex items-center justify-between">
-                  <span>BOM Items for Quote {selectedQuote.id}{selectedQuote.quote_number && ` (${selectedQuote.quote_number})`}</span>
+                  <span>BOM Items for Quote {selectedQuote.id} - {getProductName(selectedQuote.product_id)}{selectedQuote.quote_number && ` (${selectedQuote.quote_number})`}</span>
                   <div className="flex items-center gap-2">
                     {selectedQuote.verified === "1" && (
                       <Badge variant="default">Verified</Badge>
