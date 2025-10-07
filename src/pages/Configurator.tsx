@@ -186,6 +186,37 @@ const Configurator = () => {
   const [beltSpeed, setBeltSpeed] = useState("");
   const [burdenDepth, setBurdenDepth] = useState("");
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialStream | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCustomMaterial, setIsCustomMaterial] = useState(false);
+  const [customMaterial, setCustomMaterial] = useState<MaterialStream>({
+    name: "",
+    density: "",
+    surcharge: "",
+    moisture: "",
+    lumps: "",
+    notes: "",
+    commonTramp: "",
+    specificTramp: ""
+  });
+
+  const handleMaterialSelect = (stream: MaterialStream) => {
+    setSelectedMaterial(stream);
+    setIsCustomMaterial(false);
+  };
+
+  const handleMaterialDoubleClick = (stream: MaterialStream) => {
+    setSelectedMaterial(stream);
+    setIsCustomMaterial(false);
+    setIsDialogOpen(false);
+  };
+
+  const handleCustomMaterialSave = () => {
+    if (customMaterial.name && customMaterial.density) {
+      setSelectedMaterial(customMaterial);
+      setIsCustomMaterial(true);
+      setIsDialogOpen(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
@@ -241,7 +272,7 @@ const Configurator = () => {
               </div>
               
               <div className="pt-4">
-                <Dialog>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
                       <Info className="w-4 h-4 mr-2" />
@@ -258,9 +289,10 @@ const Configurator = () => {
                           <Card 
                             key={index} 
                             className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                              selectedMaterial?.name === stream.name ? 'border-primary' : ''
+                              selectedMaterial?.name === stream.name && !isCustomMaterial ? 'border-primary' : ''
                             }`}
-                            onClick={() => setSelectedMaterial(stream)}
+                            onClick={() => handleMaterialSelect(stream)}
+                            onDoubleClick={() => handleMaterialDoubleClick(stream)}
                           >
                             <CardHeader className="pb-3">
                               <CardTitle className="text-lg">{stream.name}</CardTitle>
@@ -298,6 +330,96 @@ const Configurator = () => {
                             </CardContent>
                           </Card>
                         ))}
+                        
+                        {/* Custom Material Card */}
+                        <Card className={`border-2 border-dashed ${isCustomMaterial ? 'border-primary' : 'border-muted-foreground/50'}`}>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">+ Custom Material</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="customName">Material Name *</Label>
+                                <Input
+                                  id="customName"
+                                  placeholder="e.g., Custom Ore"
+                                  value={customMaterial.name}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, name: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="customDensity">Density *</Label>
+                                <Input
+                                  id="customDensity"
+                                  placeholder="e.g., 1.5–2.0 t/m³"
+                                  value={customMaterial.density}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, density: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="customSurcharge">Surcharge Angle</Label>
+                                <Input
+                                  id="customSurcharge"
+                                  placeholder="e.g., 20–25°"
+                                  value={customMaterial.surcharge}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, surcharge: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="customMoisture">Moisture Content</Label>
+                                <Input
+                                  id="customMoisture"
+                                  placeholder="e.g., 5–10%"
+                                  value={customMaterial.moisture}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, moisture: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="customLumps">Lump Size</Label>
+                                <Input
+                                  id="customLumps"
+                                  placeholder="e.g., ≤150 mm"
+                                  value={customMaterial.lumps}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, lumps: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="customNotes">Notes</Label>
+                                <Input
+                                  id="customNotes"
+                                  placeholder="Additional properties"
+                                  value={customMaterial.notes}
+                                  onChange={(e) => setCustomMaterial({...customMaterial, notes: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="customCommonTramp">Common Tramp Metal</Label>
+                              <Input
+                                id="customCommonTramp"
+                                placeholder="e.g., fasteners, hardware"
+                                value={customMaterial.commonTramp}
+                                onChange={(e) => setCustomMaterial({...customMaterial, commonTramp: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="customSpecificTramp">Stream-Specific Tramp Metal</Label>
+                              <Input
+                                id="customSpecificTramp"
+                                placeholder="e.g., specific metal types"
+                                value={customMaterial.specificTramp}
+                                onChange={(e) => setCustomMaterial({...customMaterial, specificTramp: e.target.value})}
+                              />
+                            </div>
+                            <Button 
+                              onClick={handleCustomMaterialSave}
+                              disabled={!customMaterial.name || !customMaterial.density}
+                              className="w-full"
+                            >
+                              Save Custom Material
+                            </Button>
+                          </CardContent>
+                        </Card>
                       </div>
                     </ScrollArea>
                   </DialogContent>
