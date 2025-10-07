@@ -11,6 +11,7 @@ import QuoteDetails from "./pages/QuoteDetails";
 import OCW from "./pages/OCW";
 import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
+import PCBChat from "./pages/PCBChat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/ocw" element={<OCW />} />
             <Route path="/winding-sheet" element={<WindingSheet />} />
             <Route path="/configurator" element={<Configurator />} />
+            <Route path="/pcb-chat" element={<PCBChat />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
