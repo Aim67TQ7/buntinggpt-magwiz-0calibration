@@ -4,8 +4,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Thermometer, Target, Award, TrendingUp, ArrowRight, Settings } from 'lucide-react';
-import { ValidationToolsRecommendation } from './ValidationToolsRecommendation';
+import { AlertTriangle, CheckCircle2, XCircle, Info, Zap, Target, TrendingUp, ArrowRight, Settings } from 'lucide-react';
+
 
 interface ResultsDisplayProps {
   results: EnhancedCalculationResults;
@@ -150,70 +150,7 @@ export function ResultsDisplay({ results, inputs }: ResultsDisplayProps) {
         </CardContent>
       </Card>
 
-      {/* Thermal Performance */}
-      <Card className="shadow-card">
-        <CardHeader className="bg-gradient-to-r from-engineering-warning to-engineering-error text-white">
-          <CardTitle className="flex items-center gap-2">
-            <Thermometer size={20} />
-            Thermal Performance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-engineering-warning">
-                {results.thermalPerformance.totalPowerLoss} W
-              </div>
-              <div className="text-sm text-muted-foreground">Total Power Loss</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-engineering-error">
-                {results.thermalPerformance.temperatureRise}°C
-              </div>
-              <div className="text-sm text-muted-foreground">Temperature Rise</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-engineering-success">
-                {(results.thermalPerformance.coolingEfficiency * 100).toFixed(0)}%
-              </div>
-              <div className="text-sm text-muted-foreground">Cooling Efficiency</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Model Recommendation */}
-      <Card className="shadow-elevation border-engineering-primary">
-        <CardHeader className="bg-gradient-to-r from-engineering-primary to-engineering-primary-light text-white">
-          <CardTitle className="flex items-center gap-2">
-            <Award size={20} />
-            Recommended Separator Model
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="text-center mb-6">
-            <div className="text-2xl font-bold text-engineering-primary mb-2">
-              {results.recommendedModel.model}
-            </div>
-            <Badge variant="secondary" className="bg-engineering-success text-white text-lg px-4 py-2">
-              Score: {results.recommendedModel.score}/100
-            </Badge>
-          </div>
-          
-          <div className="space-y-3">
-            <h4 className="font-semibold text-foreground">Alternative Models:</h4>
-            {results.recommendedModel.alternatives.map((alt, index) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                <span className="font-medium">{alt.model}</span>
-                <Badge variant="outline">Score: {alt.score}</Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Professional Validation Tools */}
-      <ValidationToolsRecommendation results={results} />
       
       {/* Optimization Results */}
       {results.optimization && (
