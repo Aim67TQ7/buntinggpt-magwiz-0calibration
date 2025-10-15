@@ -60,6 +60,30 @@ const Dashboard = () => {
   const [loadingQuoteItems, setLoadingQuoteItems] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Define the exact order for BOM items
+  const BOM_ITEM_ORDER = [
+    'Core',
+    'Winding',
+    'Backbar',
+    'Core Backbar',
+    'Side Pole',
+    'Sealing Plate',
+    'Core Insulator',
+    'Conservator',
+    'Coolant',
+    'Dowels and Spacers',
+    'Steel Sections',
+    'Pulleys',
+    'Self Lube Bearings',
+    'Geared Motor',
+    'Mesh Guards',
+    'Belt',
+    'Terminal Box and Posts',
+    'Odds Factor',
+    'OCW Labour',
+    'Overband Labour'
+  ];
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -100,8 +124,7 @@ const Dashboard = () => {
       const response = await supabase
         .from('BMR_quote_items')
         .select('*', { count: 'exact' })
-        .eq('quote_id', quoteId)
-        .order('name', { ascending: true });
+        .eq('quote_id', quoteId);
 
       if (response.error) {
         console.error('Quote items query error:', response.error);
@@ -109,9 +132,28 @@ const Dashboard = () => {
       }
 
       const items = response.data as QuoteItem[];
-      console.log(`Loaded ${items.length} items for quote ${quoteId}:`, items);
       
-      setQuoteItems(items || []);
+      // Sort items according to predefined order
+      const sortedItems = items.sort((a, b) => {
+        const indexA = BOM_ITEM_ORDER.indexOf(a.name);
+        const indexB = BOM_ITEM_ORDER.indexOf(b.name);
+        
+        // If both items are in the order list, sort by their position
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        
+        // If only one item is in the list, it comes first
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        
+        // If neither is in the list, sort alphabetically
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log(`Loaded ${sortedItems.length} items for quote ${quoteId}:`, sortedItems);
+      
+      setQuoteItems(sortedItems || []);
     } catch (error) {
       console.error('Error fetching quote items:', error);
       setQuoteItems([]);
