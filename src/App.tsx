@@ -26,14 +26,14 @@ const App = () => (
         <BrowserRouter>
           <Navigation />
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<BOMManager />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/quote/:quoteId" element={<QuoteDetails />} />
             <Route path="/ocw" element={<OCW />} />
             <Route path="/winding-sheet" element={<WindingSheet />} />
             <Route path="/configurator" element={<Configurator />} />
             <Route path="/pcb-chat" element={<PCBChat />} />
-            <Route path="/bom-manager" element={<BOMManager />} />
+            <Route path="/calculator" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
