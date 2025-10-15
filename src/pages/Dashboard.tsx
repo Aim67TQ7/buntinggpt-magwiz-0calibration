@@ -177,27 +177,13 @@ const Dashboard = () => {
       .filter(item => item.quote_id === quoteId)
       .reduce((total, item) => {
         if (item.cost <= 0) return total;
-        
-        // For coolant and labor items, use cost directly from database
-        const isLaborOrCoolant = item.name.toLowerCase().includes('coolant') || 
-                                item.name.toLowerCase().includes('labour') || 
-                                item.name.toLowerCase().includes('labor');
-        
-        const itemTotal = isLaborOrCoolant ? item.cost : (item.cost * item.amount);
-        return total + itemTotal;
+        return total + item.cost;
       }, 0);
   };
 
   const getItemDisplayCost = (item: QuoteItem) => {
     if (item.cost <= 0) return 'TBD';
-    
-    // For coolant and labor items, use cost directly from database
-    const isLaborOrCoolant = item.name.toLowerCase().includes('coolant') || 
-                            item.name.toLowerCase().includes('labour') || 
-                            item.name.toLowerCase().includes('labor');
-    
-    const displayCost = isLaborOrCoolant ? item.cost : (item.cost * item.amount);
-    return `$${displayCost.toFixed(2)}`;
+    return `$${item.cost.toFixed(2)}`;
   };
 
   const getSelectedQuoteItems = () => {
@@ -305,29 +291,29 @@ const Dashboard = () => {
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-sm">Item</TableHead>
-                        <TableHead className="text-right text-sm">Quantity</TableHead>
-                        <TableHead className="text-right text-sm">Weight</TableHead>
-                        <TableHead className="text-right text-sm">Cost</TableHead>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs font-semibold h-8 px-3">Item</TableHead>
+                        <TableHead className="text-right text-xs font-semibold h-8 px-3">Quantity</TableHead>
+                        <TableHead className="text-right text-xs font-semibold h-8 px-3">Weight</TableHead>
+                        <TableHead className="text-right text-xs font-semibold h-8 px-3">Cost</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getSelectedQuoteItems().map((item) => (
-                        <TableRow key={item["# item_id"]}>
-                          <TableCell className="font-medium text-sm">{item.name}</TableCell>
-                          <TableCell className="text-right text-sm">{item.amount}</TableCell>
-                          <TableCell className="text-right text-sm">
+                        <TableRow key={item["# item_id"]} className="h-7 hover:bg-muted/30">
+                          <TableCell className="text-xs py-1 px-3">{item.name}</TableCell>
+                          <TableCell className="text-right text-xs py-1 px-3">{item.amount}</TableCell>
+                          <TableCell className="text-right text-xs py-1 px-3">
                             {item.weight ? `${item.weight.toFixed(2)}` : '-'}
                           </TableCell>
-                          <TableCell className="text-right text-sm">
+                          <TableCell className="text-right text-xs py-1 px-3">
                             {getItemDisplayCost(item)}
                           </TableCell>
                         </TableRow>
                       ))}
-                      <TableRow className="border-t-2 font-semibold">
-                        <TableCell colSpan={3} className="text-right text-sm">Total</TableCell>
-                        <TableCell className="text-right text-sm">
+                      <TableRow className="border-t-2 font-semibold bg-muted/30 h-8">
+                        <TableCell colSpan={3} className="text-right text-xs py-1 px-3">Total</TableCell>
+                        <TableCell className="text-right text-xs py-1 px-3">
                           ${getQuoteTotal(selectedQuote.id).toFixed(2)}
                         </TableCell>
                       </TableRow>
