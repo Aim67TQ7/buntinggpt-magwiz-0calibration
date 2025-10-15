@@ -13,16 +13,6 @@ export const Navigation = () => {
 
   const navItems = [
     {
-      path: "/",
-      label: "Calculator",
-      icon: Calculator,
-    },
-    {
-      path: "/configurator",
-      label: "Configurator",
-      icon: Settings,
-    },
-    {
       path: "/dashboard",
       label: "BMR Dashboard",
       icon: BarChart3,
@@ -33,12 +23,22 @@ export const Navigation = () => {
       icon: Zap,
     },
     {
+      path: "/calculator",
+      label: "OCW Shape Extraction",
+      icon: Calculator,
+    },
+    {
+      path: "/configurator",
+      label: "Configurator",
+      icon: Settings,
+    },
+    {
       path: "/pcb-chat",
       label: "PCB Assistant",
       icon: MessageSquare,
     },
     {
-      path: "/bom-manager",
+      path: "/",
       label: "BOM Manager",
       icon: Database,
     },
@@ -51,7 +51,7 @@ export const Navigation = () => {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center space-x-2">
               <Home className="h-6 w-6" />
-              <span className="font-bold text-lg">Magnetic Separator Tools</span>
+              <span className="font-bold text-lg">MagWiz 2</span>
             </Link>
           </div>
           
