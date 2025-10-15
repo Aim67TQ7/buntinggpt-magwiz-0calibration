@@ -131,17 +131,35 @@ const BOMManager = () => {
     });
   };
 
+  // Define the desired order of BOM items
+  const bomItemOrder = [
+    'Core', 'Winding', 'Backbar', 'Core Backbar', 'Side Pole', 
+    'Sealing Plate', 'Core Insulator', 'Conservator', 'Coolant',
+    'Machining of Core', 'Dowels and Spacers', 'Lifting Lugs', 
+    'Sling Chains', 'Steel Sections', 'Pulleys', 'Self Lube Bearings',
+    'Geared Motor', 'Mesh Guards', 'Belt', 'Terminal Box and Posts',
+    'Odds Factor', 'OCW Labour', 'Suspension Labour'
+  ];
+
+  const getSortOrder = (name: string | null) => {
+    if (!name) return 999;
+    const index = bomItemOrder.findIndex(item => 
+      name.toLowerCase().includes(item.toLowerCase())
+    );
+    return index === -1 ? 999 : index;
+  };
+
   const filteredMaterials = materials.filter(m => 
     m.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredParts = parts.filter(p => 
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredParts = parts
+    .filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => getSortOrder(a.name) - getSortOrder(b.name));
 
-  const filteredLabor = labor.filter(l => 
-    l.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLabor = labor
+    .filter(l => l.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => getSortOrder(a.name) - getSortOrder(b.name));
 
   if (loading && materials.length === 0) {
     return (
