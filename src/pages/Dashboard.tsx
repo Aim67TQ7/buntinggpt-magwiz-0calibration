@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, DollarSign, Package } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Quote {
@@ -57,6 +58,7 @@ const Dashboard = () => {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingQuoteItems, setLoadingQuoteItems] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
@@ -162,7 +164,7 @@ const Dashboard = () => {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString();
+    return new Date(timestamp * 1000).toLocaleDateString('en-GB');
   };
 
   if (loading) {
@@ -187,51 +189,50 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-200px)]">
-        {/* Left side - Quotes List (25%) */}
-        <Card className="col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Quotes / Workups</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-              <Table>
-                <TableBody>
-                  {quotes.map((quote) => (
-                    <TableRow 
-                      key={quote.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
-                      onClick={() => handleQuoteSelection(quote)}
-                    >
-                       <TableCell className="p-4">
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm">
-                            Quote {quote.id}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {getProductName(quote.product_id)}
-                            {quote.quote_number && ` - ${quote.quote_number}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatDate(quote.date_generated)}
-                          </div>
-                          {quote.verified === "1" && (
-                            <Badge variant="default" className="text-xs">
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex gap-6 h-[calc(100vh-200px)]">
+        {/* Left side - Collapsible Quotes List */}
+        <Collapsible open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <Card className={`transition-all duration-300 ${sidebarOpen ? 'w-80' : 'w-12'}`}>
+            <CardHeader className="pb-2 px-2 pt-2">
+              <div className="flex items-center justify-between">
+                {sidebarOpen && (
+                  <CardTitle className="text-base">Quote History</CardTitle>
+                )}
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="p-0">
+                <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+                  <Table>
+                    <TableBody>
+                      {quotes.map((quote) => (
+                        <TableRow 
+                          key={quote.id}
+                          className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
+                          onClick={() => handleQuoteSelection(quote)}
+                        >
+                          <TableCell className="p-2">
+                            <div className="text-xs font-mono whitespace-nowrap">
+                              {quote.quote_number} {getProductName(quote.product_id)} {formatDate(quote.date_generated)}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
-        {/* Right side - BOM Details (75%) */}
-        <Card className="col-span-3">
+        {/* Right side - BOM Details */}
+        <Card className="flex-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
               {selectedQuote ? (
