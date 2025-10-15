@@ -12,6 +12,7 @@ import OCW from "./pages/OCW";
 import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
 import PCBChat from "./pages/PCBChat";
+import BOMManager from "./pages/BOMManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/winding-sheet" element={<WindingSheet />} />
             <Route path="/configurator" element={<Configurator />} />
             <Route path="/pcb-chat" element={<PCBChat />} />
+            <Route path="/bom-manager" element={<BOMManager />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

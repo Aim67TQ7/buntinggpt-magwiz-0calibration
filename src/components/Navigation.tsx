@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare } from "lucide-react";
+import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database } from "lucide-react";
 
 export const Navigation = () => {
   const location = useLocation();
@@ -36,6 +36,11 @@ export const Navigation = () => {
       path: "/pcb-chat",
       label: "PCB Assistant",
       icon: MessageSquare,
+    },
+    {
+      path: "/bom-manager",
+      label: "BOM Manager",
+      icon: Database,
     },
   ];
 
