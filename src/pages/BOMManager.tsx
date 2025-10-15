@@ -13,6 +13,7 @@ interface Material {
   id: number;
   name: string | null;
   density: number | null;
+  cost_per_unit: number | null;
 }
 
 interface Part {
@@ -21,6 +22,7 @@ interface Part {
   bom: number | null;
   material: number | null;
   amount: number | null;
+  cost_per_unit: number | null;
 }
 
 interface Labor {
@@ -28,6 +30,7 @@ interface Labor {
   name: string | null;
   bom: number | null;
   rate: number | null;
+  cost_per_unit: number | null;
 }
 
 const BOMManager = () => {
@@ -80,7 +83,7 @@ const BOMManager = () => {
       for (const material of materials) {
         const { error } = await supabase
           .from('BMR_materials')
-          .update({ name: material.name, density: material.density })
+          .update({ name: material.name, density: material.density, cost_per_unit: material.cost_per_unit })
           .eq('id', material.id);
         if (error) throw error;
       }
@@ -89,7 +92,7 @@ const BOMManager = () => {
       for (const part of parts) {
         const { error } = await supabase
           .from('BMR_parts')
-          .update({ name: part.name, bom: part.bom, material: part.material, amount: part.amount })
+          .update({ name: part.name, bom: part.bom, material: part.material, amount: part.amount, cost_per_unit: part.cost_per_unit })
           .eq('id', part.id);
         if (error) throw error;
       }
@@ -98,7 +101,7 @@ const BOMManager = () => {
       for (const lab of labor) {
         const { error } = await supabase
           .from('BMR_labour')
-          .update({ name: lab.name, bom: lab.bom, rate: lab.rate })
+          .update({ name: lab.name, bom: lab.bom, rate: lab.rate, cost_per_unit: lab.cost_per_unit })
           .eq('id', lab.id);
         if (error) throw error;
       }
@@ -208,6 +211,7 @@ const BOMManager = () => {
                       <TableHead className="w-[100px]">ID</TableHead>
                       <TableHead>Material Name</TableHead>
                       <TableHead className="w-[200px]">Density (t/m³)</TableHead>
+                      <TableHead className="w-[200px]">Cost per Unit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -238,6 +242,19 @@ const BOMManager = () => {
                             }}
                           />
                         </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={material.cost_per_unit || ''}
+                            onChange={(e) => {
+                              setMaterials(materials.map(m => 
+                                m.id === material.id ? { ...m, cost_per_unit: parseFloat(e.target.value) || null } : m
+                              ));
+                              setHasChanges(true);
+                            }}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -255,6 +272,7 @@ const BOMManager = () => {
                       <TableHead className="w-[120px]">BOM</TableHead>
                       <TableHead className="w-[120px]">Material</TableHead>
                       <TableHead className="w-[120px]">Amount</TableHead>
+                      <TableHead className="w-[150px]">Cost per Unit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -308,6 +326,19 @@ const BOMManager = () => {
                             }}
                           />
                         </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={part.cost_per_unit || ''}
+                            onChange={(e) => {
+                              setParts(parts.map(p => 
+                                p.id === part.id ? { ...p, cost_per_unit: parseFloat(e.target.value) || null } : p
+                              ));
+                              setHasChanges(true);
+                            }}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -324,6 +355,7 @@ const BOMManager = () => {
                       <TableHead>Labor Name</TableHead>
                       <TableHead className="w-[150px]">BOM</TableHead>
                       <TableHead className="w-[150px]">Rate</TableHead>
+                      <TableHead className="w-[150px]">Cost per Unit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -360,6 +392,19 @@ const BOMManager = () => {
                             onChange={(e) => {
                               setLabor(labor.map(l => 
                                 l.id === lab.id ? { ...l, rate: parseInt(e.target.value) || null } : l
+                              ));
+                              setHasChanges(true);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={lab.cost_per_unit || ''}
+                            onChange={(e) => {
+                              setLabor(labor.map(l => 
+                                l.id === lab.id ? { ...l, cost_per_unit: parseFloat(e.target.value) || null } : l
                               ));
                               setHasChanges(true);
                             }}

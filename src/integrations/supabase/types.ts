@@ -161,18 +161,21 @@ export type Database = {
       BMR_labour: {
         Row: {
           bom: number | null
+          cost_per_unit: number | null
           id: number
           name: string | null
           rate: number | null
         }
         Insert: {
           bom?: number | null
+          cost_per_unit?: number | null
           id: number
           name?: string | null
           rate?: number | null
         }
         Update: {
           bom?: number | null
+          cost_per_unit?: number | null
           id?: number
           name?: string | null
           rate?: number | null
@@ -385,16 +388,19 @@ export type Database = {
       }
       BMR_materials: {
         Row: {
+          cost_per_unit: number | null
           density: number | null
           id: number
           name: string | null
         }
         Insert: {
+          cost_per_unit?: number | null
           density?: number | null
           id: number
           name?: string | null
         }
         Update: {
+          cost_per_unit?: number | null
           density?: number | null
           id?: number
           name?: string | null
@@ -525,6 +531,7 @@ export type Database = {
         Row: {
           amount: number | null
           bom: number | null
+          cost_per_unit: number | null
           id: number
           material: number | null
           name: string | null
@@ -532,6 +539,7 @@ export type Database = {
         Insert: {
           amount?: number | null
           bom?: number | null
+          cost_per_unit?: number | null
           id: number
           material?: number | null
           name?: string | null
@@ -539,6 +547,7 @@ export type Database = {
         Update: {
           amount?: number | null
           bom?: number | null
+          cost_per_unit?: number | null
           id?: number
           material?: number | null
           name?: string | null
@@ -718,6 +727,78 @@ export type Database = {
         }
         Relationships: []
       }
+      certificates: {
+        Row: {
+          contract_number: string | null
+          created_at: string
+          dimension_1: string | null
+          dimension_2: string | null
+          end_use_statement: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          issue_date: string | null
+          language: string | null
+          magnet_specifications: string | null
+          notes: string | null
+          purpose: string | null
+          signature_name: string | null
+          status: string
+          supplier: string | null
+          total_weight_kg: number | null
+          updated_at: string
+          user_id: string | null
+          weight: number | null
+        }
+        Insert: {
+          contract_number?: string | null
+          created_at?: string
+          dimension_1?: string | null
+          dimension_2?: string | null
+          end_use_statement?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          issue_date?: string | null
+          language?: string | null
+          magnet_specifications?: string | null
+          notes?: string | null
+          purpose?: string | null
+          signature_name?: string | null
+          status?: string
+          supplier?: string | null
+          total_weight_kg?: number | null
+          updated_at?: string
+          user_id?: string | null
+          weight?: number | null
+        }
+        Update: {
+          contract_number?: string | null
+          created_at?: string
+          dimension_1?: string | null
+          dimension_2?: string | null
+          end_use_statement?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          issue_date?: string | null
+          language?: string | null
+          magnet_specifications?: string | null
+          notes?: string | null
+          purpose?: string | null
+          signature_name?: string | null
+          status?: string
+          supplier?: string | null
+          total_weight_kg?: number | null
+          updated_at?: string
+          user_id?: string | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
       entities: {
         Row: {
           address: string | null
@@ -868,6 +949,36 @@ export type Database = {
           "Prod. Qty"?: number
           "Start Date"?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      OCW_Criteria: {
+        Row: {
+          "force factor": number | null
+          frame: string | null
+          gauss: number | null
+          model: string | null
+          modelid: string
+          watts: number | null
+          width: number | null
+        }
+        Insert: {
+          "force factor"?: number | null
+          frame?: string | null
+          gauss?: number | null
+          model?: string | null
+          modelid?: string
+          watts?: number | null
+          width?: number | null
+        }
+        Update: {
+          "force factor"?: number | null
+          frame?: string | null
+          gauss?: number | null
+          model?: string | null
+          modelid?: string
+          watts?: number | null
+          width?: number | null
         }
         Relationships: []
       }
