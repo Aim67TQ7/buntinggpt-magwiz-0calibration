@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, Info } from "lucide-react";
+import { Settings, Info, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MaterialStream {
   name: string;
@@ -16,6 +18,14 @@ interface MaterialStream {
   notes: string;
   commonTramp: string;
   specificTramp: string;
+}
+
+interface OCWUnit {
+  filename: string;
+  prefix: number;
+  suffix: number;
+  belt_width: number;
+  magnet_dimension: string;
 }
 
 const materialStreams: MaterialStream[] = [
@@ -182,9 +192,11 @@ const materialStreams: MaterialStream[] = [
 ];
 
 const Configurator = () => {
+  const navigate = useNavigate();
   const [beltWidth, setBeltWidth] = useState("");
   const [beltSpeed, setBeltSpeed] = useState("");
   const [burdenDepth, setBurdenDepth] = useState("");
+  const [coreBeltRatio, setCoreBeltRatio] = useState("0.3");
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialStream | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCustomMaterial, setIsCustomMaterial] = useState(false);
@@ -198,6 +210,9 @@ const Configurator = () => {
     commonTramp: "",
     specificTramp: ""
   });
+  const [ocwUnits, setOcwUnits] = useState<OCWUnit[]>([]);
+  const [recommendations, setRecommendations] = useState<OCWUnit[]>([]);
+  const [isLoadingOCW, setIsLoadingOCW] = useState(false);
 
   const handleMaterialSelect = (stream: MaterialStream) => {
     setSelectedMaterial(stream);
@@ -218,6 +233,77 @@ const Configurator = () => {
     }
   };
 
+  // Fetch OCW data on mount
+  useEffect(() => {
+    const fetchOCWData = async () => {
+      setIsLoadingOCW(true);
+      try {
+        const { data, error } = await supabase
+          .from('BMR_magwiz')
+          .select('filename, prefix, suffix, belt_width, magnet_dimension');
+        
+        if (error) throw error;
+        
+        if (data) {
+          setOcwUnits(data as OCWUnit[]);
+        }
+      } catch (error) {
+        console.error('Error fetching OCW data:', error);
+      } finally {
+        setIsLoadingOCW(false);
+      }
+    };
+
+    fetchOCWData();
+  }, []);
+
+  // Parse magnet dimension width from string (e.g., "701 x 701 x 296mm" → 701)
+  const parseMagnetWidth = (dimension: string | null): number => {
+    if (!dimension) return 0;
+    const match = dimension.match(/^(\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  // Calculate OCW recommendations
+  const calculateRecommendations = () => {
+    if (!beltWidth || !coreBeltRatio) return;
+
+    const beltWidthNum = parseFloat(beltWidth);
+    const coreBeltRatioNum = parseFloat(coreBeltRatio);
+    
+    // Calculate target core and minimum suffix
+    const targetCore = (beltWidthNum * coreBeltRatioNum) / 10;
+    const minSuffix = Math.ceil(targetCore / 5) * 5;
+
+    // Belt width tolerance (80% - 120%)
+    const minBeltWidth = beltWidthNum * 0.8;
+    const maxBeltWidth = beltWidthNum * 1.2;
+
+    // Filter and sort OCW units
+    const filtered = ocwUnits
+      .filter(unit => {
+        const magnetWidth = parseMagnetWidth(unit.magnet_dimension);
+        return (
+          unit.suffix >= minSuffix &&
+          magnetWidth >= minBeltWidth &&
+          magnetWidth <= maxBeltWidth
+        );
+      })
+      .sort((a, b) => {
+        // Sort by suffix first, then by prefix
+        if (a.suffix !== b.suffix) return a.suffix - b.suffix;
+        return a.prefix - b.prefix;
+      })
+      .slice(0, 15); // Limit to 15 results
+
+    setRecommendations(filtered);
+  };
+
+  // Navigate to OCW page with selected unit
+  const handleOCWClick = (unit: OCWUnit) => {
+    navigate(`/ocw?prefix=${unit.prefix}&suffix=${unit.suffix}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6">
@@ -235,7 +321,7 @@ const Configurator = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="beltWidth">Belt Width (mm)</Label>
                   <Input
@@ -269,7 +355,28 @@ const Configurator = () => {
                     onChange={(e) => setBurdenDepth(e.target.value)}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="coreBeltRatio">Core/Belt Ratio</Label>
+                  <Input
+                    id="coreBeltRatio"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.3"
+                    value={coreBeltRatio}
+                    onChange={(e) => setCoreBeltRatio(e.target.value)}
+                  />
+                </div>
               </div>
+
+              <Button 
+                onClick={calculateRecommendations}
+                disabled={!beltWidth || !coreBeltRatio || isLoadingOCW}
+                className="w-full"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Calculate OCW Recommendations
+              </Button>
               
               <div className="pt-4">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -451,6 +558,46 @@ const Configurator = () => {
             </Card>
           )}
         </div>
+
+        {/* OCW Recommendations Card */}
+        {recommendations.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Recommended OCW Units
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {recommendations.map((unit, index) => {
+                  const magnetWidth = parseMagnetWidth(unit.magnet_dimension);
+                  const beltWidthNum = parseFloat(beltWidth);
+                  const matchPercentage = ((magnetWidth / beltWidthNum) * 100).toFixed(0);
+                  
+                  return (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="h-auto flex flex-col items-start p-4 hover:bg-primary/10 hover:border-primary transition-colors"
+                      onClick={() => handleOCWClick(unit)}
+                    >
+                      <div className="font-bold text-lg">
+                        {unit.prefix} OCW {unit.suffix}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Magnet: {magnetWidth}mm
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Match: {matchPercentage}%
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
