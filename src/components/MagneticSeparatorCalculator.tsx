@@ -121,14 +121,29 @@ export function MagneticSeparatorCalculator() {
       const widthMin = beltWidth * 0.8;
       const widthMax = beltWidth * 1.2;
       
+      console.log('=== OCW Calculation Debug ===');
+      console.log('Input Parameters:', { beltWidth, coreBeltRatio });
+      console.log('Calculated minSuffix:', minSuffix);
+      console.log('Width range:', { widthMin, widthMax });
+      console.log('Total units in database:', data.length);
+      
       // Filter units where Suffix >= minSuffix AND width is within tolerance
       const filtered = data.filter((unit: any) => {
-        return (
-          unit.Suffix >= minSuffix &&
-          unit.width >= widthMin &&
-          unit.width <= widthMax
-        );
+        const suffixMatch = unit.Suffix >= minSuffix;
+        const widthMatch = unit.width >= widthMin && unit.width <= widthMax;
+        
+        if (suffixMatch && widthMatch) {
+          console.log('Match found:', { 
+            model: `${unit.Prefix} OCW ${unit.Suffix}`, 
+            width: unit.width,
+            suffix: unit.Suffix 
+          });
+        }
+        
+        return suffixMatch && widthMatch;
       });
+      
+      console.log('Total matches:', filtered.length);
       
       // Sort by Suffix (ascending), then by Prefix (ascending)
       const sorted = filtered.sort((a: any, b: any) => {
@@ -160,7 +175,7 @@ export function MagneticSeparatorCalculator() {
       } else {
         toast({
           title: "No Matches Found",
-          description: "No OCW units match your criteria. Try adjusting parameters.",
+          description: `No units found with Suffix ≥ ${minSuffix} and width ${widthMin}-${widthMax}mm. Check console for details.`,
           variant: "destructive",
         });
       }
