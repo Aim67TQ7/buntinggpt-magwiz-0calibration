@@ -21,11 +21,14 @@ interface MaterialStream {
 }
 
 interface OCWUnit {
-  filename: string;
-  prefix: number;
-  suffix: number;
-  belt_width: number;
-  magnet_dimension: string;
+  model: string;
+  Prefix: number;
+  Suffix: number;
+  surface_gauss: number;
+  force_factor: number;
+  watts: number;
+  width: number;
+  frame: string;
 }
 
 const materialStreams: MaterialStream[] = [
@@ -239,13 +242,13 @@ const Configurator = () => {
       setIsLoadingOCW(true);
       try {
         const { data, error } = await supabase
-          .from('BMR_magwiz')
-          .select('filename, prefix, suffix, belt_width, magnet_dimension');
+          .from('BMR_Top' as any)
+          .select('model, Prefix, Suffix, surface_gauss, force_factor, watts, width, frame');
         
         if (error) throw error;
         
         if (data) {
-          setOcwUnits(data as OCWUnit[]);
+          setOcwUnits(data as unknown as OCWUnit[]);
         }
       } catch (error) {
         console.error('Error fetching OCW data:', error);
@@ -256,13 +259,6 @@ const Configurator = () => {
 
     fetchOCWData();
   }, []);
-
-  // Parse magnet dimension width from string (e.g., "701 x 701 x 296mm" → 701)
-  const parseMagnetWidth = (dimension: string | null): number => {
-    if (!dimension) return 0;
-    const match = dimension.match(/^(\d+)/);
-    return match ? parseInt(match[1]) : 0;
-  };
 
   // Calculate OCW recommendations
   const calculateRecommendations = () => {
@@ -282,17 +278,17 @@ const Configurator = () => {
     // Filter and sort OCW units
     const filtered = ocwUnits
       .filter(unit => {
-        const magnetWidth = parseMagnetWidth(unit.magnet_dimension);
+        // The width field in BMR_Top is the magnet dimension
         return (
-          unit.suffix >= minSuffix &&
-          magnetWidth >= minBeltWidth &&
-          magnetWidth <= maxBeltWidth
+          unit.Suffix >= minSuffix &&
+          unit.width >= minBeltWidth &&
+          unit.width <= maxBeltWidth
         );
       })
       .sort((a, b) => {
         // Sort by suffix first, then by prefix
-        if (a.suffix !== b.suffix) return a.suffix - b.suffix;
-        return a.prefix - b.prefix;
+        if (a.Suffix !== b.Suffix) return a.Suffix - b.Suffix;
+        return a.Prefix - b.Prefix;
       })
       .slice(0, 15); // Limit to 15 results
 
@@ -301,7 +297,7 @@ const Configurator = () => {
 
   // Navigate to OCW page with selected unit
   const handleOCWClick = (unit: OCWUnit) => {
-    navigate(`/ocw?prefix=${unit.prefix}&suffix=${unit.suffix}`);
+    navigate(`/ocw?prefix=${unit.Prefix}&suffix=${unit.Suffix}`);
   };
 
   return (
@@ -569,11 +565,10 @@ const Configurator = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {recommendations.map((unit, index) => {
-                  const magnetWidth = parseMagnetWidth(unit.magnet_dimension);
                   const beltWidthNum = parseFloat(beltWidth);
-                  const matchPercentage = ((magnetWidth / beltWidthNum) * 100).toFixed(0);
+                  const matchPercentage = ((unit.width / beltWidthNum) * 100).toFixed(0);
                   
                   return (
                     <Button
@@ -582,14 +577,30 @@ const Configurator = () => {
                       className="h-auto flex flex-col items-start p-4 hover:bg-primary/10 hover:border-primary transition-colors"
                       onClick={() => handleOCWClick(unit)}
                     >
-                      <div className="font-bold text-lg">
-                        {unit.prefix} OCW {unit.suffix}
+                      <div className="font-bold text-lg mb-2">
+                        {unit.Prefix} OCW {unit.Suffix}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Magnet: {magnetWidth}mm
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Match: {matchPercentage}%
+                      <div className="space-y-1 text-xs text-muted-foreground w-full">
+                        <div className="flex justify-between">
+                          <span>Width:</span>
+                          <span className="font-medium">{unit.width}mm ({matchPercentage}%)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Surface Gauss:</span>
+                          <span className="font-medium">{unit.surface_gauss}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Force Factor:</span>
+                          <span className="font-medium">{unit.force_factor}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Watts:</span>
+                          <span className="font-medium">{unit.watts}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Frame:</span>
+                          <span className="font-medium">{unit.frame}</span>
+                        </div>
                       </div>
                     </Button>
                   );
