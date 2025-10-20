@@ -432,13 +432,28 @@ export function MagneticSeparatorCalculator() {
                       <span>Width: {unit.width}mm</span>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => handleViewOCW(unit)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    View
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => handleViewOCW(unit)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      View
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/magnetic-decay', { 
+                        state: { 
+                          model: `${unit.Prefix} OCW ${unit.Suffix}`,
+                          gauss: unit.surface_gauss,
+                          force: unit.force_factor
+                        }
+                      })}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Decay Chart
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

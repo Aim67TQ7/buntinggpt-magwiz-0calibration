@@ -13,6 +13,7 @@ import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
 import PCBChat from "./pages/PCBChat";
 import BOMManager from "./pages/BOMManager";
+import MagneticDecay from "./pages/MagneticDecay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/configurator" element={<Configurator />} />
             <Route path="/pcb-chat" element={<PCBChat />} />
             <Route path="/calculator" element={<Index />} />
+            <Route path="/magnetic-decay" element={<MagneticDecay />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
