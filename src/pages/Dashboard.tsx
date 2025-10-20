@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface Quote {
@@ -59,6 +60,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadingQuoteItems, setLoadingQuoteItems] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sortBy, setSortBy] = useState<'date' | 'ocw'>('date');
 
   // Define the exact order for BOM items
   const BOM_ITEM_ORDER = [
@@ -94,7 +96,7 @@ const Dashboard = () => {
       
       // Fetch quotes, products, and BOM items (but not all quote items)
       const [quotesResponse, productsResponse, bomItemsResponse] = await Promise.all([
-        supabase.from('BMR_quotes').select('*').order('date_generated', { ascending: false }),
+        supabase.from('BMR_quotes').select('*'),
         supabase.from('BMR_products').select('*'),
         supabase.from('BMR_parts').select('*')
       ]);
@@ -114,6 +116,24 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSortedQuotes = () => {
+    const sorted = [...quotes];
+    
+    if (sortBy === 'date') {
+      // Sort by date descending (newest first)
+      sorted.sort((a, b) => b.date_generated - a.date_generated);
+    } else if (sortBy === 'ocw') {
+      // Sort by OCW unit (product name alphabetically)
+      sorted.sort((a, b) => {
+        const productA = getProductName(a.product_id);
+        const productB = getProductName(b.product_id);
+        return productA.localeCompare(productB);
+      });
+    }
+    
+    return sorted;
   };
 
   const fetchQuoteItems = async (quoteId: number) => {
@@ -234,11 +254,28 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CollapsibleContent>
-              <CardContent className="p-0">
-                <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+              <CardContent className="p-2 space-y-2">
+                {/* Sort Options */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 px-1">
+                    <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Sort by:</span>
+                  </div>
+                  <Select value={sortBy} onValueChange={(value: 'date' | 'ocw') => setSortBy(value)}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="ocw">OCW Unit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="max-h-[calc(100vh-380px)] overflow-y-auto">
                   <Table>
                     <TableBody>
-                      {quotes.map((quote) => (
+                      {getSortedQuotes().map((quote) => (
                         <TableRow 
                           key={quote.id}
                           className={`cursor-pointer hover:bg-muted/50 ${selectedQuote?.id === quote.id ? 'bg-muted' : ''}`}
