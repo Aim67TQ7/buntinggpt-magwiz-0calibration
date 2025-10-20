@@ -95,6 +95,19 @@ const OCW = () => {
   const [beltWidth, setBeltWidth] = useState<number>(1200);
   const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.5);
   const [recommendations, setRecommendations] = useState<Array<{prefix: number, suffix: number, distance: number, belt_width: number}>>([]);
+  
+  // Tramp metal profile states
+  const [isTrampMetalOpen, setIsTrampMetalOpen] = useState(false);
+  const [materialStream, setMaterialStream] = useState<string>("sand");
+  const [trampMetalTypes, setTrampMetalTypes] = useState({
+    loaderTeeth: false,
+    rebar: false,
+    boltsFasteners: false,
+    drillRods: false,
+    wireNails: false,
+    crusherPlates: false
+  });
+  const [extractionPriority, setExtractionPriority] = useState<number>(50);
   useEffect(() => {
     fetchOCWData();
     

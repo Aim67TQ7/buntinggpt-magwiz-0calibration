@@ -6,8 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, Info, Zap } from "lucide-react";
+import { Settings, Info, Zap, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 
 interface MaterialStream {
   name: string;
@@ -216,6 +220,19 @@ const Configurator = () => {
   const [ocwUnits, setOcwUnits] = useState<OCWUnit[]>([]);
   const [recommendations, setRecommendations] = useState<OCWUnit[]>([]);
   const [isLoadingOCW, setIsLoadingOCW] = useState(false);
+  
+  // Tramp Metal Profile states
+  const [isTrampMetalOpen, setIsTrampMetalOpen] = useState(false);
+  const [trampMaterialStream, setTrampMaterialStream] = useState("sand");
+  const [trampMetalTypes, setTrampMetalTypes] = useState({
+    loaderTeeth: false,
+    rebar: false,
+    boltsFasteners: false,
+    drillRods: false,
+    wireNails: false,
+    crusherPlates: false
+  });
+  const [extractionPriority, setExtractionPriority] = useState<number>(50);
 
   const handleMaterialSelect = (stream: MaterialStream) => {
     setSelectedMaterial(stream);
@@ -375,6 +392,134 @@ const Configurator = () => {
                   />
                 </div>
               </div>
+
+              {/* Tramp Metal Extraction Profile */}
+              <Collapsible open={isTrampMetalOpen} onOpenChange={setIsTrampMetalOpen} className="mt-4">
+                <div className="border rounded-lg">
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <h3 className="text-sm font-medium">Tramp Metal Extraction Profile</h3>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isTrampMetalOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4 pt-0 space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="trampMaterialStream">Material Stream</Label>
+                        <Select value={trampMaterialStream} onValueChange={setTrampMaterialStream}>
+                          <SelectTrigger id="trampMaterialStream">
+                            <SelectValue placeholder="Select material stream" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sand">Sand/Aggregate</SelectItem>
+                            <SelectItem value="mining">Mining</SelectItem>
+                            <SelectItem value="industrial">Industrial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-sm">Tramp Metal Types</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="loaderTeeth"
+                              checked={trampMetalTypes.loaderTeeth}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, loaderTeeth: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="loaderTeeth" className="text-sm font-normal cursor-pointer">
+                              Loader Teeth
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="rebar"
+                              checked={trampMetalTypes.rebar}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, rebar: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="rebar" className="text-sm font-normal cursor-pointer">
+                              Rebar
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="boltsFasteners"
+                              checked={trampMetalTypes.boltsFasteners}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, boltsFasteners: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="boltsFasteners" className="text-sm font-normal cursor-pointer">
+                              Bolts/Fasteners
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="drillRods"
+                              checked={trampMetalTypes.drillRods}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, drillRods: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="drillRods" className="text-sm font-normal cursor-pointer">
+                              Drill Rods
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="wireNails"
+                              checked={trampMetalTypes.wireNails}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, wireNails: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="wireNails" className="text-sm font-normal cursor-pointer">
+                              Wire/Nails
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="crusherPlates"
+                              checked={trampMetalTypes.crusherPlates}
+                              onCheckedChange={(checked) => 
+                                setTrampMetalTypes({...trampMetalTypes, crusherPlates: checked as boolean})
+                              }
+                            />
+                            <Label htmlFor="crusherPlates" className="text-sm font-normal cursor-pointer">
+                              Crusher Plates
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="extractionPriority" className="text-sm">Extraction Priority</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {extractionPriority <= 25 ? 'All' : extractionPriority >= 75 ? 'Largest Only' : 'Mixed'}
+                          </span>
+                        </div>
+                        <Slider
+                          id="extractionPriority"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={[extractionPriority]}
+                          onValueChange={(value) => setExtractionPriority(value[0])}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This weights the burden-depth penalty multiplier
+                        </p>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
 
               <Button 
                 onClick={calculateRecommendations}
