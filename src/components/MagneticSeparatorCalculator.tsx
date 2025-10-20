@@ -68,25 +68,25 @@ export function MagneticSeparatorCalculator() {
         return;
       }
       
-      // Calculate target prefix based on belt width and core:belt ratio
-      const targetPrefix = (beltWidth * coreBeltRatio) / 10;
+      // Calculate target suffix based on belt width and core:belt ratio
+      const targetSuffix = (beltWidth * coreBeltRatio) / 10;
       
       // Filter and score OCW units
       const scored = data.map((unit: any) => {
         let score = 0;
         
-        // Prefix matching (critical) - exact match gets highest score
-        if (unit.Prefix === Math.round(targetPrefix)) {
-          score += 50;
-        } else if (unit.Prefix && Math.abs(unit.Prefix - targetPrefix) <= 2) {
-          // Close prefix match
-          score += 30;
-        }
-        
-        // Belt width matching - within ±20%
+        // Belt width matching (critical) - within ±20%
         const widthTolerance = beltWidth * 0.2;
         if (unit.width && Math.abs(unit.width - beltWidth) <= widthTolerance) {
+          score += 50;
+        }
+        
+        // Suffix matching - exact match gets highest score
+        if (unit.Suffix === Math.round(targetSuffix)) {
           score += 30;
+        } else if (unit.Suffix && Math.abs(unit.Suffix - targetSuffix) <= 2) {
+          // Close suffix match
+          score += 20;
         }
         
         // Magnetic field strength (gauss)

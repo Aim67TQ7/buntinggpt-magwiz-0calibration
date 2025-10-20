@@ -291,15 +291,15 @@ const Configurator = () => {
     const beltWidthNum = parseFloat(beltWidth);
     const coreBeltRatioNum = parseFloat(coreBeltRatio);
     
-    // Calculate target core and minimum suffix
-    const targetCore = (beltWidthNum * coreBeltRatioNum) / 10;
-    const minSuffix = Math.ceil(targetCore / 5) * 5;
+    // Calculate target suffix based on belt width and core:belt ratio
+    const targetSuffix = (beltWidthNum * coreBeltRatioNum) / 10;
 
-    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, targetCore, minSuffix });
+    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, targetSuffix });
 
-    // Belt width tolerance (80% - 120%)
-    const minBeltWidth = beltWidthNum * 0.8;
-    const maxBeltWidth = beltWidthNum * 1.2;
+    // Belt width tolerance (±20%)
+    const widthTolerance = beltWidthNum * 0.2;
+    const minBeltWidth = beltWidthNum - widthTolerance;
+    const maxBeltWidth = beltWidthNum + widthTolerance;
 
     console.log('Width range:', { minBeltWidth, maxBeltWidth });
 
@@ -307,15 +307,17 @@ const Configurator = () => {
     const filtered = ocwUnits
       .filter(unit => {
         // The width field in BMR_Top is the magnet dimension
+        // Must be within ±20% of belt width
         return (
-          unit.Suffix >= minSuffix &&
           unit.width >= minBeltWidth &&
           unit.width <= maxBeltWidth
         );
       })
       .sort((a, b) => {
-        // Sort by surface_gauss (lowest first)
-        return a.surface_gauss - b.surface_gauss;
+        // Sort by how close the suffix is to target suffix
+        const aDiff = Math.abs(a.Suffix - targetSuffix);
+        const bDiff = Math.abs(b.Suffix - targetSuffix);
+        return aDiff - bDiff;
       })
       .slice(0, 15); // Limit to 15 results
 
