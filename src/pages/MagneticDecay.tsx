@@ -72,7 +72,7 @@ export default function MagneticDecay() {
               
               <YAxis 
                 scale="log"
-                domain={[10, 'auto']}
+                domain={['auto', 'auto']}
                 stroke="#fff"
                 label={{ value: 'Gauss (Log Scale)', angle: -90, position: 'insideLeft', fill: '#fff' }}
                 tickFormatter={(value) => value.toLocaleString()}
@@ -124,14 +124,15 @@ export default function MagneticDecay() {
                 label={{ value: '25mm Cube (200G)', position: 'right', fill: '#dc2626', fontSize: 12 }}
               />
               
-              {/* Main Gauss curve - navy blue */}
+              {/* Main Gauss curve - navy blue with data points */}
               <Line 
                 type="monotone" 
                 dataKey="gauss" 
                 stroke="#1e3a8a" 
                 strokeWidth={3}
                 name="Magnetic Field Strength"
-                dot={false}
+                dot={{ fill: '#1e3a8a', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
               />
               
               <Tooltip 
@@ -141,6 +142,12 @@ export default function MagneticDecay() {
                   color: '#fff'
                 }}
                 labelStyle={{ color: '#fbbf24' }}
+                formatter={(value: number, name: string) => {
+                  if (name === "Magnetic Field Strength") {
+                    return [`${value.toLocaleString()} G`, name];
+                  }
+                  return [value, name];
+                }}
               />
               <Legend 
                 wrapperStyle={{ color: '#fff' }}
