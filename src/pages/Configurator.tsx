@@ -296,9 +296,9 @@ const Configurator = () => {
 
     console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, minSuffix });
 
-    // Belt width tolerance (±20%)
-    const widthMin = beltWidthNum * 0.8;
-    const widthMax = beltWidthNum * 1.2;
+    // Belt width tolerance (-10% to +20%)
+    const widthMin = beltWidthNum * 0.9;  // -10%
+    const widthMax = beltWidthNum * 1.2;  // +20%
 
     console.log('Width range:', { widthMin, widthMax });
 

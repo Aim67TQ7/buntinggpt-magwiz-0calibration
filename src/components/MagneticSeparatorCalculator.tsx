@@ -117,9 +117,9 @@ export function MagneticSeparatorCalculator() {
       // Calculate minimum suffix: (beltWidth * coreBeltRatio) / 10
       const minSuffix = Math.round((beltWidth * coreBeltRatio) / 10);
       
-      // Calculate belt width tolerance range (±20%)
-      const widthMin = beltWidth * 0.8;
-      const widthMax = beltWidth * 1.2;
+      // Calculate belt width tolerance range (-10% to +20%)
+      const widthMin = beltWidth * 0.9;  // -10%
+      const widthMax = beltWidth * 1.2;  // +20%
       
       console.log('=== OCW Calculation Debug ===');
       console.log('Input Parameters:', { beltWidth, coreBeltRatio });
