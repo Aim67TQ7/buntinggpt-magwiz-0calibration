@@ -285,48 +285,40 @@ const OCW = () => {
           </Link>
           <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
         </div>
+        
+        {/* Compact selector in upper right */}
+        <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+          <span className="text-sm font-medium">BMR</span>
+          <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
+            <SelectTrigger className="w-16 h-8">
+              <SelectValue placeholder="000" />
+            </SelectTrigger>
+            <SelectContent>
+              {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
+                  {prefix}
+                </SelectItem>)}
+            </SelectContent>
+          </Select>
+          <span className="text-sm">-</span>
+          <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
+            <SelectTrigger className="w-16 h-8">
+              <SelectValue placeholder="00" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
+                  {suffix}
+                </SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Manual Configuration Selection</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">BMR</span>
-              <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder="000" />
-                </SelectTrigger>
-                <SelectContent>
-                  {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
-                      {prefix}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-              <span className="text-sm">-</span>
-              <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder="00" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
-                      {suffix}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedRecord && <div className="mt-4 p-4 bg-muted rounded-lg">
-                <p className="font-medium">Selected: {selectedRecord.filename}</p>
-                <p className="text-lg font-semibold text-primary mt-2">
-                  Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
-                </p>
-              </div>}
-          </CardContent>
-        </Card>
-      </div>
+      {selectedRecord && <div className="bg-muted rounded-lg p-3 text-sm">
+          <p className="font-medium">Selected: {selectedRecord.filename}</p>
+          <p className="text-base font-semibold text-primary mt-1">
+            Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
+          </p>
+        </div>}
 
       {selectedRecord && <div className="space-y-6">
           {/* Component Table - Collapsible */}
