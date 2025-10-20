@@ -297,9 +297,8 @@ const Configurator = () => {
         );
       })
       .sort((a, b) => {
-        // Sort by suffix first, then by prefix
-        if (a.Suffix !== b.Suffix) return a.Suffix - b.Suffix;
-        return a.Prefix - b.Prefix;
+        // Sort by surface_gauss (lowest first)
+        return a.surface_gauss - b.surface_gauss;
       })
       .slice(0, 15); // Limit to 15 results
 
@@ -593,44 +592,30 @@ const Configurator = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
                 {recommendations.map((unit, index) => {
                   const beltWidthNum = parseFloat(beltWidth);
                   const matchPercentage = ((unit.width / beltWidthNum) * 100).toFixed(0);
                   
                   return (
-                    <Button
+                    <button
                       key={index}
-                      variant="outline"
-                      className="h-auto flex flex-col items-start p-4 hover:bg-primary/10 hover:border-primary transition-colors"
+                      className="w-full text-left p-3 rounded-md border hover:bg-primary/5 hover:border-primary transition-colors"
                       onClick={() => handleOCWClick(unit)}
                     >
-                      <div className="font-bold text-lg mb-2">
-                        {unit.Prefix} OCW {unit.Suffix}
-                      </div>
-                      <div className="space-y-1 text-xs text-muted-foreground w-full">
-                        <div className="flex justify-between">
-                          <span>Width:</span>
-                          <span className="font-medium">{unit.width}mm ({matchPercentage}%)</span>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="font-bold text-sm">
+                          {unit.Prefix} OCW {unit.Suffix}
                         </div>
-                        <div className="flex justify-between">
-                          <span>Surface Gauss:</span>
-                          <span className="font-medium">{unit.surface_gauss}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Force Factor:</span>
-                          <span className="font-medium">{unit.force_factor}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Watts:</span>
-                          <span className="font-medium">{unit.watts}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Frame:</span>
-                          <span className="font-medium">{unit.frame}</span>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Gauss: <span className="font-medium">{unit.surface_gauss}</span></span>
+                          <span>Force: <span className="font-medium">{unit.force_factor}</span></span>
+                          <span>Watts: <span className="font-medium">{unit.watts}</span></span>
+                          <span>Width: <span className="font-medium">{unit.width}mm ({matchPercentage}%)</span></span>
+                          <span>Frame: <span className="font-medium">{unit.frame}</span></span>
                         </div>
                       </div>
-                    </Button>
+                    </button>
                   );
                 })}
               </div>
