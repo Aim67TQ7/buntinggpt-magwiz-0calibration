@@ -201,7 +201,8 @@ const materialStreams: MaterialStream[] = [
 const Configurator = () => {
   const navigate = useNavigate();
   const [beltWidth, setBeltWidth] = useState("");
-  const [beltSpeed, setBeltSpeed] = useState("");
+  const [minGauss, setMinGauss] = useState("");
+  const [minForce, setMinForce] = useState("");
   const [burdenDepth, setBurdenDepth] = useState("");
   const [coreBeltRatio, setCoreBeltRatio] = useState("0.3");
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialStream | null>(null);
@@ -290,11 +291,19 @@ const Configurator = () => {
 
     const beltWidthNum = parseFloat(beltWidth);
     const coreBeltRatioNum = parseFloat(coreBeltRatio);
+    const minGaussNum = minGauss ? parseFloat(minGauss) : 0;
+    const minForceNum = minForce ? parseFloat(minForce) : 0;
     
     // Calculate minimum suffix: (beltWidth * coreBeltRatio) / 10
     const minSuffix = Math.round((beltWidthNum * coreBeltRatioNum) / 10);
 
-    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, minSuffix });
+    console.log('Calculation:', { 
+      beltWidth: beltWidthNum, 
+      coreBeltRatio: coreBeltRatioNum, 
+      minSuffix,
+      minGauss: minGaussNum,
+      minForce: minForceNum
+    });
 
     // Belt width tolerance (-10% to +20%)
     const widthMin = beltWidthNum * 0.9;  // -10%
@@ -302,13 +311,22 @@ const Configurator = () => {
 
     console.log('Width range:', { widthMin, widthMax });
 
-    // Filter units where Suffix >= minSuffix AND width is within tolerance
+    // Filter units where:
+    // - Suffix >= minSuffix
+    // - Width is within tolerance
+    // - Gauss >= minGauss (if specified)
+    // - Force >= minForce (if specified)
     const filtered = ocwUnits
       .filter(unit => {
+        const meetsGaussReq = minGaussNum === 0 || (unit.surface_gauss >= minGaussNum);
+        const meetsForceReq = minForceNum === 0 || (unit.force_factor >= minForceNum);
+        
         return (
           unit.Suffix >= minSuffix &&
           unit.width >= widthMin &&
-          unit.width <= widthMax
+          unit.width <= widthMax &&
+          meetsGaussReq &&
+          meetsForceReq
         );
       })
       .sort((a, b) => {
@@ -358,29 +376,6 @@ const Configurator = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="beltSpeed">Belt Speed (m/s)</Label>
-                  <Input
-                    id="beltSpeed"
-                    type="number"
-                    step="0.1"
-                    placeholder="2.5"
-                    value={beltSpeed}
-                    onChange={(e) => setBeltSpeed(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="burdenDepth">Burden Depth (mm)</Label>
-                  <Input
-                    id="burdenDepth"
-                    type="number"
-                    placeholder="50"
-                    value={burdenDepth}
-                    onChange={(e) => setBurdenDepth(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="coreBeltRatio">Core/Belt Ratio</Label>
                   <Input
                     id="coreBeltRatio"
@@ -389,6 +384,28 @@ const Configurator = () => {
                     placeholder="0.3"
                     value={coreBeltRatio}
                     onChange={(e) => setCoreBeltRatio(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="minGauss">Min Gauss (optional)</Label>
+                  <Input
+                    id="minGauss"
+                    type="number"
+                    placeholder="3000"
+                    value={minGauss}
+                    onChange={(e) => setMinGauss(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="minForce">Min Force (optional)</Label>
+                  <Input
+                    id="minForce"
+                    type="number"
+                    placeholder="500000"
+                    value={minForce}
+                    onChange={(e) => setMinForce(e.target.value)}
                   />
                 </div>
               </div>
