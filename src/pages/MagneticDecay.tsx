@@ -108,10 +108,9 @@ export default function MagneticDecay() {
                 />
                 
                 <YAxis 
-                  scale="log"
-                  domain={[100, 10000]}
+                  domain={[0, 2500]}
                   stroke="#fff"
-                  label={{ value: 'Magnetic Field Strength (Gauss - Log Scale)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
+                  label={{ value: 'Magnetic Field Strength (Gauss)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
                   tickFormatter={(value) => value.toLocaleString()}
                 />
                 
