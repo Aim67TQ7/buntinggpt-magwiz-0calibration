@@ -286,30 +286,61 @@ const OCW = () => {
           <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
         </div>
         
-        {/* Compact selector in upper right */}
-        <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
-          <span className="text-sm font-medium">BMR</span>
-          <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
-            <SelectTrigger className="w-16 h-8">
-              <SelectValue placeholder="000" />
-            </SelectTrigger>
-            <SelectContent>
-              {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
-                  {prefix}
-                </SelectItem>)}
-            </SelectContent>
-          </Select>
-          <span className="text-sm">-</span>
-          <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
-            <SelectTrigger className="w-16 h-8">
-              <SelectValue placeholder="00" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
-                  {suffix}
-                </SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-4">
+          {/* Decay Chart Buttons */}
+          {selectedRecord && (
+            <div className="flex items-center gap-2">
+              {[20, 30, 40, 45].map((temp) => (
+                <Button
+                  key={temp}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // For now, only A20 is implemented, others will be added later
+                    if (temp === 20) {
+                      navigate('/magnetic-decay', {
+                        state: {
+                          model: selectedRecord.filename,
+                          gauss: 2410, // This should come from BMR_Top table
+                          force: 499496, // This should come from BMR_Top table
+                          ambient: temp
+                        }
+                      });
+                    }
+                  }}
+                  disabled={temp !== 20}
+                >
+                  A{temp} Gauss
+                </Button>
+              ))}
+            </div>
+          )}
+          
+          {/* Compact selector in upper right */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+            <span className="text-sm font-medium">BMR</span>
+            <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
+              <SelectTrigger className="w-16 h-8">
+                <SelectValue placeholder="000" />
+              </SelectTrigger>
+              <SelectContent>
+                {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
+                    {prefix}
+                  </SelectItem>)}
+              </SelectContent>
+            </Select>
+            <span className="text-sm">-</span>
+            <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
+              <SelectTrigger className="w-16 h-8">
+                <SelectValue placeholder="00" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
+                    {suffix}
+                  </SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
