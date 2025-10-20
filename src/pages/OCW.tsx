@@ -321,51 +321,51 @@ const OCW = () => {
         </div>}
 
       {selectedRecord && <div className="space-y-6">
-          {/* Component Table - Collapsible */}
-          <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
-            <Card>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Component Specifications</CardTitle>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isComponentsOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Dimension</TableHead>
-                        <TableHead>Mass</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {componentData.map((component, index) => <TableRow key={index} className="h-10">
-                          <TableCell className="font-medium py-2">{component.name}</TableCell>
-                          <TableCell className="py-2">{component.amount}</TableCell>
-                          <TableCell className="py-2">{component.material}</TableCell>
-                          <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
-                          <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
-                        </TableRow>)}
-                      <TableRow className="font-bold h-10">
-                        <TableCell colSpan={4} className="py-2">Total</TableCell>
-                        <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+          {/* Component Specifications and Winding Information - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Component Table - Collapsible - 60% width */}
+            <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
+              <Card className="lg:col-span-1">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Component Specifications</CardTitle>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isComponentsOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Dimension</TableHead>
+                          <TableHead>Mass</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {componentData.map((component, index) => <TableRow key={index} className="h-10">
+                            <TableCell className="font-medium py-2">{component.name}</TableCell>
+                            <TableCell className="py-2">{component.amount}</TableCell>
+                            <TableCell className="py-2">{component.material}</TableCell>
+                            <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
+                            <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
+                          </TableRow>)}
+                        <TableRow className="font-bold h-10">
+                          <TableCell colSpan={4} className="py-2">Total</TableCell>
+                          <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
-          {/* Winding Information and Temperature/Electrical Properties - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Winding Information - 33% width */}
+            {/* Winding Information - 40% width */}
             <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
               <Card className="lg:col-span-1">
                 <CollapsibleTrigger asChild>
@@ -419,10 +419,12 @@ const OCW = () => {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+          </div>
 
-            {/* Temperature and Electrical Properties - 66% width */}
-            <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
-              <Card className="lg:col-span-2">
+
+          {/* Temperature and Electrical Properties - Full width below */}
+          <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
+            <Card>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                     <div className="flex items-center justify-between">
@@ -525,7 +527,6 @@ const OCW = () => {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
-          </div>
         </div>}
     </div>;
 };
