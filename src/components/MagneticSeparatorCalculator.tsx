@@ -68,24 +68,24 @@ export function MagneticSeparatorCalculator() {
         return;
       }
       
-      // Calculate required force based on tramp metal dimensions and material stream
-      const trampVolume = (trampWidth * trampLength * trampHeight) / 1000000; // mm³ to m³
-      const trampMass = trampVolume * 7850; // Steel density kg/m³
-      const requiredForce = trampMass * 9.81; // Force in Newtons
+      // Calculate target prefix based on belt width and core:belt ratio
+      const targetPrefix = (beltWidth * coreBeltRatio) / 10;
       
       // Filter and score OCW units
       const scored = data.map((unit: any) => {
         let score = 0;
         
-        // Belt width matching (critical)
-        if (unit.width && Math.abs(unit.width - beltWidth) < 100) {
+        // Prefix matching (critical) - exact match gets highest score
+        if (unit.Prefix === Math.round(targetPrefix)) {
           score += 50;
-        } else if (unit.width && unit.width >= beltWidth) {
+        } else if (unit.Prefix && Math.abs(unit.Prefix - targetPrefix) <= 2) {
+          // Close prefix match
           score += 30;
         }
         
-        // Force factor matching
-        if (unit.force_factor && unit.force_factor >= requiredForce / 100) {
+        // Belt width matching - within ±20%
+        const widthTolerance = beltWidth * 0.2;
+        if (unit.width && Math.abs(unit.width - beltWidth) <= widthTolerance) {
           score += 30;
         }
         
