@@ -245,7 +245,12 @@ const Configurator = () => {
           .from('BMR_Top' as any)
           .select('model, Prefix, Suffix, surface_gauss, force_factor, watts, width, frame');
         
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+        
+        console.log('BMR_Top data fetched:', data);
         
         if (data) {
           setOcwUnits(data as unknown as OCWUnit[]);
@@ -264,6 +269,8 @@ const Configurator = () => {
   const calculateRecommendations = () => {
     if (!beltWidth || !coreBeltRatio) return;
 
+    console.log('Total OCW units available:', ocwUnits.length);
+
     const beltWidthNum = parseFloat(beltWidth);
     const coreBeltRatioNum = parseFloat(coreBeltRatio);
     
@@ -271,9 +278,13 @@ const Configurator = () => {
     const targetCore = (beltWidthNum * coreBeltRatioNum) / 10;
     const minSuffix = Math.ceil(targetCore / 5) * 5;
 
+    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, targetCore, minSuffix });
+
     // Belt width tolerance (80% - 120%)
     const minBeltWidth = beltWidthNum * 0.8;
     const maxBeltWidth = beltWidthNum * 1.2;
+
+    console.log('Width range:', { minBeltWidth, maxBeltWidth });
 
     // Filter and sort OCW units
     const filtered = ocwUnits
@@ -292,6 +303,7 @@ const Configurator = () => {
       })
       .slice(0, 15); // Limit to 15 results
 
+    console.log('Filtered recommendations:', filtered.length);
     setRecommendations(filtered);
   };
 
@@ -556,6 +568,22 @@ const Configurator = () => {
         </div>
 
         {/* OCW Recommendations Card */}
+        {beltWidth && coreBeltRatio && recommendations.length === 0 && ocwUnits.length === 0 && !isLoadingOCW && (
+          <Card className="mt-6">
+            <CardContent className="py-8 text-center text-muted-foreground">
+              <p>No OCW data available in the BMR_Top table. Please add data to the table first.</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {beltWidth && coreBeltRatio && recommendations.length === 0 && ocwUnits.length > 0 && !isLoadingOCW && (
+          <Card className="mt-6">
+            <CardContent className="py-8 text-center text-muted-foreground">
+              <p>No OCW units match the criteria. Try adjusting the belt width or core/belt ratio.</p>
+            </CardContent>
+          </Card>
+        )}
+        
         {recommendations.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
