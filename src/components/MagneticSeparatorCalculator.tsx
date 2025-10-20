@@ -147,48 +147,52 @@ export function MagneticSeparatorCalculator() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Process Parameters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Process Parameters</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Process Parameters</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="beltSpeed">Belt Speed (m/s)</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-0">
+          <div className="space-y-1.5">
+            <Label htmlFor="beltSpeed" className="text-xs">Belt Speed (m/s)</Label>
             <Input
               id="beltSpeed"
               type="number"
               value={beltSpeed}
               onChange={(e) => setBeltSpeed(parseFloat(e.target.value))}
               step="0.1"
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="beltWidth">Belt Width (mm)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="beltWidth" className="text-xs">Belt Width (mm)</Label>
             <Input
               id="beltWidth"
               type="number"
               value={beltWidth}
               onChange={(e) => setBeltWidth(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="feedDepth" className="text-xs">Feed Depth (mm)</Label>
             <Input
               id="feedDepth"
               type="number"
               value={feedDepth}
               onChange={(e) => setFeedDepth(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="throughput">Throughput (TPH)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="throughput" className="text-xs">Throughput (TPH)</Label>
             <Input
               id="throughput"
               type="number"
               value={throughput}
               onChange={(e) => setThroughput(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
         </CardContent>
@@ -196,21 +200,22 @@ export function MagneticSeparatorCalculator() {
 
       {/* Magnet & Shape */}
       <Card>
-        <CardHeader>
-          <CardTitle>Magnet & Shape</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Magnet & Shape</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="magnetGap">Magnet Gap (mm)</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-0">
+          <div className="space-y-1.5">
+            <Label htmlFor="magnetGap" className="text-xs">Magnet Gap (mm)</Label>
             <Input
               id="magnetGap"
               type="number"
               value={magnetGap}
               onChange={(e) => setMagnetGap(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="coreBeltRatio">Core:Belt Ratio</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="coreBeltRatio" className="text-xs">Core:Belt Ratio</Label>
             <Input
               id="coreBeltRatio"
               type="number"
@@ -219,12 +224,13 @@ export function MagneticSeparatorCalculator() {
               step="0.1"
               min="0"
               max="1"
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="magnetPosition">Magnet Position</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
             <Select value={magnetPosition} onValueChange={setMagnetPosition}>
-              <SelectTrigger id="magnetPosition">
+              <SelectTrigger id="magnetPosition" className="h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -239,37 +245,40 @@ export function MagneticSeparatorCalculator() {
 
       {/* Material Stream */}
       <Card>
-        <CardHeader>
-          <CardTitle>Material Stream</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Material Stream</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="bulkDensity">Bulk Density (t/m³)</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-0">
+          <div className="space-y-1.5">
+            <Label htmlFor="bulkDensity" className="text-xs">Bulk Density (t/m³)</Label>
             <Input
               id="bulkDensity"
               type="number"
               value={bulkDensity}
               onChange={(e) => setBulkDensity(parseFloat(e.target.value))}
               step="0.1"
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="waterContent">Water Content (%)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="waterContent" className="text-xs">Water Content (%)</Label>
             <Input
               id="waterContent"
               type="number"
               value={waterContent}
               onChange={(e) => setWaterContent(parseFloat(e.target.value))}
               step="1"
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ambientTemp">Ambient Temp (°C)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="ambientTemp" className="text-xs">Ambient Temp (°C)</Label>
             <Input
               id="ambientTemp"
               type="number"
               value={ambientTemp}
               onChange={(e) => setAmbientTemp(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
         </CardContent>
@@ -277,73 +286,71 @@ export function MagneticSeparatorCalculator() {
 
       {/* Tramp Metal */}
       <Card>
-        <CardHeader>
-          <CardTitle>Tramp Metal (mm)</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Tramp Metal (mm)</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="trampWidth">Width (W)</Label>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-0">
+          <div className="space-y-1.5">
+            <Label htmlFor="trampWidth" className="text-xs">Width (W)</Label>
             <Input
               id="trampWidth"
               type="number"
               value={trampWidth}
               onChange={(e) => setTrampWidth(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="trampLength">Length (L)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="trampLength" className="text-xs">Length (L)</Label>
             <Input
               id="trampLength"
               type="number"
               value={trampLength}
               onChange={(e) => setTrampLength(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="trampHeight">Height (H)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="trampHeight" className="text-xs">Height (H)</Label>
             <Input
               id="trampHeight"
               type="number"
               value={trampHeight}
               onChange={(e) => setTrampHeight(parseFloat(e.target.value))}
+              className="h-8"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Calculate Button */}
-      <Card>
-        <CardContent className="pt-6">
-          <Button 
-            onClick={handleCalculate}
-            disabled={isCalculating}
-            className="w-full"
-            size="lg"
-          >
-            <Calculator className="w-5 h-5 mr-2" />
-            {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
-          </Button>
-        </CardContent>
-      </Card>
+      <Button 
+        onClick={handleCalculate}
+        disabled={isCalculating}
+        className="w-full"
+      >
+        <Calculator className="w-4 h-4 mr-2" />
+        {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
+      </Button>
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Recommended OCW Units</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Recommended OCW Units</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="pt-0">
+            <div className="space-y-2">
               {recommendations.map((unit, index) => (
                 <div 
                   key={index}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="space-y-1">
-                    <div className="font-semibold text-lg">
+                  <div className="space-y-0.5">
+                    <div className="font-semibold text-sm">
                       {unit.Prefix} OCW {unit.Suffix}
                     </div>
-                    <div className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-4">
+                    <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-3">
                       <span>Gauss: {unit.surface_gauss}</span>
                       <span>Force: {unit.force_factor}</span>
                       <span>Watts: {unit.watts}</span>
@@ -353,8 +360,9 @@ export function MagneticSeparatorCalculator() {
                   <Button 
                     onClick={() => handleViewOCW(unit)}
                     variant="outline"
+                    size="sm"
                   >
-                    View Details
+                    View
                   </Button>
                 </div>
               ))}
