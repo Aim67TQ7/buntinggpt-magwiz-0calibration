@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 
 interface DecayData {
   gap: number;
@@ -46,44 +46,105 @@ export default function MagneticDecay() {
       </div>
 
       {/* Chart */}
-      <Card>
+      <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle>Decay Chart</CardTitle>
+          <CardTitle className="text-white">Magnetic Reach & Capture Zones – {model}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
+          <ResponsiveContainer width="100%" height={500}>
             <LineChart data={decayData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <defs>
+                {/* Gradient for heatmap background - amber to red */}
+                <linearGradient id="heatmapGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.8} />
+                  <stop offset="50%" stopColor="#f97316" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#dc2626" stopOpacity={0.2} />
+                </linearGradient>
+              </defs>
+              
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+              
               <XAxis 
                 dataKey="gap" 
-                label={{ value: 'Gap (mm)', position: 'insideBottom', offset: -5 }}
+                stroke="#fff"
+                label={{ value: 'Gap (mm)', position: 'insideBottom', offset: -5, fill: '#fff' }}
               />
+              
               <YAxis 
-                yAxisId="left"
-                label={{ value: 'Gauss', angle: -90, position: 'insideLeft' }}
+                scale="log"
+                domain={[10, 'auto']}
+                stroke="#fff"
+                label={{ value: 'Gauss (Log Scale)', angle: -90, position: 'insideLeft', fill: '#fff' }}
+                tickFormatter={(value) => value.toLocaleString()}
               />
-              <YAxis 
-                yAxisId="right"
-                orientation="right"
-                label={{ value: 'Force', angle: 90, position: 'insideRight' }}
-              />
-              <Tooltip />
-              <Legend />
-              <Line 
-                yAxisId="left"
+              
+              {/* Heatmap background using Area */}
+              <Area 
                 type="monotone" 
                 dataKey="gauss" 
-                stroke="hsl(var(--primary))" 
-                strokeWidth={2}
-                name="Gauss"
+                fill="url(#heatmapGradient)"
+                stroke="none"
+                fillOpacity={1}
               />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="force" 
-                stroke="hsl(var(--destructive))" 
+              
+              {/* Tramp pickup threshold lines */}
+              <ReferenceLine 
+                y={700} 
+                stroke="#fbbf24" 
+                strokeDasharray="5 5" 
                 strokeWidth={2}
-                name="Force"
+                label={{ value: '6mm Plate (700G)', position: 'right', fill: '#fbbf24', fontSize: 12 }}
+              />
+              <ReferenceLine 
+                y={400} 
+                stroke="#fb923c" 
+                strokeDasharray="5 5" 
+                strokeWidth={2}
+                label={{ value: 'M18 Nut (400G)', position: 'right', fill: '#fb923c', fontSize: 12 }}
+              />
+              <ReferenceLine 
+                y={350} 
+                stroke="#f97316" 
+                strokeDasharray="5 5" 
+                strokeWidth={2}
+                label={{ value: 'M16×75mm Bolt (350G)', position: 'right', fill: '#f97316', fontSize: 12 }}
+              />
+              <ReferenceLine 
+                y={300} 
+                stroke="#ea580c" 
+                strokeDasharray="5 5" 
+                strokeWidth={2}
+                label={{ value: 'M12 Nut (300G)', position: 'right', fill: '#ea580c', fontSize: 12 }}
+              />
+              <ReferenceLine 
+                y={200} 
+                stroke="#dc2626" 
+                strokeDasharray="5 5" 
+                strokeWidth={2}
+                label={{ value: '25mm Cube (200G)', position: 'right', fill: '#dc2626', fontSize: 12 }}
+              />
+              
+              {/* Main Gauss curve - navy blue */}
+              <Line 
+                type="monotone" 
+                dataKey="gauss" 
+                stroke="#1e3a8a" 
+                strokeWidth={3}
+                name="Magnetic Field Strength"
+                dot={false}
+              />
+              
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff'
+                }}
+                labelStyle={{ color: '#fbbf24' }}
+              />
+              <Legend 
+                wrapperStyle={{ color: '#fff' }}
+                iconType="line"
               />
             </LineChart>
           </ResponsiveContainer>
