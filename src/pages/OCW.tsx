@@ -87,7 +87,9 @@ const OCW = () => {
   const [selectedPrefix, setSelectedPrefix] = useState<number | undefined>(undefined);
   const [selectedSuffix, setSelectedSuffix] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [isComponentsOpen, setIsComponentsOpen] = useState(true);
+  const [isComponentsOpen, setIsComponentsOpen] = useState(false);
+  const [isWindingOpen, setIsWindingOpen] = useState(false);
+  const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(false);
   
   // Calculation inputs
   const [beltWidth, setBeltWidth] = useState<number>(1200);
@@ -99,12 +101,20 @@ const OCW = () => {
     // Check for URL parameters to restore selection
     const prefixParam = searchParams.get('prefix');
     const suffixParam = searchParams.get('suffix');
+    const expandParam = searchParams.get('expand');
     
     if (prefixParam) {
       setSelectedPrefix(Number(prefixParam));
     }
     if (suffixParam) {
       setSelectedSuffix(Number(suffixParam));
+    }
+    
+    // Auto-expand sections if expand=true
+    if (expandParam === 'true') {
+      setIsComponentsOpen(true);
+      setIsWindingOpen(true);
+      setIsTempElectricalOpen(true);
     }
   }, [searchParams]);
   useEffect(() => {
@@ -344,147 +354,165 @@ const OCW = () => {
           {/* Winding Information and Temperature/Electrical Properties - Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Winding Information - 33% width */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle>Winding Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span>Radial Depth:</span>
-                      <span>{selectedRecord.radial_depth || 'N/A'}</span>
+            <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
+              <Card className="lg:col-span-1">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Winding Information</CardTitle>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isWindingOpen ? 'rotate-180' : ''}`} />
                     </div>
-                    <div className="flex justify-between">
-                      <span>Coil Height:</span>
-                      <span>{selectedRecord.coil_height || 'N/A'}</span>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="space-y-4">
+                      
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span>Radial Depth:</span>
+                          <span>{selectedRecord.radial_depth || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Coil Height:</span>
+                          <span>{selectedRecord.coil_height || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Number of Sections:</span>
+                          <span>{selectedRecord.number_of_sections || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Diameter:</span>
+                          <span>{selectedRecord.diameter || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Mean Length of Turn:</span>
+                          <span>{selectedRecord.mean_length_of_turn || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Number of Turns:</span>
+                          <span>{selectedRecord.number_of_turns || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Surface Area:</span>
+                          <span>{selectedRecord.surface_area || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Wires in Parallel:</span>
+                          <span>{selectedRecord.wires_in_parallel || 'N/A'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Number of Sections:</span>
-                      <span>{selectedRecord.number_of_sections || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Diameter:</span>
-                      <span>{selectedRecord.diameter || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Mean Length of Turn:</span>
-                      <span>{selectedRecord.mean_length_of_turn || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Number of Turns:</span>
-                      <span>{selectedRecord.number_of_turns || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Surface Area:</span>
-                      <span>{selectedRecord.surface_area || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Wires in Parallel:</span>
-                      <span>{selectedRecord.wires_in_parallel || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Temperature and Electrical Properties - 66% width */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Temperature and Electrical Properties</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Ambient Temperature:</span>
-                      <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
-                      <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
-                      <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
+            <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
+              <Card className="lg:col-span-2">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Temperature and Electrical Properties</CardTitle>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isTempElectricalOpen ? 'rotate-180' : ''}`} />
                     </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Temperature Rise:</span>
-                      <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
-                      <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
-                      <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="space-y-4">
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Ambient Temperature:</span>
+                          <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
+                          <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
+                          <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Temperature Rise:</span>
+                          <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
+                          <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
+                          <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Maximum Rise:</span>
+                          <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
+                          <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
+                          <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Expected Rise:</span>
+                          <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Voltage:</span>
+                          <span>{selectedRecord.voltage_A || 'N/A'}</span>
+                          <span>{selectedRecord.voltage_B || 'N/A'}</span>
+                          <span>{selectedRecord.voltage_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Resistance:</span>
+                          <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Watts:</span>
+                          <span>{selectedRecord.watts_A || 'N/A'}</span>
+                          <span>{selectedRecord.watts_B || 'N/A'}</span>
+                          <span>{selectedRecord.watts_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Cold Current:</span>
+                          <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Hot Current:</span>
+                          <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
+                          <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Cold Ampere Turns:</span>
+                          <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
+                          <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
+                          <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <span>Hot Ampere Turns:</span>
+                          <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
+                          <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
+                          <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Maximum Rise:</span>
-                      <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
-                      <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
-                      <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Expected Rise:</span>
-                      <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Voltage:</span>
-                      <span>{selectedRecord.voltage_A || 'N/A'}</span>
-                      <span>{selectedRecord.voltage_B || 'N/A'}</span>
-                      <span>{selectedRecord.voltage_C || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Resistance:</span>
-                      <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Watts:</span>
-                      <span>{selectedRecord.watts_A || 'N/A'}</span>
-                      <span>{selectedRecord.watts_B || 'N/A'}</span>
-                      <span>{selectedRecord.watts_C || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Cold Current:</span>
-                      <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Hot Current:</span>
-                      <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
-                      <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Cold Ampere Turns:</span>
-                      <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
-                      <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
-                      <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs">
-                      <span>Hot Ampere Turns:</span>
-                      <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
-                      <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
-                      <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 mt-6">
-                  <Button 
-                    onClick={() => {
-                      const params = new URLSearchParams({
-                        prefix: selectedRecord.prefix?.toString() || '',
-                        suffix: selectedRecord.suffix?.toString() || '',
-                        data: encodeURIComponent(JSON.stringify(selectedRecord))
-                      });
-                      navigate(`/winding-sheet?${params.toString()}`);
-                    }}
-                    className="flex-1"
-                  >
-                    View Winding Sheet
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-6">
+                      <Button 
+                        onClick={() => {
+                          const params = new URLSearchParams({
+                            prefix: selectedRecord.prefix?.toString() || '',
+                            suffix: selectedRecord.suffix?.toString() || '',
+                            data: encodeURIComponent(JSON.stringify(selectedRecord))
+                          });
+                          navigate(`/winding-sheet?${params.toString()}`);
+                        }}
+                        className="flex-1"
+                      >
+                        View Winding Sheet
+                      </Button>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </div>
         </div>}
     </div>;

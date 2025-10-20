@@ -306,9 +306,9 @@ const Configurator = () => {
     setRecommendations(filtered);
   };
 
-  // Navigate to OCW page with selected unit
+  // Navigate to OCW page with selected unit and auto-expand sections
   const handleOCWClick = (unit: OCWUnit) => {
-    navigate(`/ocw?prefix=${unit.Prefix}&suffix=${unit.Suffix}`);
+    navigate(`/ocw?prefix=${unit.Prefix}&suffix=${unit.Suffix}&expand=true`);
   };
 
   return (
