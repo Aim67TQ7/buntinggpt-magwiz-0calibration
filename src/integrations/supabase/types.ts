@@ -706,6 +706,39 @@ export type Database = {
         }
         Relationships: []
       }
+      BMR_Top: {
+        Row: {
+          force_factor: number | null
+          frame: string | null
+          model: string
+          Prefix: number | null
+          Suffix: number | null
+          surface_gauss: number | null
+          watts: number | null
+          width: number | null
+        }
+        Insert: {
+          force_factor?: number | null
+          frame?: string | null
+          model: string
+          Prefix?: number | null
+          Suffix?: number | null
+          surface_gauss?: number | null
+          watts?: number | null
+          width?: number | null
+        }
+        Update: {
+          force_factor?: number | null
+          frame?: string | null
+          model?: string
+          Prefix?: number | null
+          Suffix?: number | null
+          surface_gauss?: number | null
+          watts?: number | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       BMR_users: {
         Row: {
           admin: number | null
@@ -796,6 +829,84 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           weight?: number | null
+        }
+        Relationships: []
+      }
+      end_user_certificates: {
+        Row: {
+          ai_scanned: boolean | null
+          commitment_no_military: boolean
+          commitment_no_transfer: boolean
+          commitment_no_wmd: boolean
+          company_address: string
+          company_name: string
+          company_stamp_url: string | null
+          contract_number: string
+          created_at: string
+          end_use_description: string
+          id: string
+          product_description: string
+          quantity: string
+          signature_date: string | null
+          signature_image_url: string | null
+          signature_name: string | null
+          signature_title: string | null
+          status: string
+          supplier_address: string | null
+          supplier_name: string
+          updated_at: string
+          website_url: string | null
+          weight: string | null
+        }
+        Insert: {
+          ai_scanned?: boolean | null
+          commitment_no_military?: boolean
+          commitment_no_transfer?: boolean
+          commitment_no_wmd?: boolean
+          company_address: string
+          company_name: string
+          company_stamp_url?: string | null
+          contract_number: string
+          created_at?: string
+          end_use_description: string
+          id?: string
+          product_description: string
+          quantity: string
+          signature_date?: string | null
+          signature_image_url?: string | null
+          signature_name?: string | null
+          signature_title?: string | null
+          status?: string
+          supplier_address?: string | null
+          supplier_name: string
+          updated_at?: string
+          website_url?: string | null
+          weight?: string | null
+        }
+        Update: {
+          ai_scanned?: boolean | null
+          commitment_no_military?: boolean
+          commitment_no_transfer?: boolean
+          commitment_no_wmd?: boolean
+          company_address?: string
+          company_name?: string
+          company_stamp_url?: string | null
+          contract_number?: string
+          created_at?: string
+          end_use_description?: string
+          id?: string
+          product_description?: string
+          quantity?: string
+          signature_date?: string | null
+          signature_image_url?: string | null
+          signature_name?: string | null
+          signature_title?: string | null
+          status?: string
+          supplier_address?: string | null
+          supplier_name?: string
+          updated_at?: string
+          website_url?: string | null
+          weight?: string | null
         }
         Relationships: []
       }
