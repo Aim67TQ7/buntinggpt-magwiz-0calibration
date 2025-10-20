@@ -109,26 +109,30 @@ const OCW = () => {
   });
   const [extractionPriority, setExtractionPriority] = useState<number>(50);
   useEffect(() => {
-    fetchOCWData();
+    const loadData = async () => {
+      await fetchOCWData();
+      
+      // Check for URL parameters to restore selection AFTER data is loaded
+      const prefixParam = searchParams.get('prefix');
+      const suffixParam = searchParams.get('suffix');
+      const expandParam = searchParams.get('expand');
+      
+      if (prefixParam) {
+        setSelectedPrefix(Number(prefixParam));
+      }
+      if (suffixParam) {
+        setSelectedSuffix(Number(suffixParam));
+      }
+      
+      // Auto-expand sections if expand=true
+      if (expandParam === 'true') {
+        setIsComponentsOpen(true);
+        setIsWindingOpen(true);
+        setIsTempElectricalOpen(true);
+      }
+    };
     
-    // Check for URL parameters to restore selection
-    const prefixParam = searchParams.get('prefix');
-    const suffixParam = searchParams.get('suffix');
-    const expandParam = searchParams.get('expand');
-    
-    if (prefixParam) {
-      setSelectedPrefix(Number(prefixParam));
-    }
-    if (suffixParam) {
-      setSelectedSuffix(Number(suffixParam));
-    }
-    
-    // Auto-expand sections if expand=true
-    if (expandParam === 'true') {
-      setIsComponentsOpen(true);
-      setIsWindingOpen(true);
-      setIsTempElectricalOpen(true);
-    }
+    loadData();
   }, [searchParams]);
   useEffect(() => {
     if (selectedPrefix !== undefined && selectedSuffix !== undefined) {
@@ -144,15 +148,18 @@ const OCW = () => {
     if (selectedPrefix !== undefined) {
       const validSuffixes = suffixes.filter(suffix => ocwData.some(record => record.prefix === selectedPrefix && record.suffix === suffix));
       setAvailableSuffixes(validSuffixes);
-      // Reset suffix if current selection is not valid for the new prefix
-      if (selectedSuffix !== undefined && !validSuffixes.includes(selectedSuffix)) {
+      // Only reset suffix if it was manually changed and is invalid (not from URL)
+      const suffixParam = searchParams.get('suffix');
+      if (selectedSuffix !== undefined && !validSuffixes.includes(selectedSuffix) && !suffixParam) {
         setSelectedSuffix(undefined);
       }
     } else {
       setAvailableSuffixes(suffixes);
-      setSelectedSuffix(undefined);
+      if (!searchParams.get('suffix')) {
+        setSelectedSuffix(undefined);
+      }
     }
-  }, [selectedPrefix, suffixes, ocwData, selectedSuffix]);
+  }, [selectedPrefix, suffixes, ocwData]);
   const fetchOCWData = async () => {
     try {
       setLoading(true);
