@@ -148,8 +148,10 @@ export function MagneticSeparatorCalculator() {
 
   return (
     <div className="space-y-4">
-      {/* Process Parameters */}
-      <Card>
+      {/* Input Cards in 2x2 Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Process Parameters */}
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Process Parameters</CardTitle>
         </CardHeader>
@@ -322,6 +324,7 @@ export function MagneticSeparatorCalculator() {
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Calculate Button */}
       <Button 
