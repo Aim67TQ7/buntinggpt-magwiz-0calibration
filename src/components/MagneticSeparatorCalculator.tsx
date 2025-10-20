@@ -1,120 +1,137 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CompactCalculatorInputs } from "./CompactCalculatorInputs";
-import { ResultsDisplay } from "./ResultsDisplay";
-import { CalculatorInputs, EnhancedCalculationResults } from '@/types/calculator';
-import { performEnhancedCalculation } from '@/utils/calculations';
-import { generateValidationExportData } from '@/utils/validation';
-import { Calculator, Settings, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
-const materialTypes = [
-  { item: "Suspension Parts", source: "Automotive components", typicalSize: "100-600mm (4-24\") assemblies", weightRange: "2-30 kg (4-66 lbs)" },
-  { item: "Steel Grinding Balls", source: "Ball mills", typicalSize: "25-125mm (1-5\") diameter", weightRange: "0.1-8 kg (0.2-18 lbs)" },
-  { item: "Conveyor Splice Bolts", source: "Belt connections", typicalSize: "M16-M24 (5/8\"-1\") dia, 50-150mm (2-6\") long", weightRange: "100-600g (0.2-1.3 lbs)" },
-  { item: "Bottle Caps", source: "Beverage containers", typicalSize: "26-38mm (1-1.5\") diameter", weightRange: "1-3g (0.04-0.1 oz)" },
-  { item: "Drill Steel", source: "Blast hole drilling", typicalSize: "1-6m (3-20 ft) long, 32-89mm (1.25\"-3.5\") dia", weightRange: "8-50 kg (18-110 lbs)" },
-  { item: "Drill Rod Sections", source: "Blast hole equipment", typicalSize: "1-3m (3-10 ft) long, 76-152mm (3-6\") dia", weightRange: "15-80 kg (33-175 lbs)" },
-  { item: "Structural Steel", source: "Building demolition", typicalSize: "1-8m (3-26 ft) beams/angles", weightRange: "20-500 kg (44-1100 lbs)" },
-  { item: "Rebar Sections", source: "Concrete demolition", typicalSize: "3-12m (10-40 ft) long, 10-32mm (#3-#10) dia", weightRange: "2-50 kg (4-110 lbs)" },
-  { item: "Nails/Screws", source: "Construction lumber", typicalSize: "25-150mm (1-6\") long, 2-8mm (1/16\"-5/16\") dia", weightRange: "2-50g (0.07-1.8 oz)" },
-  { item: "Aerosol Cans", source: "Consumer products", typicalSize: "45-75mm (1.75-3\") dia, 100-300mm (4-12\") tall", weightRange: "50-200g (1.8-7 oz)" },
-  { item: "Food Cans", source: "Consumer waste", typicalSize: "65-108mm (2.5-4.25\") dia, 75-180mm (3-7\") tall", weightRange: "15-150g (0.5-5.3 oz)" },
-  { item: "Pick Points", source: "Continuous miners", typicalSize: "75-150mm (3-6\") long, 25-40mm (1-1.5\") dia", weightRange: "200-800g (0.4-1.8 lbs)" },
-  { item: "Mine Cables", source: "Conveyor/power systems", typicalSize: "10-50m (30-165 ft) long, 12-50mm (1/2\"-2\") dia", weightRange: "5-100 kg (10-220 lbs)" },
-  { item: "Hinges/Hardware", source: "Doors/cabinets", typicalSize: "50-200mm (2-8\") pieces", weightRange: "100-2000g (3.5-70 oz)" },
-  { item: "Wire/Cable", source: "Electrical systems", typicalSize: "1-100m (3-330 ft) long, 1-25mm (AWG 18-1/0)", weightRange: "0.1-20 kg (0.2-44 lbs)" },
-  { item: "Hydraulic Cylinders", source: "Equipment components", typicalSize: "200-1000mm (8-40\") long, 75-200mm (3-8\") dia", weightRange: "10-150 kg (22-330 lbs)" },
-  { item: "Bolt/Nut Hardware", source: "Equipment maintenance", typicalSize: "M12-M36 (1/2\"-1.5\") bolts, 20-100mm (3/4\"-4\") long", weightRange: "50-500g (0.1-1 lb)" },
-  { item: "Crusher Wear Plates", source: "Equipment maintenance", typicalSize: "300-1200mm (12-48\") sections", weightRange: "15-200 kg (33-440 lbs)" },
-  { item: "Chain Links", source: "Equipment/rigging", typicalSize: "50-200mm (2-8\") links, 8-25mm (5/16\"-1\") wire", weightRange: "0.5-5 kg (1-11 lbs)" },
-  { item: "Blast Fragments", source: "Explosive steel casings", typicalSize: "50-300mm (2-12\") irregular pieces", weightRange: "0.5-15 kg (1-33 lbs)" },
-];
-
-const burdenMaterials = [
-  { material: "E-Waste Shred", industry: "Recycling", tph: "50-200", bulkDensity: "50-80", moisture: "1-5%", roiDriver: "Precious metal recovery" },
-  { material: "Battery Recycling", industry: "Energy Storage", tph: "50-200", bulkDensity: "60-90", moisture: "1-5%", roiDriver: "Critical material recovery" },
-  { material: "Mill Scale", industry: "Steel", tph: "500-1500", bulkDensity: "200-250", moisture: "2-5%", roiDriver: "Iron recovery" },
-  { material: "Lead Slag", industry: "Lead", tph: "200-600", bulkDensity: "180-220", moisture: "2-6%", roiDriver: "Lead recovery" },
-  { material: "Scrap Metal Shred", industry: "Recycling", tph: "200-1000", bulkDensity: "40-60", moisture: "2-8%", roiDriver: "Product separation" },
-  { material: "Solar Panel Recycling", industry: "Renewable", tph: "25-100", bulkDensity: "45-70", moisture: "2-8%", roiDriver: "Silicon/metal recovery" },
-  { material: "Copper Slag", industry: "Copper", tph: "400-1000", bulkDensity: "140-170", moisture: "3-8%", roiDriver: "Copper recovery" },
-  { material: "Foundry Sand", industry: "Foundry", tph: "400-1200", bulkDensity: "80-100", moisture: "3-8%", roiDriver: "Sand reclamation" },
-  { material: "Zinc Calcine", industry: "Zinc", tph: "300-800", bulkDensity: "90-120", moisture: "3-8%", roiDriver: "Process protection" },
-  { material: "Catalyst Recovery", industry: "Chemical", tph: "50-150", bulkDensity: "80-120", moisture: "3-10%", roiDriver: "Precious metal recovery" },
-  { material: "Iron Ore Concentrate", industry: "Steel/Mining", tph: "2000-8000", bulkDensity: "140-160", moisture: "12-15%", roiDriver: "$500K+ mill protection" },
-  { material: "Coal Run-of-Mine", industry: "Power/Steel", tph: "1500-5000", bulkDensity: "45-55", moisture: "12-15%", roiDriver: "$200K belt + downtime" },
-  { material: "Bauxite Ore", industry: "Aluminum", tph: "1000-2500", bulkDensity: "75-95", moisture: "12-15%", roiDriver: "Refinery protection" },
-  { material: "Magnetite Concentrate", industry: "Steel", tph: "1000-3000", bulkDensity: "150-180", moisture: "10-15%", roiDriver: "Pellet plant protection" },
-  { material: "Coal ROM (Metallurgical)", industry: "Steel", tph: "1000-3000", bulkDensity: "50-60", moisture: "10-18%", roiDriver: "Coking plant protection" },
-];
+interface OCWRecommendation {
+  model: string;
+  Prefix: number;
+  Suffix: number;
+  surface_gauss: number;
+  force_factor: number;
+  watts: number;
+  width: number;
+  frame: string;
+}
 
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
-  const [inputs, setInputs] = useState<CalculatorInputs>({
-    conveyor: {
-      beltSpeed: 2.5,
-      troughAngle: 20,
-      beltWidth: 1200
-    },
-    burden: {
-      feedDepth: 100,
-      throughPut: 500,
-      density: 1.8,
-      waterContent: 8
-    },
-    shape: {
-      width: 50,
-      length: 100,
-      height: 25
-    },
-    magnet: {
-      gap: 150,
-      coreBeltRatio: 0.7,
-      position: 'overhead'
-    },
-    misc: {
-      altitude: 0,
-      ambientTemperature: 25
-    }
-  });
-
-  const [results, setResults] = useState<EnhancedCalculationResults | null>(null);
+  // Process Parameters
+  const [beltSpeed, setBeltSpeed] = useState<number>(2.5);
+  const [beltWidth, setBeltWidth] = useState<number>(1200);
+  const [feedDepth, setFeedDepth] = useState<number>(100);
+  const [throughput, setThroughput] = useState<number>(500);
+  
+  // Magnet & Shape
+  const [magnetGap, setMagnetGap] = useState<number>(150);
+  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.7);
+  const [magnetPosition, setMagnetPosition] = useState<string>("overhead");
+  
+  // Material Stream
+  const [bulkDensity, setBulkDensity] = useState<number>(1.8);
+  const [waterContent, setWaterContent] = useState<number>(8);
+  const [ambientTemp, setAmbientTemp] = useState<number>(25);
+  
+  // Tramp Metal
+  const [trampWidth, setTrampWidth] = useState<number>(50);
+  const [trampLength, setTrampLength] = useState<number>(100);
+  const [trampHeight, setTrampHeight] = useState<number>(25);
+  
+  const [recommendations, setRecommendations] = useState<OCWRecommendation[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [targetEfficiency, setTargetEfficiency] = useState(95);
-  const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<string[]>([]);
-  const [showMaterialTypes, setShowMaterialTypes] = useState(false);
 
   const handleCalculate = async () => {
     setIsCalculating(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const calculationResults = await performEnhancedCalculation(inputs, false);
-      setResults(calculationResults);
+      // Fetch OCW data from BMR_Top table
+      const { data, error } = await supabase
+        .from('BMR_Top')
+        .select('*');
       
-      if (calculationResults.validation.severity === 'critical') {
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
         toast({
-          title: "Critical Issues Detected",
-          description: "Review validation errors before proceeding.",
+          title: "No Data Available",
+          description: "No OCW units found in BMR_Top table.",
           variant: "destructive",
         });
-      } else if (calculationResults.validation.severity === 'warning') {
+        setIsCalculating(false);
+        return;
+      }
+      
+      // Calculate required force based on tramp metal dimensions and material stream
+      const trampVolume = (trampWidth * trampLength * trampHeight) / 1000000; // mm³ to m³
+      const trampMass = trampVolume * 7850; // Steel density kg/m³
+      const requiredForce = trampMass * 9.81; // Force in Newtons
+      
+      // Filter and score OCW units
+      const scored = data.map((unit: any) => {
+        let score = 0;
+        
+        // Belt width matching (critical)
+        if (unit.width && Math.abs(unit.width - beltWidth) < 100) {
+          score += 50;
+        } else if (unit.width && unit.width >= beltWidth) {
+          score += 30;
+        }
+        
+        // Force factor matching
+        if (unit.force_factor && unit.force_factor >= requiredForce / 100) {
+          score += 30;
+        }
+        
+        // Magnetic field strength (gauss)
+        if (unit.surface_gauss && unit.surface_gauss >= 800) {
+          score += 20;
+        }
+        
+        return {
+          ...unit,
+          score
+        };
+      });
+      
+      // Sort by score and take top 5
+      const topRecommendations = scored
+        .filter((unit: any) => unit.score > 0)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 5)
+        .map((unit: any) => ({
+          model: unit.model,
+          Prefix: unit.Prefix,
+          Suffix: unit.Suffix,
+          surface_gauss: unit.surface_gauss,
+          force_factor: unit.force_factor,
+          watts: unit.watts,
+          width: unit.width,
+          frame: unit.frame
+        }));
+      
+      setRecommendations(topRecommendations);
+      
+      if (topRecommendations.length > 0) {
         toast({
-          title: "Warnings Present",
-          description: "Design is feasible but please review recommendations.",
+          title: "Calculation Complete",
+          description: `Found ${topRecommendations.length} recommended OCW units.`,
         });
       } else {
         toast({
-          title: "Design Validated",
-          description: "Your magnetic separator design passes all checks.",
+          title: "No Matches Found",
+          description: "No OCW units match your criteria. Try adjusting parameters.",
+          variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Calculation error:', error);
       toast({
         title: "Calculation Error",
         description: "An error occurred. Please check your inputs.",
@@ -125,220 +142,226 @@ export function MagneticSeparatorCalculator() {
     }
   };
 
-  const handleOptimize = async () => {
-    setIsCalculating(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const calculationResults = await performEnhancedCalculation(inputs, true, targetEfficiency / 100);
-      setResults(calculationResults);
-      
-      if (calculationResults.optimization?.success) {
-        const optimized = calculationResults.optimization.optimizedParameters;
-        setInputs(prev => ({
-          ...prev,
-          magnet: {
-            ...prev.magnet,
-            gap: optimized.gap || prev.magnet.gap,
-            coreBeltRatio: optimized.coreBeltRatio || prev.magnet.coreBeltRatio
-          },
-          conveyor: {
-            ...prev.conveyor,
-            beltSpeed: optimized.beltSpeed || prev.conveyor.beltSpeed
-          },
-          burden: {
-            ...prev.burden,
-            feedDepth: optimized.feedDepth || prev.burden.feedDepth
-          }
-        }));
-        toast({
-          title: `Optimization Successful!`,
-          description: `Achieved ${(calculationResults.optimization.achievedEfficiency * 100).toFixed(1)}% efficiency`,
-        });
-      } else {
-        toast({
-          title: `Optimization Incomplete`,
-          description: `Reached ${(calculationResults.optimization?.achievedEfficiency || 0 * 100).toFixed(1)}% efficiency.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Optimization Error",
-        description: "Failed to perform optimization.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCalculating(false);
-    }
-  };
-
-  const handleExport = () => {
-    if (!results) return;
-
-    const exportData = generateValidationExportData(results, results.validation);
-    
-    const csvData = [
-      ['Parameter', 'Value', 'Unit', 'Status'],
-      ['Validation Status', exportData.validation.status, '', ''],
-      ['Severity Level', exportData.validation.severity, '', ''],
-      ['Magnetic Field Strength (Tesla)', results.magneticFieldStrength.tesla.toString(), 'T', ''],
-      ['Overall Removal Efficiency', results.trampMetalRemoval.overallEfficiency.toString(), '%', ''],
-      ['Temperature Rise', results.thermalPerformance.temperatureRise.toString(), '°C', ''],
-    ];
-
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `magnetic-separator-design-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Export Complete",
-      description: "Results exported to CSV.",
-    });
+  const handleViewOCW = (unit: OCWRecommendation) => {
+    navigate(`/ocw?prefix=${unit.Prefix}&suffix=${unit.Suffix}&expand=true`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-6">
-        {/* Compact Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-engineering-primary mb-2">
-            Magnetic Separator Calculator
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Optimize tramp metal removal efficiency and thermal performance
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Compact Input Parameters */}
-          <div className="space-y-4">
-            <CompactCalculatorInputs
-              inputs={inputs}
-              setInputs={setInputs}
-              selectedMaterialTypes={selectedMaterialTypes}
-              setSelectedMaterialTypes={setSelectedMaterialTypes}
-              showMaterialTypes={showMaterialTypes}
-              setShowMaterialTypes={setShowMaterialTypes}
-              materialTypes={materialTypes}
-              burdenMaterials={burdenMaterials}
-              results={results}
+    <div className="space-y-6">
+      {/* Process Parameters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Process Parameters</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="beltSpeed">Belt Speed (m/s)</Label>
+            <Input
+              id="beltSpeed"
+              type="number"
+              value={beltSpeed}
+              onChange={(e) => setBeltSpeed(parseFloat(e.target.value))}
+              step="0.1"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="beltWidth">Belt Width (mm)</Label>
+            <Input
+              id="beltWidth"
+              type="number"
+              value={beltWidth}
+              onChange={(e) => setBeltWidth(parseFloat(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
+            <Input
+              id="feedDepth"
+              type="number"
+              value={feedDepth}
+              onChange={(e) => setFeedDepth(parseFloat(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="throughput">Throughput (TPH)</Label>
+            <Input
+              id="throughput"
+              type="number"
+              value={throughput}
+              onChange={(e) => setThroughput(parseFloat(e.target.value))}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Action Buttons - Compact */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <Button 
-                    onClick={handleCalculate} 
-                    disabled={isCalculating}
-                    className="w-full"
-                  >
-                    {isCalculating ? (
-                      <>
-                        <Calculator className="w-4 h-4 mr-2 animate-spin" />
-                        Calculating...
-                      </>
-                    ) : (
-                      <>
-                        <Calculator className="w-4 h-4 mr-2" />
-                        Calculate
-                      </>
-                    )}
-                  </Button>
+      {/* Magnet & Shape */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Magnet & Shape</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="magnetGap">Magnet Gap (mm)</Label>
+            <Input
+              id="magnetGap"
+              type="number"
+              value={magnetGap}
+              onChange={(e) => setMagnetGap(parseFloat(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="coreBeltRatio">Core:Belt Ratio</Label>
+            <Input
+              id="coreBeltRatio"
+              type="number"
+              value={coreBeltRatio}
+              onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))}
+              step="0.1"
+              min="0"
+              max="1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="magnetPosition">Magnet Position</Label>
+            <Select value={magnetPosition} onValueChange={setMagnetPosition}>
+              <SelectTrigger id="magnetPosition">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="overhead">Overhead</SelectItem>
+                <SelectItem value="inline">Inline</SelectItem>
+                <SelectItem value="drum">Drum</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-                  <Button 
-                    onClick={handleOptimize} 
-                    disabled={isCalculating}
-                    variant="secondary"
-                    className="w-full"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Optimize
-                  </Button>
-                </div>
+      {/* Material Stream */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Material Stream</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="bulkDensity">Bulk Density (t/m³)</Label>
+            <Input
+              id="bulkDensity"
+              type="number"
+              value={bulkDensity}
+              onChange={(e) => setBulkDensity(parseFloat(e.target.value))}
+              step="0.1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="waterContent">Water Content (%)</Label>
+            <Input
+              id="waterContent"
+              type="number"
+              value={waterContent}
+              onChange={(e) => setWaterContent(parseFloat(e.target.value))}
+              step="1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ambientTemp">Ambient Temp (°C)</Label>
+            <Input
+              id="ambientTemp"
+              type="number"
+              value={ambientTemp}
+              onChange={(e) => setAmbientTemp(parseFloat(e.target.value))}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-                {results && (
-                  <Button 
-                    onClick={handleExport} 
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Results
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+      {/* Tramp Metal */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tramp Metal (mm)</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="trampWidth">Width (W)</Label>
+            <Input
+              id="trampWidth"
+              type="number"
+              value={trampWidth}
+              onChange={(e) => setTrampWidth(parseFloat(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="trampLength">Length (L)</Label>
+            <Input
+              id="trampLength"
+              type="number"
+              value={trampLength}
+              onChange={(e) => setTrampLength(parseFloat(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="trampHeight">Height (H)</Label>
+            <Input
+              id="trampHeight"
+              type="number"
+              value={trampHeight}
+              onChange={(e) => setTrampHeight(parseFloat(e.target.value))}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Advanced Options Toggle */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">Advanced Options</CardTitle>
-                  <Switch 
-                    checked={showAdvanced}
-                    onCheckedChange={setShowAdvanced}
-                  />
-                </div>
-              </CardHeader>
-              {showAdvanced && (
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <Label className="text-xs">Target Efficiency</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <input
-                          type="range"
-                          min="80"
-                          max="99"
-                          value={targetEfficiency}
-                          onChange={(e) => setTargetEfficiency(Number(e.target.value))}
-                          className="flex-1"
-                        />
-                        <span className="min-w-[3rem] text-xs">{targetEfficiency}%</span>
-                      </div>
+      {/* Calculate Button */}
+      <Card>
+        <CardContent className="pt-6">
+          <Button 
+            onClick={handleCalculate}
+            disabled={isCalculating}
+            className="w-full"
+            size="lg"
+          >
+            <Calculator className="w-5 h-5 mr-2" />
+            {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Recommendations */}
+      {recommendations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommended OCW Units</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recommendations.map((unit, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-lg">
+                      {unit.Prefix} OCW {unit.Suffix}
                     </div>
-                    <div>
-                      <Label className="text-xs">Altitude</Label>
-                      <input
-                        type="number"
-                        value={inputs.misc.altitude}
-                        onChange={(e) => setInputs(prev => ({
-                          ...prev,
-                          misc: { ...prev.misc, altitude: Number(e.target.value) }
-                        }))}
-                        className="w-full mt-1 p-1 text-xs border rounded"
-                        placeholder="m"
-                      />
+                    <div className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-4">
+                      <span>Gauss: {unit.surface_gauss}</span>
+                      <span>Force: {unit.force_factor}</span>
+                      <span>Watts: {unit.watts}</span>
+                      <span>Width: {unit.width}mm</span>
                     </div>
                   </div>
-                </CardContent>
-              )}
-            </Card>
-          </div>
-
-          {/* Results Display */}
-          <div className="lg:sticky lg:top-8 lg:h-fit">
-            {results ? (
-              <ResultsDisplay results={results} inputs={inputs} />
-            ) : (
-              <Card className="p-8 text-center">
-                <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">Ready to Calculate</h3>
-                <p className="text-muted-foreground">
-                  Enter your parameters and click "Calculate" to see the results.
-                </p>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
+                  <Button 
+                    onClick={() => handleViewOCW(unit)}
+                    variant="outline"
+                  >
+                    View Details
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
