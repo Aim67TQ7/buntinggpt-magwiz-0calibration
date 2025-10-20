@@ -291,35 +291,33 @@ const Configurator = () => {
     const beltWidthNum = parseFloat(beltWidth);
     const coreBeltRatioNum = parseFloat(coreBeltRatio);
     
-    // Calculate target suffix based on belt width and core:belt ratio
-    const targetSuffix = (beltWidthNum * coreBeltRatioNum) / 10;
+    // Calculate minimum suffix: (beltWidth * coreBeltRatio) / 10
+    const minSuffix = Math.round((beltWidthNum * coreBeltRatioNum) / 10);
 
-    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, targetSuffix });
+    console.log('Calculation:', { beltWidth: beltWidthNum, coreBeltRatio: coreBeltRatioNum, minSuffix });
 
     // Belt width tolerance (±20%)
-    const widthTolerance = beltWidthNum * 0.2;
-    const minBeltWidth = beltWidthNum - widthTolerance;
-    const maxBeltWidth = beltWidthNum + widthTolerance;
+    const widthMin = beltWidthNum * 0.8;
+    const widthMax = beltWidthNum * 1.2;
 
-    console.log('Width range:', { minBeltWidth, maxBeltWidth });
+    console.log('Width range:', { widthMin, widthMax });
 
-    // Filter and sort OCW units
+    // Filter units where Suffix >= minSuffix AND width is within tolerance
     const filtered = ocwUnits
       .filter(unit => {
-        // The width field in BMR_Top is the magnet dimension
-        // Must be within ±20% of belt width
         return (
-          unit.width >= minBeltWidth &&
-          unit.width <= maxBeltWidth
+          unit.Suffix >= minSuffix &&
+          unit.width >= widthMin &&
+          unit.width <= widthMax
         );
       })
       .sort((a, b) => {
-        // Sort by how close the suffix is to target suffix
-        const aDiff = Math.abs(a.Suffix - targetSuffix);
-        const bDiff = Math.abs(b.Suffix - targetSuffix);
-        return aDiff - bDiff;
-      })
-      .slice(0, 15); // Limit to 15 results
+        // Sort by Suffix (ascending), then by Prefix (ascending)
+        if (a.Suffix !== b.Suffix) {
+          return a.Suffix - b.Suffix;
+        }
+        return a.Prefix - b.Prefix;
+      });
 
     console.log('Filtered recommendations:', filtered.length);
     setRecommendations(filtered);

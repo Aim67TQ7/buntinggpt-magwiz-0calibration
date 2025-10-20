@@ -114,60 +114,48 @@ export function MagneticSeparatorCalculator() {
         return;
       }
       
-      // Calculate target suffix based on belt width and core:belt ratio
-      const targetSuffix = (beltWidth * coreBeltRatio) / 10;
+      // Calculate minimum suffix: (beltWidth * coreBeltRatio) / 10
+      const minSuffix = Math.round((beltWidth * coreBeltRatio) / 10);
       
-      // Filter and score OCW units
-      const scored = data.map((unit: any) => {
-        let score = 0;
-        
-        // Belt width matching (critical) - within ±20%
-        const widthTolerance = beltWidth * 0.2;
-        if (unit.width && Math.abs(unit.width - beltWidth) <= widthTolerance) {
-          score += 50;
-        }
-        
-        // Suffix matching - exact match gets highest score
-        if (unit.Suffix === Math.round(targetSuffix)) {
-          score += 30;
-        } else if (unit.Suffix && Math.abs(unit.Suffix - targetSuffix) <= 2) {
-          // Close suffix match
-          score += 20;
-        }
-        
-        // Magnetic field strength (gauss)
-        if (unit.surface_gauss && unit.surface_gauss >= 800) {
-          score += 20;
-        }
-        
-        return {
-          ...unit,
-          score
-        };
+      // Calculate belt width tolerance range (±20%)
+      const widthMin = beltWidth * 0.8;
+      const widthMax = beltWidth * 1.2;
+      
+      // Filter units where Suffix >= minSuffix AND width is within tolerance
+      const filtered = data.filter((unit: any) => {
+        return (
+          unit.Suffix >= minSuffix &&
+          unit.width >= widthMin &&
+          unit.width <= widthMax
+        );
       });
       
-      // Sort by score and take top 5
-      const topRecommendations = scored
-        .filter((unit: any) => unit.score > 0)
-        .sort((a: any, b: any) => b.score - a.score)
-        .slice(0, 5)
-        .map((unit: any) => ({
-          model: unit.model,
-          Prefix: unit.Prefix,
-          Suffix: unit.Suffix,
-          surface_gauss: unit.surface_gauss,
-          force_factor: unit.force_factor,
-          watts: unit.watts,
-          width: unit.width,
-          frame: unit.frame
-        }));
+      // Sort by Suffix (ascending), then by Prefix (ascending)
+      const sorted = filtered.sort((a: any, b: any) => {
+        if (a.Suffix !== b.Suffix) {
+          return a.Suffix - b.Suffix;
+        }
+        return a.Prefix - b.Prefix;
+      });
       
-      setRecommendations(topRecommendations);
+      // Map to recommendation format
+      const allRecommendations = sorted.map((unit: any) => ({
+        model: unit.model,
+        Prefix: unit.Prefix,
+        Suffix: unit.Suffix,
+        surface_gauss: unit.surface_gauss,
+        force_factor: unit.force_factor,
+        watts: unit.watts,
+        width: unit.width,
+        frame: unit.frame
+      }));
       
-      if (topRecommendations.length > 0) {
+      setRecommendations(allRecommendations);
+      
+      if (allRecommendations.length > 0) {
         toast({
           title: "Calculation Complete",
-          description: `Found ${topRecommendations.length} recommended OCW units.`,
+          description: `Found ${allRecommendations.length} recommended OCW units.`,
         });
       } else {
         toast({
