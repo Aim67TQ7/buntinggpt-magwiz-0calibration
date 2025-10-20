@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator } from "lucide-react";
+import { Calculator, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,30 @@ interface OCWRecommendation {
   width: number;
   frame: string;
 }
+
+interface TrampMetal {
+  id: string;
+  name: string;
+  width: number;
+  length: number;
+  height: number;
+}
+
+const STANDARD_TRAMP_METALS: Omit<TrampMetal, 'id'>[] = [
+  { name: "25mm Cube", width: 25, length: 25, height: 25 },
+  { name: "25mm Cube Alt 1", width: 19, length: 19, height: 6 },
+  { name: "25mm Cube Alt 2", width: 19, length: 6, height: 19 },
+  { name: "25mm Cube Alt 3", width: 6, length: 19, height: 19 },
+  { name: "M12 Nut", width: 24, length: 24, height: 75 },
+  { name: "M16x75mm Bolt", width: 24, length: 75, height: 24 },
+  { name: "M16x75mm Bolt Alt", width: 75, length: 24, height: 24 },
+  { name: "M18 Nut", width: 27, length: 27, height: 9 },
+  { name: "M18 Nut Alt 1", width: 27, length: 9, height: 27 },
+  { name: "M18 Nut Alt 2", width: 9, length: 27, height: 27 },
+  { name: "6mm Plate", width: 100, length: 100, height: 6 },
+  { name: "6mm Plate Alt 1", width: 100, length: 6, height: 100 },
+  { name: "6mm Plate Alt 2", width: 6, length: 100, height: 100 },
+];
 
 export function MagneticSeparatorCalculator() {
   const { toast } = useToast();
@@ -41,12 +65,34 @@ export function MagneticSeparatorCalculator() {
   const [ambientTemp, setAmbientTemp] = useState<number>(25);
   
   // Tramp Metal
-  const [trampWidth, setTrampWidth] = useState<number>(50);
-  const [trampLength, setTrampLength] = useState<number>(100);
-  const [trampHeight, setTrampHeight] = useState<number>(25);
+  const [trampMetals, setTrampMetals] = useState<TrampMetal[]>([
+    { id: '1', name: "Custom", width: 50, length: 100, height: 25 }
+  ]);
   
   const [recommendations, setRecommendations] = useState<OCWRecommendation[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
+
+  const handleAddStandard = () => {
+    const newMetals = STANDARD_TRAMP_METALS.map((metal, index) => ({
+      ...metal,
+      id: `std-${Date.now()}-${index}`
+    }));
+    setTrampMetals([...trampMetals, ...newMetals]);
+    toast({
+      title: "Standard Shapes Added",
+      description: `Added ${STANDARD_TRAMP_METALS.length} standard tramp metal shapes.`,
+    });
+  };
+
+  const handleDeleteTrampMetal = (id: string) => {
+    setTrampMetals(trampMetals.filter(metal => metal.id !== id));
+  };
+
+  const handleUpdateTrampMetal = (id: string, field: 'width' | 'length' | 'height', value: number) => {
+    setTrampMetals(trampMetals.map(metal => 
+      metal.id === id ? { ...metal, [field]: value } : metal
+    ));
+  };
 
   const handleCalculate = async () => {
     setIsCalculating(true);
@@ -288,40 +334,63 @@ export function MagneticSeparatorCalculator() {
 
       {/* Tramp Metal */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-base">Tramp Metal (mm)</CardTitle>
+          <Button
+            onClick={handleAddStandard}
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add Standards
+          </Button>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-0">
-          <div className="space-y-1.5">
-            <Label htmlFor="trampWidth" className="text-xs">Width (W)</Label>
-            <Input
-              id="trampWidth"
-              type="number"
-              value={trampWidth}
-              onChange={(e) => setTrampWidth(parseFloat(e.target.value))}
-              className="h-8"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="trampLength" className="text-xs">Length (L)</Label>
-            <Input
-              id="trampLength"
-              type="number"
-              value={trampLength}
-              onChange={(e) => setTrampLength(parseFloat(e.target.value))}
-              className="h-8"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="trampHeight" className="text-xs">Height (H)</Label>
-            <Input
-              id="trampHeight"
-              type="number"
-              value={trampHeight}
-              onChange={(e) => setTrampHeight(parseFloat(e.target.value))}
-              className="h-8"
-            />
-          </div>
+        <CardContent className="pt-0 space-y-2">
+          {trampMetals.map((metal) => (
+            <div key={metal.id} className="grid grid-cols-[1fr_auto] gap-2 p-2 border rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">{metal.name}</Label>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Width (W)</Label>
+                  <Input
+                    type="number"
+                    value={metal.width}
+                    onChange={(e) => handleUpdateTrampMetal(metal.id, 'width', parseFloat(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Length (L)</Label>
+                  <Input
+                    type="number"
+                    value={metal.length}
+                    onChange={(e) => handleUpdateTrampMetal(metal.id, 'length', parseFloat(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Height (H)</Label>
+                  <Input
+                    type="number"
+                    value={metal.height}
+                    onChange={(e) => handleUpdateTrampMetal(metal.id, 'height', parseFloat(e.target.value))}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={() => handleDeleteTrampMetal(metal.id)}
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 self-end"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
         </CardContent>
       </Card>
       </div>
