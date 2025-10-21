@@ -105,12 +105,12 @@ export default function MagneticDecay() {
                 <YAxis 
                   yAxisId="right"
                   orientation="right"
-                  stroke="hsl(var(--chart-2))"
+                  stroke="hsl(142 76% 36%)"
                   label={{ 
-                    value: 'Force (N)', 
+                    value: 'Force Factor', 
                     angle: 90, 
                     position: 'insideRight',
-                    style: { fill: 'hsl(var(--chart-2))' }
+                    style: { fill: 'hsl(142 76% 36%)' }
                   }}
                 />
                 
@@ -130,9 +130,9 @@ export default function MagneticDecay() {
                   yAxisId="right"
                   type="monotone" 
                   dataKey="force" 
-                  stroke="hsl(var(--chart-2))" 
+                  stroke="hsl(142 76% 36%)" 
                   strokeWidth={3}
-                  name="Force (N)"
+                  name="Force Factor"
                   dot={false}
                   strokeDasharray="5 5"
                 />
@@ -166,7 +166,7 @@ export default function MagneticDecay() {
                   <TableRow>
                     <TableHead>Gap (mm)</TableHead>
                     <TableHead className="text-right">Gauss</TableHead>
-                    <TableHead className="text-right">Force (N)</TableHead>
+                    <TableHead className="text-right text-green-600 dark:text-green-400">Force Factor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,7 +174,7 @@ export default function MagneticDecay() {
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{row.gap}</TableCell>
                       <TableCell className="text-right">{row.gauss}</TableCell>
-                      <TableCell className="text-right">{row.force.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-green-600 dark:text-green-400">{row.force.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
