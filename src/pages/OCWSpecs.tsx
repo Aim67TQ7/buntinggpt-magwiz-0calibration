@@ -7,7 +7,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -74,30 +73,25 @@ interface OCWData {
   expected_rise_B?: number;
   expected_rise_C?: number;
 }
-
 export default function OCWSpecs() {
   const location = useLocation();
-  const { unit } = location.state || {};
-  
+  const {
+    unit
+  } = location.state || {};
   const [ocwData, setOcwData] = useState<OCWData | null>(null);
   const [isComponentsOpen, setIsComponentsOpen] = useState(true);
   const [isWindingOpen, setIsWindingOpen] = useState(true);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(true);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchOCWData = async () => {
       if (!unit?.Prefix || !unit?.Suffix) return;
-      
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('BMR_magwiz')
-          .select('*')
-          .eq('prefix', unit.Prefix)
-          .eq('suffix', unit.Suffix)
-          .single();
-        
+        const {
+          data,
+          error
+        } = await supabase.from('BMR_magwiz').select('*').eq('prefix', unit.Prefix).eq('suffix', unit.Suffix).single();
         if (error) throw error;
         setOcwData(data);
       } catch (error) {
@@ -106,13 +100,10 @@ export default function OCWSpecs() {
         setLoading(false);
       }
     };
-
     fetchOCWData();
   }, [unit]);
-
   if (!unit) {
-    return (
-      <div className="container mx-auto p-6">
+    return <div className="container mx-auto p-6">
         <div className="text-center">No OCW unit selected</div>
         <Link to="/ocw">
           <Button variant="outline" className="mt-4">
@@ -120,24 +111,64 @@ export default function OCWSpecs() {
             Back to OCW Selector
           </Button>
         </Link>
-      </div>
-    );
+      </div>;
   }
-
-  const componentData = ocwData ? [
-    { name: "Core", amount: 1, material: "Mild Steel", dimension: ocwData.core_dimension, mass: ocwData.core_mass },
-    { name: "Winding", amount: 1, material: "Aluminium Nomex", dimension: ocwData.winding_dimension, mass: ocwData.winding_mass },
-    { name: "Backbar", amount: 1, material: "Mild Steel", dimension: ocwData.backbar_dimension, mass: ocwData.backbar_mass },
-    { name: "Core Backbar", amount: 1, material: "Mild Steel", dimension: ocwData.core_backbar_dimension, mass: ocwData.core_backbar_mass },
-    { name: "Side Pole", amount: 4, material: "Mild Steel", dimension: ocwData.side_pole_dimension, mass: ocwData.side_pole_mass },
-    { name: "Sealing Plate", amount: 1, material: "Manganese Steel", dimension: ocwData.sealing_plate_dimension, mass: ocwData.sealing_plate_mass ? parseFloat(ocwData.sealing_plate_mass) : undefined },
-    { name: "Core Insulator", amount: 1, material: "Elephantide", dimension: ocwData.core_insulator_dimension, mass: ocwData.core_insulator_mass ? parseFloat(ocwData.core_insulator_mass) : undefined },
-    { name: "Conservator", amount: 1, material: "Mild Steel", dimension: ocwData.conservator_dimension, mass: ocwData.conservator_mass },
-    { name: "Coolant", amount: 7563, material: "Oil", dimension: "-", mass: ocwData.coolant_mass }
-  ].filter(item => item.mass !== undefined && item.mass !== null) : [];
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
+  const componentData = ocwData ? [{
+    name: "Core",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: ocwData.core_dimension,
+    mass: ocwData.core_mass
+  }, {
+    name: "Winding",
+    amount: 1,
+    material: "Aluminium Nomex",
+    dimension: ocwData.winding_dimension,
+    mass: ocwData.winding_mass
+  }, {
+    name: "Backbar",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: ocwData.backbar_dimension,
+    mass: ocwData.backbar_mass
+  }, {
+    name: "Core Backbar",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: ocwData.core_backbar_dimension,
+    mass: ocwData.core_backbar_mass
+  }, {
+    name: "Side Pole",
+    amount: 4,
+    material: "Mild Steel",
+    dimension: ocwData.side_pole_dimension,
+    mass: ocwData.side_pole_mass
+  }, {
+    name: "Sealing Plate",
+    amount: 1,
+    material: "Manganese Steel",
+    dimension: ocwData.sealing_plate_dimension,
+    mass: ocwData.sealing_plate_mass ? parseFloat(ocwData.sealing_plate_mass) : undefined
+  }, {
+    name: "Core Insulator",
+    amount: 1,
+    material: "Elephantide",
+    dimension: ocwData.core_insulator_dimension,
+    mass: ocwData.core_insulator_mass ? parseFloat(ocwData.core_insulator_mass) : undefined
+  }, {
+    name: "Conservator",
+    amount: 1,
+    material: "Mild Steel",
+    dimension: ocwData.conservator_dimension,
+    mass: ocwData.conservator_mass
+  }, {
+    name: "Coolant",
+    amount: 7563,
+    material: "Oil",
+    dimension: "-",
+    mass: ocwData.coolant_mass
+  }].filter(item => item.mass !== undefined && item.mass !== null) : [];
+  return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-4 mb-2">
@@ -186,12 +217,9 @@ export default function OCWSpecs() {
         </CardContent>
       </Card>
 
-      {loading && (
-        <div className="text-center py-8 text-muted-foreground">Loading detailed specifications...</div>
-      )}
+      {loading && <div className="text-center py-8 text-muted-foreground">Loading detailed specifications...</div>}
 
-      {!loading && ocwData && (
-        <>
+      {!loading && ocwData && <>
           {/* Component Breakdown */}
           <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
             <Card>
@@ -214,15 +242,13 @@ export default function OCWSpecs() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {componentData.map((item, index) => (
-                        <TableRow key={index}>
+                      {componentData.map((item, index) => <TableRow key={index}>
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.amount}</TableCell>
                           <TableCell>{item.material}</TableCell>
                           <TableCell className="font-mono text-xs">{item.dimension || '-'}</TableCell>
                           <TableCell className="text-right">{item.mass?.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow>)}
                       <TableRow className="font-bold bg-muted/50">
                         <TableCell colSpan={4}>Total Mass</TableCell>
                         <TableCell className="text-right">{ocwData.total_mass?.toFixed(2)}</TableCell>
@@ -330,7 +356,7 @@ export default function OCWSpecs() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-3 text-sm">Current & Ampere-Turns</h4>
+                    
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -412,16 +438,12 @@ export default function OCWSpecs() {
               </CollapsibleContent>
             </Card>
           </Collapsible>
-        </>
-      )}
+        </>}
 
-      {!loading && !ocwData && (
-        <Card>
+      {!loading && !ocwData && <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Detailed specifications not available for this unit
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 }
