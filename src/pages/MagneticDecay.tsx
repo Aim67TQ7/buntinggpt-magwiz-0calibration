@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 interface DecayData {
   gap: number;
   gauss: number;
-  forceFactor: number;
+  force: number;
 }
 
 export default function MagneticDecay() {
@@ -31,14 +31,16 @@ export default function MagneticDecay() {
       // G(x) = G₀ × (0.866)^(x/25)
       const gaussAtGap = initialGauss * Math.pow(0.866, gap / 25);
       
-      // Calculate force factor at this gap (normalized 0-1)
-      // Force factor decreases with field strength squared approximately
-      const forceFactor = Math.pow(gaussAtGap / initialGauss, 2);
+      // Calculate actual force at this gap
+      // Force decreases with field strength squared approximately
+      const force = initialForce > 0 
+        ? initialForce * Math.pow(gaussAtGap / initialGauss, 2)
+        : 0;
       
       data.push({
         gap: gap,
         gauss: Math.round(gaussAtGap),
-        forceFactor: parseFloat(forceFactor.toFixed(4))
+        force: Math.round(force)
       });
     }
     
@@ -105,7 +107,7 @@ export default function MagneticDecay() {
                   orientation="right"
                   stroke="hsl(var(--chart-2))"
                   label={{ 
-                    value: 'Force Factor', 
+                    value: 'Force (N)', 
                     angle: 90, 
                     position: 'insideRight',
                     style: { fill: 'hsl(var(--chart-2))' }
@@ -123,14 +125,14 @@ export default function MagneticDecay() {
                   dot={false}
                 />
                 
-                {/* Force factor line */}
+                {/* Force line */}
                 <Line 
                   yAxisId="right"
                   type="monotone" 
-                  dataKey="forceFactor" 
+                  dataKey="force" 
                   stroke="hsl(var(--chart-2))" 
                   strokeWidth={3}
-                  name="Force Factor"
+                  name="Force (N)"
                   dot={false}
                   strokeDasharray="5 5"
                 />
@@ -164,7 +166,7 @@ export default function MagneticDecay() {
                   <TableRow>
                     <TableHead>Gap (mm)</TableHead>
                     <TableHead className="text-right">Gauss</TableHead>
-                    <TableHead className="text-right">Force Factor</TableHead>
+                    <TableHead className="text-right">Force (N)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -172,7 +174,7 @@ export default function MagneticDecay() {
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{row.gap}</TableCell>
                       <TableCell className="text-right">{row.gauss}</TableCell>
-                      <TableCell className="text-right">{row.forceFactor}</TableCell>
+                      <TableCell className="text-right">{row.force.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
