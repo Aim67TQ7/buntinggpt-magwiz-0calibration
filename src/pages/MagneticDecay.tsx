@@ -196,30 +196,30 @@ export default function MagneticDecay() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                 
                 <XAxis 
-                  dataKey="distance" 
+                  dataKey="gauss" 
                   stroke="#fff"
-                  domain={[0, 800]}
+                  domain={[0, 2500]}
                   type="number"
-                  label={{ value: 'Gap Distance (mm)', position: 'insideBottom', offset: -15, fill: '#fff', fontSize: 14 }}
+                  label={{ value: 'Magnetic Field Strength (Gauss)', position: 'insideBottom', offset: -15, fill: '#fff', fontSize: 14 }}
                 />
                 
                 <YAxis 
-                  dataKey="gauss"
-                  domain={[0, 2500]}
+                  dataKey="distance"
+                  domain={[0, 800]}
                   stroke="#fff"
-                  label={{ value: 'Magnetic Field Strength (Gauss)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
+                  label={{ value: 'Gap Distance (mm)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
                   tickFormatter={(value) => value.toLocaleString()}
                 />
                 
                 {/* Feed depth shaded zone */}
                 <ReferenceArea
-                  x1={0}
-                  x2={feedDepth}
+                  y1={0}
+                  y2={feedDepth}
                   fill="#94a3b8"
                   fillOpacity={0.25}
                   label={{ 
                     value: `Feed Depth: ${feedDepth}mm`, 
-                    position: 'insideTop',
+                    position: 'insideLeft',
                     fill: '#fff',
                     fontSize: 11,
                     fontWeight: 'bold'
@@ -228,13 +228,13 @@ export default function MagneticDecay() {
                 
                 {/* Magnet gap shaded zone */}
                 <ReferenceArea
-                  x1={feedDepth}
-                  x2={feedDepth + magnetGap}
+                  y1={feedDepth}
+                  y2={feedDepth + magnetGap}
                   fill="#f59e0b"
                   fillOpacity={0.2}
                   label={{ 
                     value: `Magnet Gap: ${magnetGap}mm`, 
-                    position: 'insideTop',
+                    position: 'insideLeft',
                     fill: '#fff',
                     fontSize: 11,
                     fontWeight: 'bold'
@@ -281,8 +281,8 @@ export default function MagneticDecay() {
                 {intersections.map((point, idx) => (
                   <ReferenceDot
                     key={`intersection-${idx}`}
-                    x={point.distance}
-                    y={point.gauss}
+                    x={point.gauss}
+                    y={point.distance}
                     r={6}
                     fill={point.color}
                     stroke="#fff"
@@ -290,7 +290,7 @@ export default function MagneticDecay() {
                   >
                     <ChartLabel
                       value={`${point.name}\n≈${point.distance} mm`}
-                      position="right"
+                      position="top"
                       fill={point.color}
                       fontSize={11}
                       fontWeight="bold"
@@ -345,15 +345,15 @@ export default function MagneticDecay() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-background">
                     <TableRow>
-                      <TableHead>Distance (mm)</TableHead>
-                      <TableHead className="text-right">Gauss</TableHead>
+                      <TableHead>Gauss</TableHead>
+                      <TableHead className="text-right">Distance (mm)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {decayData.filter((_, idx) => idx % 5 === 0).map((row, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{row.distance}</TableCell>
-                        <TableCell className="text-right">{row.gauss}</TableCell>
+                        <TableCell className="font-medium">{row.gauss}</TableCell>
+                        <TableCell className="text-right">{row.distance}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
