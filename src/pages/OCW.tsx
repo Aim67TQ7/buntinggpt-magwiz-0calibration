@@ -601,9 +601,27 @@ const OCW = () => {
               <Waves className="w-4 h-4 mr-2" />
               Field Simulator
             </Button>
-            {[20, 30, 40, 45].map((temp) => (
-              <Button key={temp} variant="outline" size="sm" onClick={() => { if (temp === 20) { navigate('/magnetic-decay', { state: { model: selectedRecord.filename, gauss: 2410, force: 499496, ambient: temp }}); }}} disabled={temp !== 20}>
-                A{temp} Gauss
+            {[20, 30, 40, 50].map((temp) => (
+              <Button 
+                key={temp} 
+                variant={temp === 20 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => {
+                  // Calculate gauss and force based on temperature
+                  // A20 is baseline, others will be calculated later
+                  const baseGauss = 2410;
+                  const baseForce = 499496;
+                  navigate('/magnetic-decay', { 
+                    state: { 
+                      model: selectedRecord.filename, 
+                      gauss: baseGauss, 
+                      force: baseForce, 
+                      ambient: temp 
+                    }
+                  });
+                }}
+              >
+                A{temp}
               </Button>
             ))}
           </div>
