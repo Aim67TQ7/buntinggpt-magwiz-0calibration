@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useLocation, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -24,12 +27,15 @@ interface TrampObject {
 }
 
 export default function MagneticFieldSimulator() {
+  const location = useLocation();
   const [models, setModels] = useState<MagnetModel[]>([]);
   const [trampObjects, setTrampObjects] = useState<TrampObject[]>([]);
   const [selectedModel, setSelectedModel] = useState<MagnetModel | null>(null);
   const [burdenDepth, setBurdenDepth] = useState(50);
   const [airGap, setAirGap] = useState(50);
   const [loading, setLoading] = useState(true);
+  const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
+  const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
 
   // Fetch magnet models from Supabase Edge function
   useEffect(() => {
@@ -41,7 +47,22 @@ export default function MagneticFieldSimulator() {
         
         setModels(data.models);
         setTrampObjects(data.tramps);
-        setSelectedModel(data.models[0]);
+        
+        // Check if we have state from OCW page
+        const state = location.state as { model?: string; beltWidth?: number; magnetDimension?: string } | null;
+        if (state?.model) {
+          const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
+          setSelectedModel(matchedModel || data.models[0]);
+          
+          if (state.beltWidth) {
+            setOcwBeltWidth(state.beltWidth);
+          }
+          if (state.magnetDimension) {
+            setOcwMagnetDimension(state.magnetDimension);
+          }
+        } else {
+          setSelectedModel(data.models[0]);
+        }
       } catch (error) {
         console.error('Error fetching magnet models:', error);
         toast.error('Failed to load magnet models');
@@ -51,7 +72,7 @@ export default function MagneticFieldSimulator() {
     };
 
     fetchModels();
-  }, []);
+  }, [location]);
 
   if (loading || !selectedModel) {
     return (
@@ -153,7 +174,7 @@ export default function MagneticFieldSimulator() {
   // Calculate SVG dimensions based on real proportions
   const magnetWidth = selectedModel.width * scale;
   const magnetHeight = selectedModel.thickness * scale;
-  const beltWidth = selectedModel.beltWidth * scale;
+  const beltWidth = (ocwBeltWidth || selectedModel.beltWidth) * scale;
   const totalDepth = (airGap + burdenDepth) * scale;
   
   const svgWidth = beltWidth + 200; // Extra space for labels
@@ -165,11 +186,29 @@ export default function MagneticFieldSimulator() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Magnetic Field Penetration Simulator</h1>
-        <p className="text-muted-foreground">
-          Proportionally accurate visualization of magnetic field decay through burden layers
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-4 mb-2">
+            <Link to="/ocw">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to OCW
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-bold">Magnetic Field Penetration Simulator</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Proportionally accurate visualization of magnetic field decay through burden layers
+          </p>
+          {ocwBeltWidth && (
+            <div className="mt-2 p-2 bg-primary/10 rounded border border-primary/20">
+              <p className="text-sm font-medium">
+                OCW Data: Belt Width = {ocwBeltWidth}mm
+                {ocwMagnetDimension && ` · Magnet Dimension: ${ocwMagnetDimension}`}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -214,8 +253,16 @@ export default function MagneticFieldSimulator() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Belt Width:</span>
-                  <span className="font-mono">{selectedModel.beltWidth} mm</span>
+                  <span className="font-mono">
+                    {ocwBeltWidth ? `${ocwBeltWidth} mm (OCW)` : `${selectedModel.beltWidth} mm`}
+                  </span>
                 </div>
+                {ocwMagnetDimension && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Magnet Dimension:</span>
+                    <span className="font-mono text-primary">{ocwMagnetDimension}</span>
+                  </div>
+                )}
               </div>
             </div>
 

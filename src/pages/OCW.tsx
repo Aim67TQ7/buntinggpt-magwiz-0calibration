@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calculator } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator, Waves } from "lucide-react";
 import { Link } from "react-router-dom";
 interface OCWData {
   filename: string;
@@ -287,9 +287,31 @@ const OCW = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Decay Chart Buttons */}
+          {/* Decay Chart and Field Simulator Buttons */}
           {selectedRecord && (
             <div className="flex items-center gap-2">
+              {/* Field Simulator Button */}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  // Extract magnet model from filename (e.g., "55 OCW 25" from filename)
+                  const modelMatch = selectedRecord.filename?.match(/(\d+)\s*OCW\s*(\d+)/);
+                  const modelName = modelMatch ? `${modelMatch[1]} OCW ${modelMatch[2]}` : '55 OCW 25';
+                  
+                  navigate('/field-simulator', {
+                    state: {
+                      model: modelName,
+                      beltWidth: selectedRecord.belt_width,
+                      magnetDimension: selectedRecord.magnet_dimension
+                    }
+                  });
+                }}
+              >
+                <Waves className="w-4 h-4 mr-2" />
+                Field Simulator
+              </Button>
+              
               {[20, 30, 40, 45].map((temp) => (
                 <Button
                   key={temp}
