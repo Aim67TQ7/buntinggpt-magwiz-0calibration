@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot, Label, ReferenceArea } from "recharts";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot, Label as ChartLabel, ReferenceArea } from "recharts";
 
 interface DecayData {
   gauss: number;
@@ -31,7 +34,9 @@ interface IntersectionPoint {
 
 export default function MagneticDecay() {
   const location = useLocation();
-  const { model, gauss, force, feedDepth = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50 };
+  const { model, gauss, force, feedDepth: initialFeedDepth = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50 };
+  
+  const [feedDepth, setFeedDepth] = useState<number>(initialFeedDepth);
 
   // Tramp configurations with base thresholds and gain factors
   const trampConfigs: TrampConfig[] = [
@@ -118,6 +123,33 @@ export default function MagneticDecay() {
           Model: <span className="font-semibold">{model}</span> | Initial Gauss: {gauss} | Initial Force: {force} | Ambient: 20°C
         </p>
       </div>
+
+      {/* Feed Depth Input */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Parameters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-xs">
+            <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
+            <Input
+              id="feedDepth"
+              type="number"
+              min="0"
+              max="800"
+              value={feedDepth}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 0;
+                setFeedDepth(Math.max(0, Math.min(800, value)));
+              }}
+              className="mt-1"
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              Material burden depth on the belt
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Chart and Table Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -218,7 +250,7 @@ export default function MagneticDecay() {
                     stroke="#fff"
                     strokeWidth={2}
                   >
-                    <Label
+                    <ChartLabel
                       value={`${point.name}\n≈${point.distance} mm`}
                       position="right"
                       fill={point.color}
