@@ -396,7 +396,7 @@ export default function OCWSpecs() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-3 text-sm">Temperature Rise</h4>
+                    
                     <Table>
                       <TableHeader>
                         <TableRow>
