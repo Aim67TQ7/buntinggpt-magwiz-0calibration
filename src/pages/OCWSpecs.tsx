@@ -320,120 +320,85 @@ export default function OCWSpecs() {
                 </CardHeader>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h4 className="font-semibold mb-3 text-sm">Voltage Configuration</h4>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Property</TableHead>
-                          <TableHead className="text-right">A20</TableHead>
-                          <TableHead className="text-right">A30</TableHead>
-                          <TableHead className="text-right">A40</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Voltage (V)</TableCell>
-                          <TableCell className="text-right">{ocwData.voltage_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.voltage_B?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.voltage_C?.toFixed(2)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Resistance (Ω)</TableCell>
-                          <TableCell className="text-right">{ocwData.resistance_A?.toFixed(4)}</TableCell>
-                          <TableCell className="text-right">{ocwData.resistance_B?.toFixed(4)}</TableCell>
-                          <TableCell className="text-right">{ocwData.resistance_C?.toFixed(4)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Watts (W)</TableCell>
-                          <TableCell className="text-right">{ocwData.watts_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.watts_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.watts_C}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div>
-                    
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Property</TableHead>
-                          <TableHead className="text-right">A20</TableHead>
-                          <TableHead className="text-right">A30</TableHead>
-                          <TableHead className="text-right">A40</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Cold Current (A)</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_current_A?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_current_B?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_current_C?.toFixed(2)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Hot Current (A)</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_current_A?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_current_B?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_current_C?.toFixed(2)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Cold AT</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_ampere_turns_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_ampere_turns_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.cold_ampere_turns_C}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Hot AT</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_ampere_turns_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_ampere_turns_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.hot_ampere_turns_C}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div>
-                    
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Property</TableHead>
-                          <TableHead className="text-right">A20</TableHead>
-                          <TableHead className="text-right">A30</TableHead>
-                          <TableHead className="text-right">A40</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Ambient (°C)</TableCell>
-                          <TableCell className="text-right">{ocwData.ambient_temperature_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.ambient_temperature_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.ambient_temperature_C}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Rise (°C)</TableCell>
-                          <TableCell className="text-right">{ocwData.temperature_rise_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.temperature_rise_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.temperature_rise_C}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Maximum (°C)</TableCell>
-                          <TableCell className="text-right">{ocwData.maximum_rise_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.maximum_rise_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.maximum_rise_C}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Expected (°C)</TableCell>
-                          <TableCell className="text-right">{ocwData.expected_rise_A?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.expected_rise_B?.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{ocwData.expected_rise_C?.toFixed(2)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Property</TableHead>
+                        <TableHead className="text-right">A20</TableHead>
+                        <TableHead className="text-right">A30</TableHead>
+                        <TableHead className="text-right">A40</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">Voltage (V)</TableCell>
+                        <TableCell className="text-right">{ocwData.voltage_A}</TableCell>
+                        <TableCell className="text-right">{ocwData.voltage_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.voltage_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Resistance (Ω)</TableCell>
+                        <TableCell className="text-right">{ocwData.resistance_A?.toFixed(4)}</TableCell>
+                        <TableCell className="text-right">{ocwData.resistance_B?.toFixed(4)}</TableCell>
+                        <TableCell className="text-right">{ocwData.resistance_C?.toFixed(4)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Watts (W)</TableCell>
+                        <TableCell className="text-right">{ocwData.watts_A}</TableCell>
+                        <TableCell className="text-right">{ocwData.watts_B}</TableCell>
+                        <TableCell className="text-right">{ocwData.watts_C}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Cold Current (A)</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_current_A?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_current_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_current_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Hot Current (A)</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_current_A?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_current_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_current_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Cold AT</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_ampere_turns_A}</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_ampere_turns_B}</TableCell>
+                        <TableCell className="text-right">{ocwData.cold_ampere_turns_C}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Hot AT</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_ampere_turns_A}</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_ampere_turns_B}</TableCell>
+                        <TableCell className="text-right">{ocwData.hot_ampere_turns_C}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Ambient (°C)</TableCell>
+                        <TableCell className="text-right">{ocwData.ambient_temperature_A}</TableCell>
+                        <TableCell className="text-right">{ocwData.ambient_temperature_B}</TableCell>
+                        <TableCell className="text-right">{ocwData.ambient_temperature_C}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Rise (°C)</TableCell>
+                        <TableCell className="text-right">{ocwData.temperature_rise_A?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.temperature_rise_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.temperature_rise_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Maximum (°C)</TableCell>
+                        <TableCell className="text-right">{ocwData.maximum_rise_A?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.maximum_rise_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.maximum_rise_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Expected (°C)</TableCell>
+                        <TableCell className="text-right">{ocwData.expected_rise_A?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.expected_rise_B?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{ocwData.expected_rise_C?.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </CollapsibleContent>
             </Card>
