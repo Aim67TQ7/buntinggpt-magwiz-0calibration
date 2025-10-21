@@ -137,6 +137,8 @@ const OCW = () => {
   const [minForce, setMinForce] = useState<string>("");
   const [trampMetalProfile, setTrampMetalProfile] = useState<string>("");
   const [isCalculating, setIsCalculating] = useState(false);
+  const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const loadData = async () => {
@@ -488,11 +490,88 @@ const OCW = () => {
       {hasActiveList && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Recommended OCW Units</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recommended OCW Units</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Sort by:</span>
+                <Button
+                  variant={sortBy === 'gauss' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortBy === 'gauss') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortBy('gauss');
+                      setSortDirection('desc');
+                    }
+                  }}
+                >
+                  Gauss {sortBy === 'gauss' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </Button>
+                <Button
+                  variant={sortBy === 'width' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortBy === 'width') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortBy('width');
+                      setSortDirection('desc');
+                    }
+                  }}
+                >
+                  Width {sortBy === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </Button>
+                <Button
+                  variant={sortBy === 'frame' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    if (sortBy === 'frame') {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortBy('frame');
+                      setSortDirection('asc');
+                    }
+                  }}
+                >
+                  Frame {sortBy === 'frame' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              {recommendations.map((unit, index) => (
+              {(() => {
+                let sorted = [...recommendations];
+                if (sortBy) {
+                  sorted.sort((a, b) => {
+                    let aVal: number | string = 0;
+                    let bVal: number | string = 0;
+                    
+                    if (sortBy === 'gauss') {
+                      aVal = a.surface_gauss || 0;
+                      bVal = b.surface_gauss || 0;
+                    } else if (sortBy === 'width') {
+                      aVal = a.width || 0;
+                      bVal = b.width || 0;
+                    } else if (sortBy === 'frame') {
+                      aVal = a.frame || '';
+                      bVal = b.frame || '';
+                    }
+                    
+                    if (typeof aVal === 'string' && typeof bVal === 'string') {
+                      return sortDirection === 'asc' 
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                    }
+                    
+                    return sortDirection === 'asc' 
+                      ? (aVal as number) - (bVal as number)
+                      : (bVal as number) - (aVal as number);
+                  });
+                }
+                return sorted;
+              })().map((unit, index) => (
                 <div key={index} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors ${selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''}`}>
                   <div className="space-y-0.5">
                     <div className="font-semibold text-sm">
