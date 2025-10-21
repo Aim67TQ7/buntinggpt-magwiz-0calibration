@@ -543,7 +543,7 @@ const OCW = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => handleViewOCW(unit)} variant="outline" size="sm">
+                    <Button onClick={() => navigate('/ocw-specs', { state: { unit }})} variant="outline" size="sm">
                       View
                     </Button>
                     <Button onClick={() => navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }})} variant="outline" size="sm">
