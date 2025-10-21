@@ -42,25 +42,16 @@ export default function MagneticDecay() {
     { name: "6mm Plate", baseThreshold: 700, gainFactor: 0.0060, color: "#dc2626", fillColor: "rgba(220, 38, 38, 0.3)", dataKey: "plate700Req" }
   ];
 
-  // Generate data with swapped axes: X = Gauss, Y = Distance
+  // Generate data with X = Distance, Y = Gauss
   const generateDecayData = (): DecayData[] => {
     const data: DecayData[] = [];
     const maxDistance = 800;
     
-    // Generate points for each Gauss value
-    for (let gauss_val = 0; gauss_val <= 2500; gauss_val += 50) {
-      // Calculate distance for this Gauss value using inverse decay formula
+    // Generate points for each distance value
+    for (let distance = 0; distance <= maxDistance; distance += 10) {
+      // Calculate magnet field at this distance using decay formula
       // G(x) = 2410 × (0.866)^(x/25)
-      // Solving for x: x = 25 × ln(G/2410) / ln(0.866)
-      let distance: number;
-      if (gauss_val >= gauss) {
-        distance = 0;
-      } else if (gauss_val <= 0) {
-        distance = maxDistance;
-      } else {
-        distance = 25 * Math.log(gauss_val / gauss) / Math.log(0.866);
-        distance = Math.max(0, Math.min(maxDistance, distance));
-      }
+      const gaussAtDistance = gauss * Math.pow(0.866, distance / 25);
       
       // Calculate tramp pickup requirements at this distance
       // Requirement increases with distance: Req(x) = baseThreshold × e^(gainFactor × x)
@@ -71,8 +62,8 @@ export default function MagneticDecay() {
       const plate700Req = trampConfigs[4].baseThreshold * Math.exp(trampConfigs[4].gainFactor * distance);
       
       data.push({
-        gauss: gauss_val,
-        distance: Math.round(distance),
+        distance: distance,
+        gauss: Math.round(gaussAtDistance),
         cube200Req: Math.round(cube200Req),
         nut300Req: Math.round(nut300Req),
         bolt350Req: Math.round(bolt350Req),
@@ -95,16 +86,16 @@ export default function MagneticDecay() {
         const prevReq = prev[tramp.dataKey as keyof DecayData] as number;
         const currReq = curr[tramp.dataKey as keyof DecayData] as number;
         
-        // Check if magnet field crosses the requirement curve
-        if (prev.gauss >= prevReq && curr.gauss <= currReq) {
+        // Check if magnet field crosses below the requirement curve
+        if (prev.gauss >= prevReq && curr.gauss < currReq) {
           // Linear interpolation to find exact intersection
           const ratio = (prev.gauss - prevReq) / ((prev.gauss - prevReq) - (curr.gauss - currReq));
-          const intersectGauss = prev.gauss + ratio * (curr.gauss - prev.gauss);
           const intersectDistance = prev.distance + ratio * (curr.distance - prev.distance);
+          const intersectGauss = prev.gauss + ratio * (curr.gauss - prev.gauss);
           
           intersections.push({
-            gauss: Math.round(intersectGauss),
             distance: Math.round(intersectDistance),
+            gauss: Math.round(intersectGauss),
             name: tramp.name,
             color: tramp.color
           });
@@ -151,18 +142,18 @@ export default function MagneticDecay() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                 
                 <XAxis 
-                  dataKey="gauss" 
+                  dataKey="distance" 
                   stroke="#fff"
-                  domain={[0, 2500]}
+                  domain={[0, 800]}
                   type="number"
-                  label={{ value: 'Magnetic Field Strength (Gauss)', position: 'insideBottom', offset: -15, fill: '#fff', fontSize: 14 }}
+                  label={{ value: 'Gap Distance (mm)', position: 'insideBottom', offset: -15, fill: '#fff', fontSize: 14 }}
                 />
                 
                 <YAxis 
-                  dataKey="distance"
-                  domain={[0, 800]}
+                  dataKey="gauss"
+                  domain={[0, 2500]}
                   stroke="#fff"
-                  label={{ value: 'Gap Distance (mm)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
+                  label={{ value: 'Magnetic Field Strength (Gauss)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
                   tickFormatter={(value) => value.toLocaleString()}
                 />
                 
@@ -206,8 +197,8 @@ export default function MagneticDecay() {
                 {intersections.map((point, idx) => (
                   <ReferenceDot
                     key={`intersection-${idx}`}
-                    x={point.gauss}
-                    y={point.distance}
+                    x={point.distance}
+                    y={point.gauss}
                     r={6}
                     fill={point.color}
                     stroke="#fff"
@@ -215,8 +206,8 @@ export default function MagneticDecay() {
                   >
                     <Label
                       value={`${point.name}\n≈${point.distance} mm`}
-                      position="top"
-                      fill="#fff"
+                      position="right"
+                      fill={point.color}
                       fontSize={11}
                       fontWeight="bold"
                     />
@@ -270,15 +261,15 @@ export default function MagneticDecay() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-background">
                     <TableRow>
-                      <TableHead>Gauss</TableHead>
-                      <TableHead className="text-right">Distance (mm)</TableHead>
+                      <TableHead>Distance (mm)</TableHead>
+                      <TableHead className="text-right">Gauss</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {decayData.filter((_, idx) => idx % 10 === 0).map((row, idx) => (
+                    {decayData.filter((_, idx) => idx % 5 === 0).map((row, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{row.gauss}</TableCell>
-                        <TableCell className="text-right">{row.distance}</TableCell>
+                        <TableCell className="font-medium">{row.distance}</TableCell>
+                        <TableCell className="text-right">{row.gauss}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
