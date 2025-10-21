@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot, Label } from "recharts";
+import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot, Label, ReferenceArea } from "recharts";
 
 interface DecayData {
   gauss: number;
@@ -31,7 +31,7 @@ interface IntersectionPoint {
 
 export default function MagneticDecay() {
   const location = useLocation();
-  const { model, gauss, force } = location.state || { model: "Unknown", gauss: 2410, force: 0 };
+  const { model, gauss, force, feedDepth = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50 };
 
   // Tramp configurations with base thresholds and gain factors
   const trampConfigs: TrampConfig[] = [
@@ -155,6 +155,20 @@ export default function MagneticDecay() {
                   stroke="#fff"
                   label={{ value: 'Magnetic Field Strength (Gauss)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
                   tickFormatter={(value) => value.toLocaleString()}
+                />
+                
+                {/* Feed depth shaded zone */}
+                <ReferenceArea
+                  x1={0}
+                  x2={feedDepth}
+                  fill="#94a3b8"
+                  fillOpacity={0.2}
+                  label={{ 
+                    value: `Feed Depth: ${feedDepth}mm`, 
+                    position: 'top',
+                    fill: '#fff',
+                    fontSize: 12
+                  }}
                 />
                 
                 {/* Capture zone shaded areas - where magnet field > tramp requirement */}
