@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calculator, Waves } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator, Waves, Plus, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
+import { Badge } from "@/components/ui/badge";
+
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -76,9 +80,46 @@ interface OCWData {
   expected_rise_B?: number;
   expected_rise_C?: number;
 }
+
+interface TrampMetal {
+  id: string;
+  name: string;
+  width: number;
+  length: number;
+  height: number;
+}
+
+const STANDARD_TRAMP_METALS: Omit<TrampMetal, 'id'>[] = [
+  { name: "25mm Cube", width: 25, length: 25, height: 25 },
+  { name: "25mm Cube Alt 1", width: 19, length: 19, height: 6 },
+  { name: "25mm Cube Alt 2", width: 19, length: 6, height: 19 },
+  { name: "25mm Cube Alt 3", width: 6, length: 19, height: 19 },
+  { name: "M12 Nut", width: 24, length: 24, height: 75 },
+  { name: "M16x75mm Bolt", width: 24, length: 75, height: 24 },
+  { name: "M16x75mm Bolt Alt", width: 75, length: 24, height: 24 },
+  { name: "M18 Nut", width: 27, length: 27, height: 9 },
+  { name: "M18 Nut Alt 1", width: 27, length: 9, height: 27 },
+  { name: "M18 Nut Alt 2", width: 9, length: 27, height: 27 },
+  { name: "6mm Plate", width: 100, length: 100, height: 6 },
+  { name: "6mm Plate Alt 1", width: 100, length: 6, height: 100 },
+  { name: "6mm Plate Alt 2", width: 6, length: 100, height: 100 },
+];
+
 const OCW = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const { 
+    recommendations, 
+    setRecommendations, 
+    selectedOCW, 
+    setSelectedOCW,
+    inputParameters,
+    setInputParameters,
+    clearList,
+    hasActiveList 
+  } = useOCWList();
+
   const [ocwData, setOcwData] = useState<OCWData[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<OCWData | null>(null);
   const [prefixes, setPrefixes] = useState<number[]>([]);
@@ -91,28 +132,26 @@ const OCW = () => {
   const [isWindingOpen, setIsWindingOpen] = useState(false);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(false);
   
-  // Calculation inputs
+  // Calculator inputs
+  const [beltSpeed, setBeltSpeed] = useState<number>(2.5);
   const [beltWidth, setBeltWidth] = useState<number>(1200);
-  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.5);
-  const [recommendations, setRecommendations] = useState<Array<{prefix: number, suffix: number, distance: number, belt_width: number}>>([]);
-  
-  // Tramp metal profile states
-  const [isTrampMetalOpen, setIsTrampMetalOpen] = useState(false);
-  const [materialStream, setMaterialStream] = useState<string>("sand");
-  const [trampMetalTypes, setTrampMetalTypes] = useState({
-    loaderTeeth: false,
-    rebar: false,
-    boltsFasteners: false,
-    drillRods: false,
-    wireNails: false,
-    crusherPlates: false
-  });
-  const [extractionPriority, setExtractionPriority] = useState<number>(50);
+  const [feedDepth, setFeedDepth] = useState<number>(100);
+  const [throughput, setThroughput] = useState<number>(500);
+  const [magnetGap, setMagnetGap] = useState<number>(150);
+  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.7);
+  const [magnetPosition, setMagnetPosition] = useState<string>("overhead");
+  const [bulkDensity, setBulkDensity] = useState<number>(1.8);
+  const [waterContent, setWaterContent] = useState<number>(8);
+  const [ambientTemp, setAmbientTemp] = useState<number>(25);
+  const [trampMetals, setTrampMetals] = useState<TrampMetal[]>([
+    { id: '1', name: "Custom", width: 50, length: 100, height: 25 }
+  ]);
+  const [isCalculating, setIsCalculating] = useState(false);
+
   useEffect(() => {
     const loadData = async () => {
       await fetchOCWData();
       
-      // Check for URL parameters to restore selection AFTER data is loaded
       const prefixParam = searchParams.get('prefix');
       const suffixParam = searchParams.get('suffix');
       const expandParam = searchParams.get('expand');
@@ -124,7 +163,6 @@ const OCW = () => {
         setSelectedSuffix(Number(suffixParam));
       }
       
-      // Auto-expand sections if expand=true
       if (expandParam === 'true') {
         setIsComponentsOpen(true);
         setIsWindingOpen(true);
@@ -134,6 +172,7 @@ const OCW = () => {
     
     loadData();
   }, [searchParams]);
+
   useEffect(() => {
     if (selectedPrefix !== undefined && selectedSuffix !== undefined) {
       const matchingRecord = ocwData.find(record => record.prefix === selectedPrefix && record.suffix === selectedSuffix);
@@ -143,12 +182,10 @@ const OCW = () => {
     }
   }, [selectedPrefix, selectedSuffix, ocwData]);
 
-  // Update available suffixes when prefix changes
   useEffect(() => {
     if (selectedPrefix !== undefined) {
       const validSuffixes = suffixes.filter(suffix => ocwData.some(record => record.prefix === selectedPrefix && record.suffix === suffix));
       setAvailableSuffixes(validSuffixes);
-      // Only reset suffix if it was manually changed and is invalid (not from URL)
       const suffixParam = searchParams.get('suffix');
       if (selectedSuffix !== undefined && !validSuffixes.includes(selectedSuffix) && !suffixParam) {
         setSelectedSuffix(undefined);
@@ -160,17 +197,14 @@ const OCW = () => {
       }
     }
   }, [selectedPrefix, suffixes, ocwData]);
+
   const fetchOCWData = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('BMR_magwiz').select('*');
+      const { data, error } = await supabase.from('BMR_magwiz').select('*');
       if (error) throw error;
       setOcwData(data || []);
 
-      // Extract unique prefixes and suffixes from database columns
       const prefixSet = new Set<number>();
       const suffixSet = new Set<number>();
       (data || []).forEach(record => {
@@ -187,297 +221,468 @@ const OCW = () => {
     }
   };
 
-  const calculateRecommendations = () => {
-    const targetValue = beltWidth * coreBeltRatio;
-    
-    // Find 3-4 closest prefixes
-    const prefixDistances = prefixes.map(prefix => ({
-      prefix,
-      distance: Math.abs(prefix - targetValue)
-    })).sort((a, b) => a.distance - b.distance).slice(0, 4);
-    
-    // For each selected prefix, find the 2 nearest suffixes based on belt_width
-    const allRecommendations: Array<{prefix: number, suffix: number, distance: number, belt_width: number}> = [];
-    
-    prefixDistances.forEach(({prefix}) => {
-      const prefixRecords = ocwData.filter(record => record.prefix === prefix && record.belt_width);
-      const suffixDistances = prefixRecords.map(record => ({
-        prefix: record.prefix!,
-        suffix: record.suffix!,
-        belt_width: record.belt_width!,
-        distance: Math.abs(record.belt_width! - beltWidth)
-      })).sort((a, b) => a.distance - b.distance).slice(0, 2);
-      
-      allRecommendations.push(...suffixDistances);
+  const handleAddStandard = () => {
+    const newMetals = STANDARD_TRAMP_METALS.map((metal, index) => ({
+      ...metal,
+      id: `std-${Date.now()}-${index}`
+    }));
+    setTrampMetals([...trampMetals, ...newMetals]);
+    toast({
+      title: "Standard Shapes Added",
+      description: `Added ${STANDARD_TRAMP_METALS.length} standard tramp metal shapes.`,
     });
-    
-    setRecommendations(allRecommendations.sort((a, b) => a.distance - b.distance));
   };
 
-  const componentData = selectedRecord ? [{
-    name: "Core",
-    amount: 1,
-    material: "Mild Steel",
-    dimension: selectedRecord.core_dimension,
-    mass: selectedRecord.core_mass
-  }, {
-    name: "Winding",
-    amount: 1,
-    material: "Aluminium Nomex",
-    dimension: selectedRecord.winding_dimension,
-    mass: selectedRecord.winding_mass
-  }, {
-    name: "Backbar",
-    amount: 1,
-    material: "Mild Steel",
-    dimension: selectedRecord.backbar_dimension,
-    mass: selectedRecord.backbar_mass
-  }, {
-    name: "Core Backbar",
-    amount: 1,
-    material: "Mild Steel",
-    dimension: selectedRecord.core_backbar_dimension,
-    mass: selectedRecord.core_backbar_mass
-  }, {
-    name: "Side Pole",
-    amount: 4,
-    material: "Mild Steel",
-    dimension: selectedRecord.side_pole_dimension,
-    mass: selectedRecord.side_pole_mass
-  }, {
-    name: "Sealing Plate",
-    amount: 1,
-    material: "Manganese Steel",
-    dimension: selectedRecord.sealing_plate_dimension,
-    mass: selectedRecord.sealing_plate_mass ? parseFloat(selectedRecord.sealing_plate_mass) : undefined
-  }, {
-    name: "Core Insulator",
-    amount: 1,
-    material: "Elephantide",
-    dimension: selectedRecord.core_insulator_dimension,
-    mass: selectedRecord.core_insulator_mass ? parseFloat(selectedRecord.core_insulator_mass) : undefined
-  }, {
-    name: "Conservator",
-    amount: 1,
-    material: "Mild Steel",
-    dimension: selectedRecord.conservator_dimension,
-    mass: selectedRecord.conservator_mass
-  }, {
-    name: "Coolant",
-    amount: 7563,
-    material: "Oil",
-    dimension: "-",
-    mass: selectedRecord.coolant_mass
-  }].filter(item => item.mass !== undefined && item.mass !== null) : [];
+  const handleDeleteTrampMetal = (id: string) => {
+    setTrampMetals(trampMetals.filter(metal => metal.id !== id));
+  };
+
+  const handleUpdateTrampMetal = (id: string, field: 'width' | 'length' | 'height', value: number) => {
+    setTrampMetals(trampMetals.map(metal => 
+      metal.id === id ? { ...metal, [field]: value } : metal
+    ));
+  };
+
+  const handleCalculate = async () => {
+    setIsCalculating(true);
+    try {
+      const { data, error } = await supabase.from('BMR_Top').select('*');
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        toast({
+          title: "No Data Available",
+          description: "No OCW units found in BMR_Top table.",
+          variant: "destructive",
+        });
+        setIsCalculating(false);
+        return;
+      }
+      
+      const minSuffix = Math.round((beltWidth * coreBeltRatio) / 10);
+      const widthMin = beltWidth * 0.9;
+      const widthMax = beltWidth * 1.2;
+      
+      const filtered = data.filter((unit: any) => {
+        const suffixMatch = unit.Suffix >= minSuffix;
+        const widthMatch = unit.width >= widthMin && unit.width <= widthMax;
+        return suffixMatch && widthMatch;
+      });
+      
+      const sorted = filtered.sort((a: any, b: any) => {
+        if (a.Suffix !== b.Suffix) return a.Suffix - b.Suffix;
+        return a.Prefix - b.Prefix;
+      });
+      
+      const allRecommendations: OCWRecommendation[] = sorted.map((unit: any) => ({
+        model: unit.model,
+        Prefix: unit.Prefix,
+        Suffix: unit.Suffix,
+        surface_gauss: unit.surface_gauss,
+        force_factor: unit.force_factor,
+        watts: unit.watts,
+        width: unit.width,
+        frame: unit.frame,
+        belt_width: beltWidth,
+        density: bulkDensity,
+        waterContent: waterContent,
+        bulkDensity: bulkDensity,
+        ambientTemp: ambientTemp,
+      }));
+      
+      setRecommendations(allRecommendations);
+      setInputParameters({
+        beltSpeed,
+        beltWidth,
+        feedDepth,
+        throughput,
+        magnetGap,
+        coreBeltRatio,
+        magnetPosition,
+        bulkDensity,
+        waterContent,
+        ambientTemp,
+        trampMetals,
+      });
+      
+      if (allRecommendations.length > 0) {
+        toast({
+          title: "Calculation Complete",
+          description: `Found ${allRecommendations.length} recommended OCW units.`,
+        });
+      } else {
+        toast({
+          title: "No Matches Found",
+          description: `No units found with Suffix ≥ ${minSuffix} and width ${widthMin}-${widthMax}mm.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Calculation error:', error);
+      toast({
+        title: "Calculation Error",
+        description: "An error occurred. Please check your inputs.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handleViewOCW = (unit: OCWRecommendation) => {
+    setSelectedOCW(unit);
+    setSelectedPrefix(unit.Prefix);
+    setSelectedSuffix(unit.Suffix);
+  };
+
+  const componentData = selectedRecord ? [
+    { name: "Core", amount: 1, material: "Mild Steel", dimension: selectedRecord.core_dimension, mass: selectedRecord.core_mass },
+    { name: "Winding", amount: 1, material: "Aluminium Nomex", dimension: selectedRecord.winding_dimension, mass: selectedRecord.winding_mass },
+    { name: "Backbar", amount: 1, material: "Mild Steel", dimension: selectedRecord.backbar_dimension, mass: selectedRecord.backbar_mass },
+    { name: "Core Backbar", amount: 1, material: "Mild Steel", dimension: selectedRecord.core_backbar_dimension, mass: selectedRecord.core_backbar_mass },
+    { name: "Side Pole", amount: 4, material: "Mild Steel", dimension: selectedRecord.side_pole_dimension, mass: selectedRecord.side_pole_mass },
+    { name: "Sealing Plate", amount: 1, material: "Manganese Steel", dimension: selectedRecord.sealing_plate_dimension, mass: selectedRecord.sealing_plate_mass ? parseFloat(selectedRecord.sealing_plate_mass) : undefined },
+    { name: "Core Insulator", amount: 1, material: "Elephantide", dimension: selectedRecord.core_insulator_dimension, mass: selectedRecord.core_insulator_mass ? parseFloat(selectedRecord.core_insulator_mass) : undefined },
+    { name: "Conservator", amount: 1, material: "Mild Steel", dimension: selectedRecord.conservator_dimension, mass: selectedRecord.conservator_mass },
+    { name: "Coolant", amount: 7563, material: "Oil", dimension: "-", mass: selectedRecord.coolant_mass }
+  ].filter(item => item.mass !== undefined && item.mass !== null) : [];
+
   if (loading) {
     return <div className="container mx-auto p-6">
-        <div className="text-center">Loading BMR data...</div>
-      </div>;
+      <div className="text-center">Loading OCW data...</div>
+    </div>;
   }
-  return <div className="container mx-auto p-6 space-y-6">
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/">
             <Button variant="outline" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Calculator
+              Back to Home
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">BMR Magnet Specifications</h1>
+          <div>
+            <h1 className="text-3xl font-bold">OCW Selector</h1>
+            {hasActiveList && (
+              <Badge variant="secondary" className="mt-1">
+                {recommendations.length} units in list
+              </Badge>
+            )}
+          </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Decay Chart and Field Simulator Buttons */}
-          {selectedRecord && (
-            <div className="flex items-center gap-2">
-              {/* Field Simulator Button */}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  // Extract magnet model from filename (e.g., "55 OCW 25" from filename)
-                  const modelMatch = selectedRecord.filename?.match(/(\d+)\s*OCW\s*(\d+)/);
-                  const modelName = modelMatch ? `${modelMatch[1]} OCW ${modelMatch[2]}` : '55 OCW 25';
-                  
-                  navigate('/field-simulator', {
-                    state: {
-                      model: modelName,
-                      beltWidth: selectedRecord.belt_width,
-                      magnetDimension: selectedRecord.magnet_dimension
-                    }
-                  });
-                }}
-              >
-                <Waves className="w-4 h-4 mr-2" />
-                Field Simulator
-              </Button>
-              
-              {[20, 30, 40, 45].map((temp) => (
-                <Button
-                  key={temp}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // For now, only A20 is implemented, others will be added later
-                    if (temp === 20) {
-                      navigate('/magnetic-decay', {
+        {hasActiveList && (
+          <Button variant="outline" size="sm" onClick={clearList}>
+            <X className="w-4 h-4 mr-2" />
+            Clear List
+          </Button>
+        )}
+      </div>
+
+      {/* Calculator Inputs Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Calculate OCW Recommendations</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Process Parameters */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Process Parameters</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3 pt-0">
+                <div className="space-y-1.5">
+                  <Label htmlFor="beltSpeed" className="text-xs">Belt Speed (m/s)</Label>
+                  <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="beltWidth" className="text-xs">Belt Width (mm)</Label>
+                  <Input id="beltWidth" type="number" value={beltWidth} onChange={(e) => setBeltWidth(parseFloat(e.target.value))} className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="feedDepth" className="text-xs">Feed Depth (mm)</Label>
+                  <Input id="feedDepth" type="number" value={feedDepth} onChange={(e) => setFeedDepth(parseFloat(e.target.value))} className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="throughput" className="text-xs">Throughput (TPH)</Label>
+                  <Input id="throughput" type="number" value={throughput} onChange={(e) => setThroughput(parseFloat(e.target.value))} className="h-8" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Magnet & Shape */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Magnet & Shape</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-3 pt-0">
+                <div className="space-y-1.5">
+                  <Label htmlFor="magnetGap" className="text-xs">Magnet Gap (mm)</Label>
+                  <Input id="magnetGap" type="number" value={magnetGap} onChange={(e) => setMagnetGap(parseFloat(e.target.value))} className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="coreBeltRatio" className="text-xs">Core:Belt Ratio</Label>
+                  <Input id="coreBeltRatio" type="number" value={coreBeltRatio} onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))} step="0.1" min="0" max="1" className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
+                  <Select value={magnetPosition} onValueChange={setMagnetPosition}>
+                    <SelectTrigger id="magnetPosition" className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="overhead">Overhead</SelectItem>
+                      <SelectItem value="inline">Inline</SelectItem>
+                      <SelectItem value="drum">Drum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Material Stream */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Material Stream</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-3 pt-0">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bulkDensity" className="text-xs">Bulk Density (t/m³)</Label>
+                  <Input id="bulkDensity" type="number" value={bulkDensity} onChange={(e) => setBulkDensity(parseFloat(e.target.value))} step="0.1" className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="waterContent" className="text-xs">Water Content (%)</Label>
+                  <Input id="waterContent" type="number" value={waterContent} onChange={(e) => setWaterContent(parseFloat(e.target.value))} step="1" className="h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ambientTemp" className="text-xs">Ambient Temp (°C)</Label>
+                  <Input id="ambientTemp" type="number" value={ambientTemp} onChange={(e) => setAmbientTemp(parseFloat(e.target.value))} className="h-8" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tramp Metal */}
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Tramp Metal (mm)</CardTitle>
+                <Button onClick={handleAddStandard} variant="outline" size="sm" className="h-7 text-xs">
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Standards
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2 max-h-40 overflow-y-auto">
+                {trampMetals.map((metal) => (
+                  <div key={metal.id} className="grid grid-cols-[1fr_auto] gap-2 p-2 border rounded-lg">
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{metal.name}</Label>
+                      </div>
+                      <div className="space-y-1">
+                        <Input type="number" value={metal.width} onChange={(e) => handleUpdateTrampMetal(metal.id, 'width', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="W" />
+                      </div>
+                      <div className="space-y-1">
+                        <Input type="number" value={metal.length} onChange={(e) => handleUpdateTrampMetal(metal.id, 'length', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="L" />
+                      </div>
+                      <div className="space-y-1">
+                        <Input type="number" value={metal.height} onChange={(e) => handleUpdateTrampMetal(metal.id, 'height', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="H" />
+                      </div>
+                    </div>
+                    <Button onClick={() => handleDeleteTrampMetal(metal.id)} variant="ghost" size="sm" className="h-7 w-7 p-0 self-end">
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Button onClick={handleCalculate} disabled={isCalculating} className="w-full">
+            <Calculator className="w-4 h-4 mr-2" />
+            {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Recommendations List */}
+      {hasActiveList && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Recommended OCW Units</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {recommendations.map((unit, index) => (
+                <div key={index} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors ${selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''}`}>
+                  <div className="space-y-0.5">
+                    <div className="font-semibold text-sm">
+                      {unit.Prefix} OCW {unit.Suffix}
+                    </div>
+                    <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-3">
+                      <span>Gauss: {unit.surface_gauss}</span>
+                      <span>Force: {unit.force_factor}</span>
+                      <span>Watts: {unit.watts}</span>
+                      <span>Width: {unit.width}mm</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleViewOCW(unit)} variant="outline" size="sm">
+                      View
+                    </Button>
+                    <Button onClick={() => navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }})} variant="outline" size="sm">
+                      Decay Chart
+                    </Button>
+                    <Button onClick={() => {
+                      const modelMatch = `${unit.Prefix} OCW ${unit.Suffix}`;
+                      navigate('/field-simulator', {
                         state: {
-                          model: selectedRecord.filename,
-                          gauss: 2410, // This should come from BMR_Top table
-                          force: 499496, // This should come from BMR_Top table
-                          ambient: temp
+                          model: modelMatch,
+                          beltWidth: unit.belt_width,
+                          magnetDimension: `${unit.Prefix}x${unit.Suffix}x${unit.width}`,
+                          density: unit.density,
+                          waterContent: unit.waterContent
                         }
                       });
-                    }
-                  }}
-                  disabled={temp !== 20}
-                >
-                  A{temp} Gauss
-                </Button>
+                    }} variant="default" size="sm">
+                      <Waves className="w-3 h-3 mr-1" />
+                      Simulator
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
-          )}
-          
-          {/* Compact selector in upper right */}
-          <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
-            <span className="text-sm font-medium">BMR</span>
-            <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
-              <SelectTrigger className="w-16 h-8">
-                <SelectValue placeholder="000" />
-              </SelectTrigger>
-              <SelectContent>
-                {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>
-                    {prefix}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
-            <span className="text-sm">-</span>
-            <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
-              <SelectTrigger className="w-16 h-8">
-                <SelectValue placeholder="00" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>
-                    {suffix}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manual Selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">Or select manually:</span>
+        <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+          <span className="text-sm font-medium">BMR</span>
+          <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
+            <SelectTrigger className="w-16 h-8">
+              <SelectValue placeholder="000" />
+            </SelectTrigger>
+            <SelectContent>
+              {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>{prefix}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <span className="text-sm">-</span>
+          <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
+            <SelectTrigger className="w-16 h-8">
+              <SelectValue placeholder="00" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>{suffix}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {selectedRecord && <div className="bg-muted rounded-lg p-3 text-sm">
-          <p className="font-medium">Selected: {selectedRecord.filename}</p>
-          <p className="text-base font-semibold text-primary mt-1">
-            Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
-          </p>
-        </div>}
-
-      {selectedRecord && <div className="space-y-6">
-          {/* Component Specifications and Winding Information - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Component Table - Collapsible - 60% width */}
-            <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
-              <Card className="lg:col-span-1">
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Component Specifications</CardTitle>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isComponentsOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Material</TableHead>
-                          <TableHead>Dimension</TableHead>
-                          <TableHead>Mass</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {componentData.map((component, index) => <TableRow key={index} className="h-10">
-                            <TableCell className="font-medium py-2">{component.name}</TableCell>
-                            <TableCell className="py-2">{component.amount}</TableCell>
-                            <TableCell className="py-2">{component.material}</TableCell>
-                            <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
-                            <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
-                          </TableRow>)}
-                        <TableRow className="font-bold h-10">
-                          <TableCell colSpan={4} className="py-2">Total</TableCell>
-                          <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-
-            {/* Winding Information - 40% width */}
-            <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
-              <Card className="lg:col-span-1">
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Winding Information</CardTitle>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isWindingOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent>
-                    <div className="space-y-4">
-                      
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span>Radial Depth:</span>
-                          <span>{selectedRecord.radial_depth || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Coil Height:</span>
-                          <span>{selectedRecord.coil_height || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Number of Sections:</span>
-                          <span>{selectedRecord.number_of_sections || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Diameter:</span>
-                          <span>{selectedRecord.diameter || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Mean Length of Turn:</span>
-                          <span>{selectedRecord.mean_length_of_turn || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Number of Turns:</span>
-                          <span>{selectedRecord.number_of_turns || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Surface Area:</span>
-                          <span>{selectedRecord.surface_area || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Wires in Parallel:</span>
-                          <span>{selectedRecord.wires_in_parallel || 'N/A'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+      {selectedRecord && (
+        <>
+          <div className="bg-muted rounded-lg p-3 text-sm">
+            <p className="font-medium">Selected: {selectedRecord.filename}</p>
+            <p className="text-base font-semibold text-primary mt-1">
+              Magnet Dimension: {selectedRecord.magnet_dimension || 'N/A'}
+            </p>
           </div>
 
+          <div className="flex items-center gap-2">
+            <Button variant="default" size="sm" onClick={() => {
+              const modelMatch = selectedRecord.filename?.match(/(\d+)\s*OCW\s*(\d+)/);
+              const modelName = modelMatch ? `${modelMatch[1]} OCW ${modelMatch[2]}` : '55 OCW 25';
+              navigate('/field-simulator', { state: { model: modelName, beltWidth: selectedRecord.belt_width, magnetDimension: selectedRecord.magnet_dimension }});
+            }}>
+              <Waves className="w-4 h-4 mr-2" />
+              Field Simulator
+            </Button>
+            {[20, 30, 40, 45].map((temp) => (
+              <Button key={temp} variant="outline" size="sm" onClick={() => { if (temp === 20) { navigate('/magnetic-decay', { state: { model: selectedRecord.filename, gauss: 2410, force: 499496, ambient: temp }}); }}} disabled={temp !== 20}>
+                A{temp} Gauss
+              </Button>
+            ))}
+          </div>
 
-          {/* Temperature and Electrical Properties - Full width below */}
-          <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
-            <Card>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
+                <Card className="lg:col-span-1">
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Component Specifications</CardTitle>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isComponentsOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Dimension</TableHead>
+                            <TableHead>Mass</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {componentData.map((component, index) => (
+                            <TableRow key={index} className="h-10">
+                              <TableCell className="font-medium py-2">{component.name}</TableCell>
+                              <TableCell className="py-2">{component.amount}</TableCell>
+                              <TableCell className="py-2">{component.material}</TableCell>
+                              <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
+                              <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="font-bold h-10">
+                            <TableCell colSpan={4} className="py-2">Total</TableCell>
+                            <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+
+              <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
+                <Card className="lg:col-span-1">
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Winding Information</CardTitle>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isWindingOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between"><span>Radial Depth:</span><span>{selectedRecord.radial_depth || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Coil Height:</span><span>{selectedRecord.coil_height || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Number of Sections:</span><span>{selectedRecord.number_of_sections || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Diameter:</span><span>{selectedRecord.diameter || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Mean Length of Turn:</span><span>{selectedRecord.mean_length_of_turn || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Number of Turns:</span><span>{selectedRecord.number_of_turns || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Surface Area:</span><span>{selectedRecord.surface_area || 'N/A'}</span></div>
+                        <div className="flex justify-between"><span>Wires in Parallel:</span><span>{selectedRecord.wires_in_parallel || 'N/A'}</span></div>
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            </div>
+
+            <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
+              <Card>
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                     <div className="flex items-center justify-between">
@@ -488,91 +693,83 @@ const OCW = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent>
-                    <div className="space-y-4">
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Ambient Temperature:</span>
-                          <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
-                          <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
-                          <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Temperature Rise:</span>
-                          <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
-                          <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
-                          <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Maximum Rise:</span>
-                          <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
-                          <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
-                          <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Expected Rise:</span>
-                          <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Voltage:</span>
-                          <span>{selectedRecord.voltage_A || 'N/A'}</span>
-                          <span>{selectedRecord.voltage_B || 'N/A'}</span>
-                          <span>{selectedRecord.voltage_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Resistance:</span>
-                          <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Watts:</span>
-                          <span>{selectedRecord.watts_A || 'N/A'}</span>
-                          <span>{selectedRecord.watts_B || 'N/A'}</span>
-                          <span>{selectedRecord.watts_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Cold Current:</span>
-                          <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Hot Current:</span>
-                          <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
-                          <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Cold Ampere Turns:</span>
-                          <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
-                          <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
-                          <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <span>Hot Ampere Turns:</span>
-                          <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
-                          <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
-                          <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
-                        </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Ambient Temperature:</span>
+                        <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
+                        <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
+                        <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Temperature Rise:</span>
+                        <span>{selectedRecord.temperature_rise_A || 'N/A'}</span>
+                        <span>{selectedRecord.temperature_rise_B || 'N/A'}</span>
+                        <span>{selectedRecord.temperature_rise_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Maximum Rise:</span>
+                        <span>{selectedRecord.maximum_rise_A || 'N/A'}</span>
+                        <span>{selectedRecord.maximum_rise_B || 'N/A'}</span>
+                        <span>{selectedRecord.maximum_rise_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Expected Rise:</span>
+                        <span>{selectedRecord.expected_rise_A?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.expected_rise_B?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.expected_rise_C?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Voltage:</span>
+                        <span>{selectedRecord.voltage_A || 'N/A'}</span>
+                        <span>{selectedRecord.voltage_B || 'N/A'}</span>
+                        <span>{selectedRecord.voltage_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Resistance:</span>
+                        <span>{selectedRecord.resistance_A?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.resistance_B?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.resistance_C?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Watts:</span>
+                        <span>{selectedRecord.watts_A || 'N/A'}</span>
+                        <span>{selectedRecord.watts_B || 'N/A'}</span>
+                        <span>{selectedRecord.watts_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Cold Current:</span>
+                        <span>{selectedRecord.cold_current_A?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.cold_current_B?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.cold_current_C?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Hot Current:</span>
+                        <span>{selectedRecord.hot_current_A?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.hot_current_B?.toFixed(2) || 'N/A'}</span>
+                        <span>{selectedRecord.hot_current_C?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Cold Ampere Turns:</span>
+                        <span>{selectedRecord.cold_ampere_turns_A || 'N/A'}</span>
+                        <span>{selectedRecord.cold_ampere_turns_B || 'N/A'}</span>
+                        <span>{selectedRecord.cold_ampere_turns_C || 'N/A'}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <span>Hot Ampere Turns:</span>
+                        <span>{selectedRecord.hot_ampere_turns_A || 'N/A'}</span>
+                        <span>{selectedRecord.hot_ampere_turns_B || 'N/A'}</span>
+                        <span>{selectedRecord.hot_ampere_turns_C || 'N/A'}</span>
                       </div>
                     </div>
-
-                    {/* Action Buttons */}
                     <div className="flex gap-2 mt-6">
-                      <Button 
-                        onClick={() => {
-                          const params = new URLSearchParams({
-                            prefix: selectedRecord.prefix?.toString() || '',
-                            suffix: selectedRecord.suffix?.toString() || '',
-                            data: encodeURIComponent(JSON.stringify(selectedRecord))
-                          });
-                          navigate(`/winding-sheet?${params.toString()}`);
-                        }}
-                        className="flex-1"
-                      >
+                      <Button onClick={() => {
+                        const params = new URLSearchParams({
+                          prefix: selectedRecord.prefix?.toString() || '',
+                          suffix: selectedRecord.suffix?.toString() || '',
+                          data: encodeURIComponent(JSON.stringify(selectedRecord))
+                        });
+                        navigate(`/winding-sheet?${params.toString()}`);
+                      }} className="flex-1">
                         View Winding Sheet
                       </Button>
                     </div>
@@ -580,7 +777,11 @@ const OCW = () => {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
-        </div>}
-    </div>;
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
+
 export default OCW;

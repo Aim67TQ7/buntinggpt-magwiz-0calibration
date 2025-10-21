@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { PasscodeProtection } from "@/components/PasscodeProtection";
+import { OCWListProvider } from "@/contexts/OCWListContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import QuoteDetails from "./pages/QuoteDetails";
@@ -25,23 +26,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PasscodeProtection>
-        <BrowserRouter>
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<BOMManager />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/quote/:quoteId" element={<QuoteDetails />} />
-            <Route path="/ocw" element={<OCW />} />
-            <Route path="/winding-sheet" element={<WindingSheet />} />
-            <Route path="/configurator" element={<Configurator />} />
-            <Route path="/pcb-chat" element={<PCBChat />} />
-            <Route path="/calculator" element={<Index />} />
-            <Route path="/magnetic-decay" element={<MagneticDecay />} />
-            <Route path="/field-simulator" element={<MagneticFieldSimulator />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <OCWListProvider>
+          <BrowserRouter>
+            <Navigation />
+            <Routes>
+              <Route path="/" element={<BOMManager />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/quote/:quoteId" element={<QuoteDetails />} />
+              <Route path="/ocw" element={<OCW />} />
+              <Route path="/winding-sheet" element={<WindingSheet />} />
+              <Route path="/configurator" element={<Configurator />} />
+              <Route path="/pcb-chat" element={<PCBChat />} />
+              <Route path="/calculator" element={<Index />} />
+              <Route path="/magnetic-decay" element={<MagneticDecay />} />
+              <Route path="/field-simulator" element={<MagneticFieldSimulator />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </OCWListProvider>
       </PasscodeProtection>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface DecayData {
   gap: number;
@@ -49,11 +51,21 @@ export default function MagneticDecay() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Magnetic Field Decay Analysis</h1>
-        <p className="text-muted-foreground">
-          Model: <span className="font-semibold">{model}</span> | Initial Gauss: {initialGauss} G | Initial Force: {initialForce} N
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-4 mb-2">
+            <Link to="/ocw">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to OCW Selector
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-bold">Magnetic Field Decay Analysis</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Model: <span className="font-semibold">{model}</span> | Initial Gauss: {initialGauss} G | Initial Force: {initialForce} N
+          </p>
+        </div>
       </div>
 
       {/* Chart and Table Side by Side */}

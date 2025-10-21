@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useOCWList } from "@/contexts/OCWListContext";
+import { Separator } from "@/components/ui/separator";
 
 interface MagnetModel {
   name: string;
@@ -28,6 +30,7 @@ interface TrampObject {
 
 export default function MagneticFieldSimulator() {
   const location = useLocation();
+  const { recommendations, hasActiveList } = useOCWList();
   const [models, setModels] = useState<MagnetModel[]>([]);
   const [trampObjects, setTrampObjects] = useState<TrampObject[]>([]);
   const [selectedModel, setSelectedModel] = useState<MagnetModel | null>(null);
@@ -263,7 +266,19 @@ export default function MagneticFieldSimulator() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-80">
+                  {hasActiveList && recommendations.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">From OCW List</div>
+                      {recommendations.map((ocw) => (
+                        <SelectItem key={`ocw-${ocw.Prefix}-${ocw.Suffix}`} value={`${ocw.Prefix} OCW ${ocw.Suffix}`}>
+                          {ocw.Prefix} OCW {ocw.Suffix} ({ocw.surface_gauss}G, {ocw.width}mm)
+                        </SelectItem>
+                      ))}
+                      <Separator className="my-2" />
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Standard Models</div>
+                    </>
+                  )}
                   {models.map((model) => (
                     <SelectItem key={model.name} value={model.name}>
                       {model.name}
