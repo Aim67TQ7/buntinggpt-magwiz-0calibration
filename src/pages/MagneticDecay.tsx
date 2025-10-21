@@ -34,9 +34,10 @@ interface IntersectionPoint {
 
 export default function MagneticDecay() {
   const location = useLocation();
-  const { model, gauss, force, feedDepth: initialFeedDepth = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50 };
+  const { model, gauss, force, feedDepth: initialFeedDepth = 50, magnetGap: initialMagnetGap = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50, magnetGap: 50 };
   
   const [feedDepth, setFeedDepth] = useState<number>(initialFeedDepth);
+  const [magnetGap, setMagnetGap] = useState<number>(initialMagnetGap);
 
   // Tramp configurations with base thresholds and gain factors
   const trampConfigs: TrampConfig[] = [
@@ -130,23 +131,44 @@ export default function MagneticDecay() {
           <CardTitle>Parameters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="max-w-xs">
-            <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
-            <Input
-              id="feedDepth"
-              type="number"
-              min="0"
-              max="800"
-              value={feedDepth}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                setFeedDepth(Math.max(0, Math.min(800, value)));
-              }}
-              className="mt-1"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              Material burden depth on the belt
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
+              <Input
+                id="feedDepth"
+                type="number"
+                min="0"
+                max="800"
+                value={feedDepth}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setFeedDepth(Math.max(0, Math.min(800, value)));
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Material burden depth on the belt
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="magnetGap">Magnet Gap (mm)</Label>
+              <Input
+                id="magnetGap"
+                type="number"
+                min="0"
+                max="800"
+                value={magnetGap}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setMagnetGap(Math.max(0, Math.min(800, value)));
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Distance from feed surface to magnet face
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -194,12 +216,28 @@ export default function MagneticDecay() {
                   x1={0}
                   x2={feedDepth}
                   fill="#94a3b8"
-                  fillOpacity={0.2}
+                  fillOpacity={0.25}
                   label={{ 
                     value: `Feed Depth: ${feedDepth}mm`, 
-                    position: 'top',
+                    position: 'insideTop',
                     fill: '#fff',
-                    fontSize: 12
+                    fontSize: 11,
+                    fontWeight: 'bold'
+                  }}
+                />
+                
+                {/* Magnet gap shaded zone */}
+                <ReferenceArea
+                  x1={feedDepth}
+                  x2={feedDepth + magnetGap}
+                  fill="#f59e0b"
+                  fillOpacity={0.2}
+                  label={{ 
+                    value: `Magnet Gap: ${magnetGap}mm`, 
+                    position: 'insideTop',
+                    fill: '#fff',
+                    fontSize: 11,
+                    fontWeight: 'bold'
                   }}
                 />
                 
