@@ -383,7 +383,7 @@ export default function MagneticFieldSimulator() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Belt Width:</span>
                   <span className="font-mono">
-                    {ocwBeltWidth ? `${ocwBeltWidth} mm (OCW)` : `${selectedModel.beltWidth} mm`}
+                    {ocwBeltWidth || selectedModel.beltWidth} mm
                   </span>
                 </div>
                 {selectedModel.frame && (
@@ -983,7 +983,7 @@ export default function MagneticFieldSimulator() {
                     fontSize="12" 
                     fontWeight="bold"
                   >
-                    CONVEYOR BELT ({selectedModel.beltWidth}mm)
+                    CONVEYOR BELT ({ocwBeltWidth || selectedModel.beltWidth}mm)
                   </text>
 
                   {/* TRAMP ICONS AT BOTTOM - Show if in capture zone */}

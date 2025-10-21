@@ -30,6 +30,7 @@ export interface OCWInputParameters {
   bulkDensity?: number;
   waterContent?: number;
   ambientTemp?: number;
+  beltIncline?: number;
   trampMetals?: Array<{
     id: string;
     name: string;

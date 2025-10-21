@@ -135,7 +135,7 @@ const OCW = () => {
   const [ambientTemp, setAmbientTemp] = useState<number>(25);
   const [minGauss, setMinGauss] = useState<string>("");
   const [minForce, setMinForce] = useState<string>("");
-  const [trampMetalProfile, setTrampMetalProfile] = useState<string>("");
+  const [beltIncline, setBeltIncline] = useState<number>(0);
   const [isCalculating, setIsCalculating] = useState(false);
   const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -277,6 +277,7 @@ const OCW = () => {
         bulkDensity,
         waterContent,
         ambientTemp,
+        beltIncline,
       });
       
       if (allRecommendations.length > 0) {
@@ -389,24 +390,6 @@ const OCW = () => {
                     <Input id="minForce" type="number" value={minForce} onChange={(e) => setMinForce(e.target.value)} className="h-8" placeholder="500000" />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="trampProfile" className="text-xs">Tramp Metal Extraction Profile</Label>
-                  <Select value={trampMetalProfile} onValueChange={setTrampMetalProfile}>
-                    <SelectTrigger id="trampProfile" className="h-8">
-                      <SelectValue placeholder="Select profile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRAMP_METAL_PROFILES.map((profile) => (
-                        <SelectItem key={profile.value} value={profile.value}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{profile.label}</span>
-                            <span className="text-xs text-muted-foreground">{profile.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </CardContent>
             </Card>
 
@@ -421,6 +404,10 @@ const OCW = () => {
                   <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8" />
                 </div>
                 <div className="space-y-1.5">
+                  <Label htmlFor="beltIncline" className="text-xs">Belt Incline (degrees)</Label>
+                  <Input id="beltIncline" type="number" value={beltIncline} onChange={(e) => setBeltIncline(parseFloat(e.target.value))} step="1" className="h-8" placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="feedDepth" className="text-xs">Feed Depth (mm)</Label>
                   <Input id="feedDepth" type="number" value={feedDepth} onChange={(e) => setFeedDepth(parseFloat(e.target.value))} className="h-8" />
                 </div>
@@ -432,36 +419,6 @@ const OCW = () => {
                   <Label htmlFor="magnetGap" className="text-xs">Magnet Gap (mm)</Label>
                   <Input id="magnetGap" type="number" value={magnetGap} onChange={(e) => setMagnetGap(parseFloat(e.target.value))} className="h-8" />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Material Stream */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Material Stream</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-3 pt-0">
-                <div className="space-y-1.5">
-                  <Label htmlFor="bulkDensity" className="text-xs">Bulk Density (t/m³)</Label>
-                  <Input id="bulkDensity" type="number" value={bulkDensity} onChange={(e) => setBulkDensity(parseFloat(e.target.value))} step="0.1" className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="waterContent" className="text-xs">Water Content (%)</Label>
-                  <Input id="waterContent" type="number" value={waterContent} onChange={(e) => setWaterContent(parseFloat(e.target.value))} step="1" className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="ambientTemp" className="text-xs">Ambient Temp (°C)</Label>
-                  <Input id="ambientTemp" type="number" value={ambientTemp} onChange={(e) => setAmbientTemp(parseFloat(e.target.value))} className="h-8" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Magnet Position */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Magnet Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
                 <div className="space-y-1.5">
                   <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
                   <Select value={magnetPosition} onValueChange={setMagnetPosition}>
