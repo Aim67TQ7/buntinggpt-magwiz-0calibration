@@ -405,13 +405,15 @@ export default function MagneticFieldSimulator() {
                     if (zoneHeight <= 0) return null;
                     
                     const isDeadZone = zone.tramp.name === "Dead Zone";
+                    const totalTrampDepth = airGap + burdenDepth;
+                    const isCaptured = totalTrampDepth <= zone.endDepth;
                     
                     return (
                       <g key={idx}>
                         {/* Zone background with sequential reveal animation */}
                         <motion.rect
                           initial={{ opacity: 0, scaleY: 0 }}
-                          animate={{ opacity: isDeadZone ? 0.15 : 0.4, scaleY: 1 }}
+                          animate={{ opacity: isDeadZone ? 0.15 : (isCaptured ? 0.5 : 0.2), scaleY: 1 }}
                           transition={{ duration: 0.6, delay: idx * 0.15 }}
                           x={beltX}
                           y={y1}
@@ -419,7 +421,7 @@ export default function MagneticFieldSimulator() {
                           height={zoneHeight}
                           fill={zone.color}
                           stroke={isDeadZone ? "#374151" : "#fff"}
-                          strokeWidth={isDeadZone ? "1" : "2"}
+                          strokeWidth={isDeadZone ? "1" : "3"}
                           strokeDasharray={isDeadZone ? "4,4" : "none"}
                           style={{ transformOrigin: `${beltX}px ${y1}px` }}
                         />
@@ -434,7 +436,7 @@ export default function MagneticFieldSimulator() {
                               fontWeight="bold" 
                               fill="#1e293b"
                             >
-                              {zone.tramp.icon} {zone.tramp.name} Zone
+                              {zone.tramp.icon} {zone.tramp.name}
                             </text>
                             <text 
                               x={beltX + 15} 
@@ -443,15 +445,7 @@ export default function MagneticFieldSimulator() {
                               fill="#475569"
                               fontWeight="bold"
                             >
-                              ≥ {zone.tramp.threshold} G required
-                            </text>
-                            <text 
-                              x={beltX + 15} 
-                              y={y1 + 50} 
-                              fontSize="10" 
-                              fill="#64748b"
-                            >
-                              Limit: {Math.round(zone.endDepth)} mm depth
+                              Requires ≥ {zone.tramp.threshold} G
                             </text>
                           </>
                         )}
@@ -470,17 +464,50 @@ export default function MagneticFieldSimulator() {
                           </text>
                         )}
                         
-                        {/* Boundary line at zone limit */}
+                        {/* Horizontal depth marker at zone limit */}
                         {!isDeadZone && (
-                          <line
-                            x1={beltX}
-                            y1={y2}
-                            x2={beltX + beltWidth}
-                            y2={y2}
-                            stroke="#fff"
-                            strokeWidth="3"
-                            strokeDasharray="8,4"
-                          />
+                          <>
+                            <line
+                              x1={beltX - 15}
+                              y1={y2}
+                              x2={beltX + beltWidth + 15}
+                              y2={y2}
+                              stroke={isCaptured ? "#22c55e" : "#64748b"}
+                              strokeWidth="4"
+                              strokeDasharray="10,5"
+                            />
+                            <circle
+                              cx={beltX - 15}
+                              cy={y2}
+                              r="5"
+                              fill={isCaptured ? "#22c55e" : "#64748b"}
+                            />
+                            <circle
+                              cx={beltX + beltWidth + 15}
+                              cy={y2}
+                              r="5"
+                              fill={isCaptured ? "#22c55e" : "#64748b"}
+                            />
+                            {/* Depth limit label */}
+                            <rect
+                              x={beltX + beltWidth + 25}
+                              y={y2 - 12}
+                              width="140"
+                              height="24"
+                              fill={isCaptured ? "#22c55e" : "#ef4444"}
+                              opacity="0.9"
+                              rx="4"
+                            />
+                            <text 
+                              x={beltX + beltWidth + 32} 
+                              y={y2 + 5} 
+                              fontSize="11" 
+                              fontWeight="bold" 
+                              fill="white"
+                            >
+                              {zone.tramp.icon} Limit: {Math.round(zone.endDepth)}mm
+                            </text>
+                          </>
                         )}
                       </g>
                     );
@@ -532,13 +559,13 @@ export default function MagneticFieldSimulator() {
                       strokeDasharray="8,4" 
                     />
                     <text 
-                      x={beltX + beltWidth + 15} 
+                      x={beltX - 180} 
                       y={magnetHeight + (airGap * scale) / 2 + 5} 
                       fontSize="12" 
                       fontWeight="bold" 
                       fill="#0ea5e9"
                     >
-                      ← Air Gap: {airGap}mm
+                      Air Gap: {airGap}mm →
                     </text>
 
                     {/* Burden depth zone */}
@@ -548,50 +575,89 @@ export default function MagneticFieldSimulator() {
                       width={beltWidth} 
                       height={burdenDepth * scale} 
                       fill="#92400e" 
-                      fillOpacity="0.2" 
+                      fillOpacity="0.25" 
                       stroke="#78350f" 
                       strokeWidth="3" 
                     />
                     {/* Material particles in burden */}
-                    {Array.from({ length: 60 }).map((_, i) => (
+                    {Array.from({ length: 80 }).map((_, i) => (
                       <circle
                         key={i}
-                        cx={beltX + 20 + (i % 30) * (beltWidth / 30)}
-                        cy={magnetHeight + airGap * scale + 10 + Math.floor(i / 30) * (burdenDepth * scale * 0.4)}
-                        r="2"
+                        cx={beltX + 20 + (i % 40) * (beltWidth / 40)}
+                        cy={magnetHeight + airGap * scale + 10 + Math.floor(i / 40) * (burdenDepth * scale * 0.45)}
+                        r="2.5"
                         fill="#78350f"
-                        opacity="0.5"
+                        opacity="0.6"
                       />
                     ))}
                     <text 
-                      x={beltX + beltWidth + 15} 
+                      x={beltX - 180} 
                       y={magnetHeight + airGap * scale + (burdenDepth * scale) / 2 + 5} 
                       fontSize="12" 
                       fontWeight="bold" 
                       fill="#78350f"
                     >
-                      ← Burden: {burdenDepth}mm
+                      Burden: {burdenDepth}mm →
                     </text>
 
-                    {/* Total depth indicator line */}
+                    {/* CRITICAL: Burden Bottom Line - This is where tramps are located */}
                     <line
-                      x1={beltX - 10}
+                      x1={beltX - 30}
                       y1={magnetHeight + (airGap + burdenDepth) * scale}
-                      x2={beltX + beltWidth + 10}
+                      x2={beltX + beltWidth + 30}
                       y2={magnetHeight + (airGap + burdenDepth) * scale}
-                      stroke="#dc2626"
-                      strokeWidth="4"
+                      stroke="#000"
+                      strokeWidth="8"
+                    />
+                    <line
+                      x1={beltX - 30}
+                      y1={magnetHeight + (airGap + burdenDepth) * scale}
+                      x2={beltX + beltWidth + 30}
+                      y2={magnetHeight + (airGap + burdenDepth) * scale}
+                      stroke="#fbbf24"
+                      strokeWidth="5"
+                    />
+                    
+                    {/* Burden line label box */}
+                    <rect
+                      x={beltX + beltWidth / 2 - 140}
+                      y={magnetHeight + (airGap + burdenDepth) * scale - 35}
+                      width="280"
+                      height="26"
+                      fill="#000"
+                      opacity="0.85"
+                      rx="4"
                     />
                     <text
                       x={beltX + beltWidth / 2}
-                      y={magnetHeight + (airGap + burdenDepth) * scale - 8}
+                      y={magnetHeight + (airGap + burdenDepth) * scale - 16}
+                      textAnchor="middle"
+                      fontSize="14"
+                      fontWeight="bold"
+                      fill="#fbbf24"
+                    >
+                      ▼ BURDEN BOTTOM: {airGap + burdenDepth}mm ▼
+                    </text>
+                    
+                    {/* Field strength at tramp depth */}
+                    <rect
+                      x={beltX + beltWidth / 2 - 120}
+                      y={magnetHeight + (airGap + burdenDepth) * scale + 10}
+                      width="240"
+                      height="22"
+                      fill="#dc2626"
+                      opacity="0.9"
+                      rx="4"
+                    />
+                    <text
+                      x={beltX + beltWidth / 2}
+                      y={magnetHeight + (airGap + burdenDepth) * scale + 25}
                       textAnchor="middle"
                       fontSize="13"
                       fontWeight="bold"
-                      fill="#dc2626"
-                      className="drop-shadow-lg"
+                      fill="white"
                     >
-                      ⬇ TRAMP DEPTH: {airGap + burdenDepth}mm @ {Math.round(calculateFieldStrength(airGap + burdenDepth))}G
+                      Field at Tramp: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
                     </text>
                   </g>
 
@@ -730,35 +796,73 @@ export default function MagneticFieldSimulator() {
 
             {/* Legend */}
             <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
-              <div>
-                <h3 className="font-semibold mb-2 text-sm">Capture Depth Formula</h3>
-                <div className="font-mono text-sm p-2 bg-background rounded border">
-                  d<sub>limit</sub> = ln(G₀ / G<sub>req</sub>) / k
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2 text-sm">Capture Depth Formula</h3>
+                  <div className="font-mono text-sm p-2 bg-background rounded border">
+                    d<sub>limit</sub> = ln(G₀ / G<sub>req</sub>) / k
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Each horizontal zone shows the maximum depth where that tramp type can be captured.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Each zone shows where a tramp can be captured. If your burden depth extends beyond a zone's limit, 
-                  that tramp type will not be recovered.
-                </p>
+                
+                <div>
+                  <h3 className="font-semibold mb-2 text-sm">Current Setup</h3>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center justify-between p-2 bg-background rounded">
+                      <span className="text-muted-foreground">Air Gap:</span>
+                      <span className="font-mono font-bold text-sky-600">{airGap} mm</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-background rounded">
+                      <span className="text-muted-foreground">Burden Depth:</span>
+                      <span className="font-mono font-bold text-amber-700">{burdenDepth} mm</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-red-600 text-white rounded font-bold">
+                      <span>Total Depth to Tramps:</span>
+                      <span className="font-mono">{airGap + burdenDepth} mm</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-yellow-500 text-black rounded font-bold">
+                      <span>Field at Tramp Depth:</span>
+                      <span className="font-mono">{Math.round(calculateFieldStrength(airGap + burdenDepth))} G</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div>
-                <h3 className="font-semibold mb-2 text-sm">Capture Zone Summary</h3>
+                <h3 className="font-semibold mb-2 text-sm">Capture Zone Limits</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {captureZones.filter(z => z.tramp.name !== "Dead Zone").map((zone, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 border rounded" style={{ backgroundColor: zone.color + '20' }}>
-                      <span className="text-lg">{zone.tramp.icon}</span>
-                      <div className="text-xs">
-                        <div className="font-semibold">{zone.tramp.name}</div>
-                        <div className="text-muted-foreground">0-{Math.round(zone.endDepth)}mm</div>
+                  {captureZones.filter(z => z.tramp.name !== "Dead Zone").map((zone, idx) => {
+                    const totalTrampDepth = airGap + burdenDepth;
+                    const isCaptured = totalTrampDepth <= zone.endDepth;
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center gap-2 p-2 border-2 rounded ${isCaptured ? 'border-green-500 bg-green-50 dark:bg-green-950' : 'border-red-500 bg-red-50 dark:bg-red-950'}`}
+                      >
+                        <span className="text-lg">{zone.tramp.icon}</span>
+                        <div className="text-xs flex-1">
+                          <div className="font-semibold">{zone.tramp.name}</div>
+                          <div className={isCaptured ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                            Limit: {Math.round(zone.endDepth)}mm
+                          </div>
+                        </div>
+                        <span className="text-lg">
+                          {isCaptured ? '✅' : '❌'}
+                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="text-xs text-muted-foreground italic border-t pt-2">
-                <strong>Current Setup:</strong> Air Gap {airGap}mm + Burden {burdenDepth}mm = {airGap + burdenDepth}mm total depth · 
-                Field strength: {Math.round(calculateFieldStrength(airGap + burdenDepth))}G
+              <div className="p-3 bg-background rounded border-l-4 border-l-blue-500">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">How to read this:</strong> The bold black/yellow line shows your burden bottom ({airGap + burdenDepth}mm). 
+                  Tramps with depth limits above this line (green markers) can be captured. 
+                  Tramps with limits below this line (gray markers) are too deep and will be missed.
+                </p>
               </div>
             </div>
           </CardContent>
