@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface MagnetModel {
   name: string;
@@ -14,8 +15,6 @@ interface MagnetModel {
 interface TrampObject {
   name: string;
   threshold: number;
-  x: number;
-  y: number;
   icon: string;
 }
 
@@ -26,10 +25,10 @@ const MODELS: MagnetModel[] = [
 ];
 
 const TRAMPS: TrampObject[] = [
-  { name: "25mm Cube", threshold: 200, x: 100, y: 140, icon: "⬛" },
-  { name: "M12 Nut", threshold: 300, x: 200, y: 140, icon: "⬢" },
-  { name: "M16×75 Bolt", threshold: 350, x: 300, y: 140, icon: "🔩" },
-  { name: "6mm Plate", threshold: 700, x: 400, y: 140, icon: "▬" },
+  { name: "25mm Cube", threshold: 200, icon: "⬛" },
+  { name: "M12 Nut", threshold: 300, icon: "⬢" },
+  { name: "M16×75 Bolt", threshold: 350, icon: "🔩" },
+  { name: "6mm Plate", threshold: 700, icon: "▬" },
 ];
 
 export default function MagneticFieldSimulator() {
@@ -50,24 +49,30 @@ export default function MagneticFieldSimulator() {
     };
   };
 
-  const generateGradientStops = (): Array<{ offset: number; color: string; gauss: number }> => {
-    const stops = [];
-    const depths = [0, 30, 60, 90, 120, 150];
-    const colors = ["#fef08a", "#fb923c", "#ef4444", "#c026d3", "#7c3aed", "#1e40af"];
+  // Generate field contour bands based on actual decay formula
+  const generateContourBands = (): Array<{ depth: number; gauss: number; color: string }> => {
+    const maxDepth = 150;
+    const numBands = 7;
+    const bands = [];
+    const colors = ["#fef08a", "#fbbf24", "#fb923c", "#f97316", "#ef4444", "#c026d3", "#7c3aed"];
 
-    for (let i = 0; i < depths.length; i++) {
-      const gauss = calculateFieldStrength(depths[i]);
-      stops.push({
-        offset: (depths[i] / 150) * 100,
-        color: colors[i],
-        gauss: Math.round(gauss),
-      });
+    for (let i = 0; i < numBands; i++) {
+      const depth = (maxDepth / (numBands - 1)) * i;
+      const gauss = Math.round(calculateFieldStrength(depth));
+      bands.push({ depth, gauss, color: colors[i] });
     }
 
-    return stops;
+    return bands;
   };
 
-  const gradientStops = generateGradientStops();
+  const contourBands = generateContourBands();
+  
+  // Scaling: 1mm = 2px for better visibility
+  const scale = 2;
+  const magnetHeight = 30;
+  const beltHeight = 20;
+  const svgHeight = magnetHeight + (airGap + burdenDepth) * scale + beltHeight + 100;
+  const svgWidth = 600;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -121,31 +126,27 @@ export default function MagneticFieldSimulator() {
             <div className="space-y-3">
               <h3 className="font-semibold">Layer Configuration</h3>
               <div>
-                <label htmlFor="airGap" className="text-sm text-muted-foreground">
-                  Air Gap (mm)
-                </label>
-                <input
+                <Label htmlFor="airGap">Air Gap: {airGap} mm</Label>
+                <Input
                   id="airGap"
-                  type="number"
+                  type="range"
                   min="10"
-                  max="150"
+                  max="100"
                   value={airGap}
-                  onChange={(e) => setAirGap(Math.max(10, Math.min(150, parseInt(e.target.value) || 10)))}
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  onChange={(e) => setAirGap(parseInt(e.target.value))}
+                  className="w-full"
                 />
               </div>
               <div>
-                <label htmlFor="burdenDepth" className="text-sm text-muted-foreground">
-                  Burden Depth (mm)
-                </label>
-                <input
+                <Label htmlFor="burdenDepth">Burden Depth: {burdenDepth} mm</Label>
+                <Input
                   id="burdenDepth"
-                  type="number"
+                  type="range"
                   min="10"
-                  max="150"
+                  max="100"
                   value={burdenDepth}
-                  onChange={(e) => setBurdenDepth(Math.max(10, Math.min(150, parseInt(e.target.value) || 10)))}
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                  onChange={(e) => setBurdenDepth(parseInt(e.target.value))}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -180,202 +181,250 @@ export default function MagneticFieldSimulator() {
           </CardContent>
         </Card>
 
-        {/* Main Visualization */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Cross-Sectional View</CardTitle>
+            <CardTitle>Cross-Sectional View — Depth Below Magnet</CardTitle>
           </CardHeader>
           <CardContent>
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedModel.name}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                className="overflow-x-auto"
               >
                 <svg
-                  viewBox="0 0 600 400"
-                  className="w-full border rounded-lg bg-gradient-to-b from-sky-100 to-amber-50 dark:from-slate-800 dark:to-slate-900"
+                  viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                  className="w-full border rounded-lg bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+                  style={{ minHeight: "600px" }}
                 >
-                  <defs>
-                    <radialGradient id="fieldGradient" cx="50%" cy="10%" r="80%">
-                      {gradientStops.map((stop, idx) => (
-                        <stop
-                          key={idx}
-                          offset={`${stop.offset}%`}
-                          stopColor={stop.color}
-                          stopOpacity={0.5}
-                        />
-                      ))}
-                    </radialGradient>
-                  </defs>
+                  {/* Depth Scale on Left */}
+                  <g>
+                    <line x1="50" y1={magnetHeight} x2="50" y2={magnetHeight + (airGap + burdenDepth) * scale} stroke="#64748b" strokeWidth="2" />
+                    <text x="40" y={magnetHeight} textAnchor="end" fontSize="11" fill="#475569" fontWeight="bold">0mm</text>
+                    <text x="40" y={magnetHeight + airGap * scale} textAnchor="end" fontSize="11" fill="#475569" fontWeight="bold">{airGap}mm</text>
+                    <text x="40" y={magnetHeight + (airGap + burdenDepth) * scale} textAnchor="end" fontSize="11" fill="#475569" fontWeight="bold">{airGap + burdenDepth}mm</text>
+                  </g>
 
-                  {/* Title */}
-                  <text x="300" y="25" textAnchor="middle" fontSize="16" fontWeight="bold" fill="#1e293b">
-                    Cross-Section: Magnet → Air Gap → Material Burden → Belt → Tramp
-                  </text>
-
-                  {/* Magnet Block at Top */}
-                  <rect x="200" y="50" width="200" height="40" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="3" rx="4" />
-                  <text x="300" y="73" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">
-                    🧲 {selectedModel.name}
-                  </text>
-                  <text x="300" y="88" textAnchor="middle" fill="white" fontSize="11">
-                    {selectedModel.G0} Gauss at surface
-                  </text>
-
-                  {/* Magnetic Field Lines - radiating from magnet */}
-                  <ellipse
-                    cx="300"
-                    cy="90"
-                    rx="220"
-                    ry={Math.max(150, airGap + burdenDepth + 60)}
-                    fill="url(#fieldGradient)"
-                    opacity="0.8"
-                  >
-                    <animate
-                      attributeName="ry"
-                      values={`${Math.max(150, airGap + burdenDepth + 60)};${Math.max(155, airGap + burdenDepth + 65)};${Math.max(150, airGap + burdenDepth + 60)}`}
-                      dur="2s"
-                      repeatCount="indefinite"
-                    />
-                  </ellipse>
-
-                  {/* Air Gap Zone */}
-                  <rect x="200" y="90" width="200" height={airGap * 1.5} fill="#bae6fd" fillOpacity="0.6" stroke="#0369a1" strokeWidth="2" strokeDasharray="4,4" />
-                  <text x="410" y={90 + (airGap * 1.5) / 2} fontSize="13" fontWeight="bold" fill="#0369a1">
-                    ← AIR GAP: {airGap}mm
-                  </text>
-                  <text x="205" y={90 + (airGap * 1.5) / 2} fontSize="10" fill="#0c4a6e">
-                    (No material resistance)
-                  </text>
-
-                  {/* Burden Layer Zone */}
+                  {/* MAGNET BLOCK */}
                   <rect 
-                    x="200" 
-                    y={90 + airGap * 1.5} 
-                    width="200" 
-                    height={burdenDepth * 1.5} 
-                    fill="#92400e" 
-                    fillOpacity="0.7" 
-                    stroke="#78350f" 
-                    strokeWidth="2"
+                    x="100" 
+                    y="10" 
+                    width="400" 
+                    height={magnetHeight} 
+                    fill="#3b82f6" 
+                    stroke="#1e3a8a" 
+                    strokeWidth="3" 
+                    rx="4" 
                   />
-                  {/* Particle pattern in burden */}
-                  {Array.from({ length: 30 }).map((_, i) => (
-                    <circle
-                      key={i}
-                      cx={210 + (i % 10) * 20}
-                      cy={95 + airGap * 1.5 + Math.floor(i / 10) * (burdenDepth * 0.4)}
-                      r="2"
-                      fill="#451a03"
-                      opacity="0.4"
-                    />
-                  ))}
-                  <text x="410" y={90 + airGap * 1.5 + (burdenDepth * 1.5) / 2} fontSize="13" fontWeight="bold" fill="#78350f">
-                    ← BURDEN: {burdenDepth}mm
-                  </text>
-                  <text x="205" y={90 + airGap * 1.5 + (burdenDepth * 1.5) / 2} fontSize="10" fill="#fef3c7">
-                    (Material load)
+                  <text x="300" y="28" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">
+                    🧲 {selectedModel.name} — {selectedModel.G0} Gauss
                   </text>
 
-                  {/* Conveyor Belt */}
-                  <rect
-                    x="150"
-                    y={90 + airGap * 1.5 + burdenDepth * 1.5}
-                    width="300"
-                    height="25"
-                    fill="#1f2937"
-                    stroke="#111827"
-                    strokeWidth="3"
-                  />
-                  <text 
-                    x="300" 
-                    y={90 + airGap * 1.5 + burdenDepth * 1.5 + 17} 
-                    textAnchor="middle" 
-                    fill="#9ca3af" 
-                    fontSize="12"
-                    fontWeight="bold"
-                  >
-                    CONVEYOR BELT
-                  </text>
-
-                  {/* Tramp Objects below belt */}
-                  {TRAMPS.map((tramp, idx) => {
-                    const status = getTrampStatus(tramp);
-                    const trampY = 90 + airGap * 1.5 + burdenDepth * 1.5 + 40;
-                    const trampX = 180 + idx * 70;
+                  {/* FIELD CONTOUR BANDS - Horizontal bands representing field decay */}
+                  {contourBands.map((band, idx) => {
+                    if (idx === contourBands.length - 1) return null;
+                    const nextBand = contourBands[idx + 1];
+                    const y1 = magnetHeight + band.depth * scale;
+                    const y2 = magnetHeight + nextBand.depth * scale;
+                    const bandHeight = y2 - y1;
+                    
                     return (
                       <g key={idx}>
-                        <rect
-                          x={trampX - 15}
-                          y={trampY - 15}
-                          width="30"
-                          height="30"
-                          fill={status.captured ? "#22c55e" : "#ef4444"}
-                          stroke="#fff"
-                          strokeWidth="2"
-                          rx="4"
+                        <motion.rect
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 0.4, height: bandHeight }}
+                          transition={{ duration: 0.5, delay: idx * 0.1 }}
+                          x="100"
+                          y={y1}
+                          width="400"
+                          height={bandHeight}
+                          fill={band.color}
+                          stroke="none"
                         />
-                        <text
-                          x={trampX}
-                          y={trampY}
-                          textAnchor="middle"
-                          fontSize="16"
-                          dominantBaseline="middle"
+                        {/* Field strength label on right */}
+                        <text 
+                          x="510" 
+                          y={y1 + bandHeight / 2 + 4} 
+                          fontSize="12" 
+                          fontWeight="bold" 
+                          fill={band.color}
                         >
-                          {tramp.icon}
-                        </text>
-                        <text
-                          x={trampX}
-                          y={trampY + 25}
-                          textAnchor="middle"
-                          fontSize="9"
-                          fill="#1e293b"
-                          fontWeight="bold"
-                        >
-                          {status.captured ? "✓ HELD" : "✗ MISSED"}
-                        </text>
-                        <text
-                          x={trampX}
-                          y={trampY + 35}
-                          textAnchor="middle"
-                          fontSize="8"
-                          fill="#64748b"
-                        >
-                          {status.fieldStrength}G
+                          {band.gauss} G
                         </text>
                       </g>
                     );
                   })}
 
-                  {/* Depth indicator on left side */}
-                  <line x1="170" y1="90" x2="170" y2={90 + airGap * 1.5 + burdenDepth * 1.5} stroke="#475569" strokeWidth="2" />
-                  <text x="160" y="85" textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
-                    0mm
+                  {/* AIR GAP ZONE */}
+                  <rect 
+                    x="100" 
+                    y={magnetHeight} 
+                    width="400" 
+                    height={airGap * scale} 
+                    fill="none" 
+                    stroke="#94a3b8" 
+                    strokeWidth="2" 
+                    strokeDasharray="6,4" 
+                  />
+                  <text x="105" y={magnetHeight + 15} fontSize="13" fontWeight="bold" fill="#475569">
+                    AIR GAP — {airGap}mm
                   </text>
-                  <text x="160" y={95 + airGap * 1.5} textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
-                    {airGap}mm
+                  <text x="105" y={magnetHeight + 30} fontSize="10" fill="#64748b">
+                    (No material resistance)
                   </text>
-                  <text x="160" y={95 + airGap * 1.5 + burdenDepth * 1.5} textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
-                    {airGap + burdenDepth}mm
+
+                  {/* BURDEN LAYER */}
+                  <rect 
+                    x="100" 
+                    y={magnetHeight + airGap * scale} 
+                    width="400" 
+                    height={burdenDepth * scale} 
+                    fill="#92400e" 
+                    fillOpacity="0.3" 
+                    stroke="#78350f" 
+                    strokeWidth="2" 
+                  />
+                  {/* Particle pattern */}
+                  {Array.from({ length: 50 }).map((_, i) => (
+                    <circle
+                      key={i}
+                      cx={110 + (i % 25) * 16}
+                      cy={magnetHeight + airGap * scale + 10 + Math.floor(i / 25) * (burdenDepth * scale * 0.4)}
+                      r="2"
+                      fill="#78350f"
+                      opacity="0.5"
+                    />
+                  ))}
+                  <text x="105" y={magnetHeight + airGap * scale + 15} fontSize="13" fontWeight="bold" fill="#78350f">
+                    MATERIAL BURDEN — {burdenDepth}mm
                   </text>
+
+                  {/* CONVEYOR BELT */}
+                  <rect 
+                    x="80" 
+                    y={magnetHeight + (airGap + burdenDepth) * scale} 
+                    width="440" 
+                    height={beltHeight} 
+                    fill="#1f2937" 
+                    stroke="#111827" 
+                    strokeWidth="3" 
+                  />
+                  <text 
+                    x="300" 
+                    y={magnetHeight + (airGap + burdenDepth) * scale + 14} 
+                    textAnchor="middle" 
+                    fill="#9ca3af" 
+                    fontSize="12" 
+                    fontWeight="bold"
+                  >
+                    CONVEYOR BELT
+                  </text>
+
+                  {/* TRAMP OBJECTS with threshold lines */}
+                  {TRAMPS.map((tramp, idx) => {
+                    const status = getTrampStatus(tramp);
+                    const trampY = magnetHeight + (airGap + burdenDepth) * scale + beltHeight + 30;
+                    const trampX = 150 + idx * 100;
+                    const trampDepth = airGap + burdenDepth;
+                    const thresholdDepthLine = magnetHeight + trampDepth * scale;
+
+                    return (
+                      <g key={idx}>
+                        {/* Threshold line - dashed horizontal line showing required field */}
+                        <line
+                          x1="100"
+                          y1={thresholdDepthLine}
+                          x2="500"
+                          y2={thresholdDepthLine}
+                          stroke={status.captured ? "#22c55e" : "#ef4444"}
+                          strokeWidth="1.5"
+                          strokeDasharray="4,3"
+                          opacity="0.6"
+                        />
+                        <text
+                          x="505"
+                          y={thresholdDepthLine + 4}
+                          fontSize="9"
+                          fill={status.captured ? "#22c55e" : "#ef4444"}
+                          fontWeight="bold"
+                        >
+                          {tramp.threshold}G req
+                        </text>
+
+                        {/* Tramp icon */}
+                        <rect
+                          x={trampX - 20}
+                          y={trampY - 20}
+                          width="40"
+                          height="40"
+                          fill={status.captured ? "#22c55e" : "#ef4444"}
+                          stroke="#fff"
+                          strokeWidth="3"
+                          rx="6"
+                          opacity={status.captured ? "0.9" : "0.7"}
+                        />
+                        <text
+                          x={trampX}
+                          y={trampY + 2}
+                          textAnchor="middle"
+                          fontSize="20"
+                          dominantBaseline="middle"
+                        >
+                          {tramp.icon}
+                        </text>
+                        
+                        {/* Status label */}
+                        <text
+                          x={trampX}
+                          y={trampY + 30}
+                          textAnchor="middle"
+                          fontSize="11"
+                          fill={status.captured ? "#166534" : "#991b1b"}
+                          fontWeight="bold"
+                        >
+                          {status.captured ? "✅ CAPTURED" : "⚠️ TOO DEEP"}
+                        </text>
+                        <text
+                          x={trampX}
+                          y={trampY + 44}
+                          textAnchor="middle"
+                          fontSize="10"
+                          fill="#64748b"
+                        >
+                          {tramp.name}
+                        </text>
+                        <text
+                          x={trampX}
+                          y={trampY + 56}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="#475569"
+                          fontWeight="bold"
+                        >
+                          Field: {status.fieldStrength}G
+                        </text>
+                      </g>
+                    );
+                  })}
                 </svg>
               </motion.div>
             </AnimatePresence>
 
-            {/* Color Legend */}
-            <div className="mt-4 p-4 border rounded-lg">
-              <h3 className="font-semibold mb-2 text-sm">Magnetic Field Intensity Legend</h3>
-              <div className="grid grid-cols-6 gap-2">
-                {gradientStops.map((stop, idx) => (
+            {/* Legend */}
+            <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+              <h3 className="font-semibold mb-3 text-sm">Field Intensity Decay (G = G₀e⁻ᵏᵈ)</h3>
+              <div className="grid grid-cols-7 gap-2">
+                {contourBands.map((band, idx) => (
                   <div key={idx} className="text-center">
                     <div
-                      className="h-6 rounded mb-1"
-                      style={{ backgroundColor: stop.color }}
+                      className="h-8 rounded mb-1 border"
+                      style={{ backgroundColor: band.color }}
                     />
-                    <div className="text-xs font-mono">{stop.gauss}G</div>
+                    <div className="text-xs font-mono font-bold">{band.gauss}G</div>
+                    <div className="text-xs text-muted-foreground">{Math.round(band.depth)}mm</div>
                   </div>
                 ))}
               </div>
