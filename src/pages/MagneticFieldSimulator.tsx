@@ -36,6 +36,11 @@ export default function MagneticFieldSimulator() {
   const [loading, setLoading] = useState(true);
   const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
   const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
+  
+  // Material stream properties
+  const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
+  const [density, setDensity] = useState(1.6); // t/m³
+  const [waterContent, setWaterContent] = useState(5); // %
 
   // Fetch magnet models from Supabase Edge function
   useEffect(() => {
@@ -89,16 +94,23 @@ export default function MagneticFieldSimulator() {
     );
   }
 
+  // Calculate material attenuation factor η
+  const eta = includeMaterialEffects 
+    ? 1 + (0.1 * density) + (0.02 * waterContent)
+    : 1;
+  
+  const effectiveK = selectedModel ? selectedModel.k * eta : 0;
+
   const calculateFieldStrength = (depth: number): number => {
-    return selectedModel.G0 * Math.exp(-selectedModel.k * depth);
+    return selectedModel.G0 * Math.exp(-effectiveK * depth);
   };
 
   const getTrampStatus = (tramp: TrampObject): { captured: boolean; fieldStrength: number; captureDepth: number } => {
     const depth = airGap + burdenDepth;
     const fieldStrength = calculateFieldStrength(depth);
-    // Calculate maximum depth where this tramp can be captured: d = ln(G₀/G_req) / k
+    // Calculate maximum depth where this tramp can be captured: d = ln(G₀/G_req) / (k × η)
     const captureDepth = tramp.threshold < selectedModel.G0 
-      ? Math.log(selectedModel.G0 / tramp.threshold) / selectedModel.k
+      ? Math.log(selectedModel.G0 / tramp.threshold) / effectiveK
       : 0;
     
     return {
@@ -131,8 +143,8 @@ export default function MagneticFieldSimulator() {
     let previousDepth = 0;
     sortedTrampObjects.forEach((tramp, idx) => {
       if (tramp.threshold < selectedModel.G0) {
-        // Calculate depth where field strength equals this tramp's threshold
-        const captureDepth = Math.log(selectedModel.G0 / tramp.threshold) / selectedModel.k;
+        // Calculate depth where field strength equals this tramp's threshold: d = ln(G₀/G_req) / (k × η)
+        const captureDepth = Math.log(selectedModel.G0 / tramp.threshold) / effectiveK;
         
         zones.push({
           tramp,
@@ -277,6 +289,12 @@ export default function MagneticFieldSimulator() {
                   <span className="text-muted-foreground">Decay Constant (k):</span>
                   <span className="font-mono">{selectedModel.k.toFixed(4)}</span>
                 </div>
+                {includeMaterialEffects && (
+                  <div className="flex justify-between border-t pt-2 mt-2">
+                    <span className="text-muted-foreground">Effective k × η:</span>
+                    <span className="font-mono font-bold text-orange-600">{effectiveK.toFixed(4)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -313,6 +331,72 @@ export default function MagneticFieldSimulator() {
                   Field at depth: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
                 </div>
               </div>
+            </div>
+
+            {/* Material Stream Effects */}
+            <div className="pt-4 border-t space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="material-effects" className="text-base font-semibold">
+                  Material Stream Effects
+                </Label>
+                <input
+                  id="material-effects"
+                  type="checkbox"
+                  checked={includeMaterialEffects}
+                  onChange={(e) => setIncludeMaterialEffects(e.target.checked)}
+                  className="h-4 w-4"
+                />
+              </div>
+              
+              {includeMaterialEffects && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="density">Bulk Density: {density.toFixed(1)} t/m³</Label>
+                    <Input
+                      id="density"
+                      type="range"
+                      min="0.8"
+                      max="3.0"
+                      step="0.1"
+                      value={density}
+                      onChange={(e) => setDensity(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Typical: Sand 1.6-1.9, Coal 1.2, Iron ore 2.5
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="water">Water Content: {waterContent}%</Label>
+                    <Input
+                      id="water"
+                      type="range"
+                      min="0"
+                      max="20"
+                      step="1"
+                      value={waterContent}
+                      onChange={(e) => setWaterContent(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Typical: Dry 2-4%, Moderate 5-8%, Wet 10-15%
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg space-y-1 border border-orange-200 dark:border-orange-800">
+                    <div className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                      Attenuation Factor: η = {eta.toFixed(3)}
+                    </div>
+                    <div className="text-xs text-orange-700 dark:text-orange-300">
+                      Effective decay: k × η = {(effectiveK * 1000).toFixed(2)} × 10⁻³
+                    </div>
+                    <div className="text-xs text-orange-700 dark:text-orange-300">
+                      Field reach reduced by {((eta - 1) * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
