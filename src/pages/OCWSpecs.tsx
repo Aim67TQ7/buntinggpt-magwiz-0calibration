@@ -372,33 +372,35 @@ export default function OCWSpecs() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Config</TableHead>
-                          <TableHead className="text-right">Ambient (°C)</TableHead>
-                          <TableHead className="text-right">Rise (°C)</TableHead>
-                          <TableHead className="text-right">Maximum (°C)</TableHead>
-                          <TableHead className="text-right">Expected (°C)</TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead className="text-right">A20</TableHead>
+                          <TableHead className="text-right">A30</TableHead>
+                          <TableHead className="text-right">A40</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         <TableRow>
-                          <TableCell className="font-medium">A</TableCell>
+                          <TableCell className="font-medium">Ambient (°C)</TableCell>
                           <TableCell className="text-right">{ocwData.ambient_temperature_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.temperature_rise_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.maximum_rise_A}</TableCell>
-                          <TableCell className="text-right">{ocwData.expected_rise_A?.toFixed(2)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">B</TableCell>
                           <TableCell className="text-right">{ocwData.ambient_temperature_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.temperature_rise_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.maximum_rise_B}</TableCell>
-                          <TableCell className="text-right">{ocwData.expected_rise_B?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{ocwData.ambient_temperature_C}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell className="font-medium">C</TableCell>
-                          <TableCell className="text-right">{ocwData.ambient_temperature_C}</TableCell>
+                          <TableCell className="font-medium">Rise (°C)</TableCell>
+                          <TableCell className="text-right">{ocwData.temperature_rise_A}</TableCell>
+                          <TableCell className="text-right">{ocwData.temperature_rise_B}</TableCell>
                           <TableCell className="text-right">{ocwData.temperature_rise_C}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Maximum (°C)</TableCell>
+                          <TableCell className="text-right">{ocwData.maximum_rise_A}</TableCell>
+                          <TableCell className="text-right">{ocwData.maximum_rise_B}</TableCell>
                           <TableCell className="text-right">{ocwData.maximum_rise_C}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Expected (°C)</TableCell>
+                          <TableCell className="text-right">{ocwData.expected_rise_A?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{ocwData.expected_rise_B?.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{ocwData.expected_rise_C?.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableBody>
