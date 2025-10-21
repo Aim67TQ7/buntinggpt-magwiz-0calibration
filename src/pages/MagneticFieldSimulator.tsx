@@ -156,17 +156,28 @@ export default function MagneticFieldSimulator() {
   const getTrampStatus = (tramp: TrampObject): { 
     probability: number; 
     fieldStrength: number; 
+    fieldAtCaptureDepth: number;
     captureDepth: number;
     status: 'captured' | 'partial' | 'missed';
+    effectiveThreshold: number;
   } => {
     const depth = airGap + burdenDepth;
-    const fieldStrength = calculateFieldStrength(depth);
+    const fieldAtBurdenSurface = calculateFieldStrength(depth);
     const probability = calculateCaptureProbability(depth, tramp.threshold);
     
     // Calculate maximum depth where this tramp can be captured: d = ln(G₀/G_req) / (k × η)
     const captureDepth = tramp.threshold < selectedModel.G0 
       ? Math.log(selectedModel.G0 / tramp.threshold) / effectiveK
       : 0;
+    
+    // Field strength at the capture depth should equal the threshold
+    const fieldAtCaptureDepth = calculateFieldStrength(captureDepth);
+    
+    // Calculate effective threshold accounting for material attenuation
+    // Higher η means stronger field needed at surface to achieve same field at depth
+    const effectiveThreshold = includeMaterialEffects 
+      ? Math.round(tramp.threshold * (1 + (eta - 1) * 0.5))
+      : tramp.threshold;
     
     let status: 'captured' | 'partial' | 'missed';
     if (probability >= 95) status = 'captured';
@@ -175,8 +186,10 @@ export default function MagneticFieldSimulator() {
     
     return {
       probability: Math.round(probability),
-      fieldStrength: Math.round(fieldStrength),
+      fieldStrength: Math.round(fieldAtBurdenSurface),
+      fieldAtCaptureDepth: Math.round(fieldAtCaptureDepth),
       captureDepth: Math.round(captureDepth),
+      effectiveThreshold,
       status
     };
   };
@@ -510,6 +523,14 @@ export default function MagneticFieldSimulator() {
                     status.status === 'partial' ? 'bg-yellow-100 dark:bg-yellow-950 border-yellow-500' :
                     'bg-red-100 dark:bg-red-950 border-red-500';
                   
+                  // Calculate material attenuation impact
+                  const attenuationImpact = includeMaterialEffects 
+                    ? `η = ${eta.toFixed(2)}×`
+                    : null;
+                  const etaColor = eta < 1.2 ? 'text-green-600 dark:text-green-400' :
+                                   eta < 1.5 ? 'text-yellow-600 dark:text-yellow-400' :
+                                   'text-red-600 dark:text-red-400';
+                  
                   return (
                     <div
                       key={tramp.name}
@@ -521,16 +542,21 @@ export default function MagneticFieldSimulator() {
                           <div>
                             <div className="font-medium text-sm">{tramp.name}</div>
                             <div className="text-xs text-muted-foreground">
-                              Limit: {status.captureDepth} mm @ {tramp.threshold} G
+                              Limit: {status.captureDepth} mm @ {status.fieldAtCaptureDepth} G
                             </div>
+                            {includeMaterialEffects && (
+                              <div className="text-xs font-semibold mt-0.5">
+                                Required: <span className={etaColor}>{status.effectiveThreshold} G</span> (with material)
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold">
                             {status.probability}%
                           </div>
-                          <div className="text-xs">
-                            {status.fieldStrength} G
+                          <div className="text-xs text-muted-foreground">
+                            Field at burden: {status.fieldStrength} G
                           </div>
                         </div>
                       </div>
@@ -547,10 +573,17 @@ export default function MagneticFieldSimulator() {
                         />
                       </div>
                       
-                      <div className="text-xs text-muted-foreground">
-                        {status.status === 'captured' && '✅ Highly likely to capture'}
-                        {status.status === 'partial' && '⚠️ Marginal capture zone'}
-                        {status.status === 'missed' && '❌ Field too weak'}
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          {status.status === 'captured' && '✅ Highly likely to capture'}
+                          {status.status === 'partial' && '⚠️ Marginal capture zone'}
+                          {status.status === 'missed' && '❌ Field too weak'}
+                        </div>
+                        {attenuationImpact && (
+                          <div className={`text-xs font-bold ${etaColor}`}>
+                            {attenuationImpact}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
