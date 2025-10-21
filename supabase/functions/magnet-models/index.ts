@@ -66,9 +66,9 @@ serve(async (req) => {
         name: `${unit.Prefix} OCW ${unit.Suffix}`,
         G0: G0,
         k: Math.max(0.003, Math.min(0.008, k)), // Clamp between 0.003 and 0.008
-        width: unit.Prefix || 300,
+        width: unit.width || 1000, // width field from BMR_Top is the magnet/belt width
         thickness: thickness,
-        beltWidth: unit.width || 1000,
+        beltWidth: unit.width || 1000, // Same as width for OCW units
         prefix: unit.Prefix,
         suffix: unit.Suffix,
         frame: unit.frame
