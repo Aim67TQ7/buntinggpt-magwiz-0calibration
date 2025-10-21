@@ -34,8 +34,8 @@ const TRAMPS: TrampObject[] = [
 
 export default function MagneticFieldSimulator() {
   const [selectedModel, setSelectedModel] = useState<MagnetModel>(MODELS[0]);
-  const [burdenDepth] = useState(50);
-  const [airGap] = useState(50);
+  const [burdenDepth, setBurdenDepth] = useState(50);
+  const [airGap, setAirGap] = useState(50);
 
   const calculateFieldStrength = (depth: number): number => {
     return selectedModel.G0 * Math.exp(-selectedModel.k * depth);
@@ -115,14 +115,38 @@ export default function MagneticFieldSimulator() {
                   <span className="text-muted-foreground">Decay Constant (k):</span>
                   <span className="font-mono">{selectedModel.k}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Air Gap:</span>
-                  <span className="font-mono">{airGap} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Burden Depth:</span>
-                  <span className="font-mono">{burdenDepth} mm</span>
-                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="font-semibold">Layer Configuration</h3>
+              <div>
+                <label htmlFor="airGap" className="text-sm text-muted-foreground">
+                  Air Gap (mm)
+                </label>
+                <input
+                  id="airGap"
+                  type="number"
+                  min="10"
+                  max="150"
+                  value={airGap}
+                  onChange={(e) => setAirGap(Math.max(10, Math.min(150, parseInt(e.target.value) || 10)))}
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label htmlFor="burdenDepth" className="text-sm text-muted-foreground">
+                  Burden Depth (mm)
+                </label>
+                <input
+                  id="burdenDepth"
+                  type="number"
+                  min="10"
+                  max="150"
+                  value={burdenDepth}
+                  onChange={(e) => setBurdenDepth(Math.max(10, Math.min(150, parseInt(e.target.value) || 10)))}
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                />
               </div>
             </div>
 
@@ -171,123 +195,172 @@ export default function MagneticFieldSimulator() {
                 transition={{ duration: 0.3 }}
               >
                 <svg
-                  viewBox="0 0 500 300"
-                  className="w-full border rounded-lg bg-slate-50 dark:bg-slate-900"
+                  viewBox="0 0 600 400"
+                  className="w-full border rounded-lg bg-gradient-to-b from-sky-100 to-amber-50 dark:from-slate-800 dark:to-slate-900"
                 >
                   <defs>
-                    <radialGradient id="fieldGradient" cx="50%" cy="0%" r="100%">
+                    <radialGradient id="fieldGradient" cx="50%" cy="10%" r="80%">
                       {gradientStops.map((stop, idx) => (
                         <stop
                           key={idx}
                           offset={`${stop.offset}%`}
                           stopColor={stop.color}
-                          stopOpacity={0.6}
+                          stopOpacity={0.5}
                         />
                       ))}
                     </radialGradient>
                   </defs>
 
-                  {/* Magnet (Top Block) */}
-                  <rect x="150" y="10" width="200" height="30" fill="#3b82f6" stroke="#1e40af" strokeWidth="2" />
-                  <text x="250" y="30" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">
-                    {selectedModel.name}
+                  {/* Title */}
+                  <text x="300" y="25" textAnchor="middle" fontSize="16" fontWeight="bold" fill="#1e293b">
+                    Cross-Section: Magnet → Air Gap → Material Burden → Belt → Tramp
                   </text>
 
-                  {/* Air Gap */}
-                  <rect x="150" y="40" width="200" height={airGap} fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1" />
-                  <text x="355" y="65" fontSize="10" fill="#64748b">
-                    Air Gap ({airGap}mm)
+                  {/* Magnet Block at Top */}
+                  <rect x="200" y="50" width="200" height="40" fill="#3b82f6" stroke="#1e3a8a" strokeWidth="3" rx="4" />
+                  <text x="300" y="73" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">
+                    🧲 {selectedModel.name}
+                  </text>
+                  <text x="300" y="88" textAnchor="middle" fill="white" fontSize="11">
+                    {selectedModel.G0} Gauss at surface
                   </text>
 
-                  {/* Burden Layer */}
-                  <rect
-                    x="150"
-                    y={40 + airGap}
-                    width="200"
-                    height={burdenDepth}
-                    fill="#a8a29e"
-                    stroke="#78716c"
-                    strokeWidth="1"
-                  />
-                  <text x="355" y={65 + airGap} fontSize="10" fill="#44403c">
-                    Burden ({burdenDepth}mm)
-                  </text>
-
-                  {/* Conveyor Belt */}
-                  <rect
-                    x="100"
-                    y={40 + airGap + burdenDepth}
-                    width="300"
-                    height="20"
-                    fill="#374151"
-                    stroke="#1f2937"
-                    strokeWidth="2"
-                  />
-
-                  {/* Magnetic Field Visualization */}
+                  {/* Magnetic Field Lines - radiating from magnet */}
                   <ellipse
-                    cx="250"
-                    cy="40"
-                    rx="150"
-                    ry="120"
+                    cx="300"
+                    cy="90"
+                    rx="220"
+                    ry={Math.max(150, airGap + burdenDepth + 60)}
                     fill="url(#fieldGradient)"
-                    opacity="0.7"
+                    opacity="0.8"
                   >
                     <animate
                       attributeName="ry"
-                      values="120;125;120"
+                      values={`${Math.max(150, airGap + burdenDepth + 60)};${Math.max(155, airGap + burdenDepth + 65)};${Math.max(150, airGap + burdenDepth + 60)}`}
                       dur="2s"
                       repeatCount="indefinite"
                     />
                   </ellipse>
 
-                  {/* Tramp Objects */}
-                  <TooltipProvider>
-                    {TRAMPS.map((tramp, idx) => {
-                      const status = getTrampStatus(tramp);
-                      return (
-                        <g key={idx}>
-                          <circle
-                            cx={tramp.x + 50}
-                            cy={40 + airGap + burdenDepth - 10}
-                            r="8"
-                            fill={status.captured ? "#22c55e" : "#ef4444"}
-                            stroke="white"
-                            strokeWidth="2"
-                          />
-                          <text
-                            x={tramp.x + 50}
-                            y={40 + airGap + burdenDepth - 7}
-                            textAnchor="middle"
-                            fontSize="10"
-                          >
-                            {tramp.icon}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </TooltipProvider>
+                  {/* Air Gap Zone */}
+                  <rect x="200" y="90" width="200" height={airGap * 1.5} fill="#bae6fd" fillOpacity="0.6" stroke="#0369a1" strokeWidth="2" strokeDasharray="4,4" />
+                  <text x="410" y={90 + (airGap * 1.5) / 2} fontSize="13" fontWeight="bold" fill="#0369a1">
+                    ← AIR GAP: {airGap}mm
+                  </text>
+                  <text x="205" y={90 + (airGap * 1.5) / 2} fontSize="10" fill="#0c4a6e">
+                    (No material resistance)
+                  </text>
 
-                  {/* Field Strength Indicator Lines */}
-                  {[0, 30, 60, 90, 120, 150].map((depth, idx) => {
-                    const gauss = Math.round(calculateFieldStrength(depth));
+                  {/* Burden Layer Zone */}
+                  <rect 
+                    x="200" 
+                    y={90 + airGap * 1.5} 
+                    width="200" 
+                    height={burdenDepth * 1.5} 
+                    fill="#92400e" 
+                    fillOpacity="0.7" 
+                    stroke="#78350f" 
+                    strokeWidth="2"
+                  />
+                  {/* Particle pattern in burden */}
+                  {Array.from({ length: 30 }).map((_, i) => (
+                    <circle
+                      key={i}
+                      cx={210 + (i % 10) * 20}
+                      cy={95 + airGap * 1.5 + Math.floor(i / 10) * (burdenDepth * 0.4)}
+                      r="2"
+                      fill="#451a03"
+                      opacity="0.4"
+                    />
+                  ))}
+                  <text x="410" y={90 + airGap * 1.5 + (burdenDepth * 1.5) / 2} fontSize="13" fontWeight="bold" fill="#78350f">
+                    ← BURDEN: {burdenDepth}mm
+                  </text>
+                  <text x="205" y={90 + airGap * 1.5 + (burdenDepth * 1.5) / 2} fontSize="10" fill="#fef3c7">
+                    (Material load)
+                  </text>
+
+                  {/* Conveyor Belt */}
+                  <rect
+                    x="150"
+                    y={90 + airGap * 1.5 + burdenDepth * 1.5}
+                    width="300"
+                    height="25"
+                    fill="#1f2937"
+                    stroke="#111827"
+                    strokeWidth="3"
+                  />
+                  <text 
+                    x="300" 
+                    y={90 + airGap * 1.5 + burdenDepth * 1.5 + 17} 
+                    textAnchor="middle" 
+                    fill="#9ca3af" 
+                    fontSize="12"
+                    fontWeight="bold"
+                  >
+                    CONVEYOR BELT
+                  </text>
+
+                  {/* Tramp Objects below belt */}
+                  {TRAMPS.map((tramp, idx) => {
+                    const status = getTrampStatus(tramp);
+                    const trampY = 90 + airGap * 1.5 + burdenDepth * 1.5 + 40;
+                    const trampX = 180 + idx * 70;
                     return (
                       <g key={idx}>
-                        <line
-                          x1="10"
-                          y1={40 + depth}
-                          x2="140"
-                          y2={40 + depth}
-                          stroke="#94a3b8"
-                          strokeWidth="1"
-                          strokeDasharray="3,3"
+                        <rect
+                          x={trampX - 15}
+                          y={trampY - 15}
+                          width="30"
+                          height="30"
+                          fill={status.captured ? "#22c55e" : "#ef4444"}
+                          stroke="#fff"
+                          strokeWidth="2"
+                          rx="4"
                         />
-                        <text x="15" y={42 + depth} fontSize="9" fill="#64748b">
-                          {depth}mm: {gauss}G
+                        <text
+                          x={trampX}
+                          y={trampY}
+                          textAnchor="middle"
+                          fontSize="16"
+                          dominantBaseline="middle"
+                        >
+                          {tramp.icon}
+                        </text>
+                        <text
+                          x={trampX}
+                          y={trampY + 25}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="#1e293b"
+                          fontWeight="bold"
+                        >
+                          {status.captured ? "✓ HELD" : "✗ MISSED"}
+                        </text>
+                        <text
+                          x={trampX}
+                          y={trampY + 35}
+                          textAnchor="middle"
+                          fontSize="8"
+                          fill="#64748b"
+                        >
+                          {status.fieldStrength}G
                         </text>
                       </g>
                     );
                   })}
+
+                  {/* Depth indicator on left side */}
+                  <line x1="170" y1="90" x2="170" y2={90 + airGap * 1.5 + burdenDepth * 1.5} stroke="#475569" strokeWidth="2" />
+                  <text x="160" y="85" textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
+                    0mm
+                  </text>
+                  <text x="160" y={95 + airGap * 1.5} textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
+                    {airGap}mm
+                  </text>
+                  <text x="160" y={95 + airGap * 1.5 + burdenDepth * 1.5} textAnchor="end" fontSize="10" fill="#475569" fontWeight="bold">
+                    {airGap + burdenDepth}mm
+                  </text>
                 </svg>
               </motion.div>
             </AnimatePresence>
