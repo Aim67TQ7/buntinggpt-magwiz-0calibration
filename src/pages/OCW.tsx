@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calculator, Waves, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator, Waves, Settings, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
@@ -81,28 +81,19 @@ interface OCWData {
   expected_rise_C?: number;
 }
 
-interface TrampMetal {
-  id: string;
-  name: string;
-  width: number;
-  length: number;
-  height: number;
+interface TrampMetalProfile {
+  value: string;
+  label: string;
+  description: string;
 }
 
-const STANDARD_TRAMP_METALS: Omit<TrampMetal, 'id'>[] = [
-  { name: "25mm Cube", width: 25, length: 25, height: 25 },
-  { name: "25mm Cube Alt 1", width: 19, length: 19, height: 6 },
-  { name: "25mm Cube Alt 2", width: 19, length: 6, height: 19 },
-  { name: "25mm Cube Alt 3", width: 6, length: 19, height: 19 },
-  { name: "M12 Nut", width: 24, length: 24, height: 75 },
-  { name: "M16x75mm Bolt", width: 24, length: 75, height: 24 },
-  { name: "M16x75mm Bolt Alt", width: 75, length: 24, height: 24 },
-  { name: "M18 Nut", width: 27, length: 27, height: 9 },
-  { name: "M18 Nut Alt 1", width: 27, length: 9, height: 27 },
-  { name: "M18 Nut Alt 2", width: 9, length: 27, height: 27 },
-  { name: "6mm Plate", width: 100, length: 100, height: 6 },
-  { name: "6mm Plate Alt 1", width: 100, length: 6, height: 100 },
-  { name: "6mm Plate Alt 2", width: 6, length: 100, height: 100 },
+const TRAMP_METAL_PROFILES: TrampMetalProfile[] = [
+  { value: "mining-general", label: "Mining - General", description: "Standard mining tramp: loader teeth, rebar, fasteners" },
+  { value: "mining-heavy", label: "Mining - Heavy", description: "Heavy duty: drill rods, crusher plates, large fasteners" },
+  { value: "quarry", label: "Quarry & Aggregates", description: "Screen hooks, blast fragments, bucket teeth" },
+  { value: "coal", label: "Coal Processing", description: "Roof bolts, cable wire, continuous miner picks" },
+  { value: "recycling", label: "Recycling", description: "Wire bundles, engine components, mixed ferrous" },
+  { value: "industrial", label: "Industrial", description: "Tools, fasteners, wear plates, cable pieces" },
 ];
 
 const OCW = () => {
@@ -132,7 +123,6 @@ const OCW = () => {
   const [isWindingOpen, setIsWindingOpen] = useState(false);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(false);
   
-  // Calculator inputs
   const [beltSpeed, setBeltSpeed] = useState<number>(2.5);
   const [beltWidth, setBeltWidth] = useState<number>(1200);
   const [feedDepth, setFeedDepth] = useState<number>(100);
@@ -143,9 +133,9 @@ const OCW = () => {
   const [bulkDensity, setBulkDensity] = useState<number>(1.8);
   const [waterContent, setWaterContent] = useState<number>(8);
   const [ambientTemp, setAmbientTemp] = useState<number>(25);
-  const [trampMetals, setTrampMetals] = useState<TrampMetal[]>([
-    { id: '1', name: "Custom", width: 50, length: 100, height: 25 }
-  ]);
+  const [minGauss, setMinGauss] = useState<string>("");
+  const [minForce, setMinForce] = useState<string>("");
+  const [trampMetalProfile, setTrampMetalProfile] = useState<string>("");
   const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
@@ -221,28 +211,6 @@ const OCW = () => {
     }
   };
 
-  const handleAddStandard = () => {
-    const newMetals = STANDARD_TRAMP_METALS.map((metal, index) => ({
-      ...metal,
-      id: `std-${Date.now()}-${index}`
-    }));
-    setTrampMetals([...trampMetals, ...newMetals]);
-    toast({
-      title: "Standard Shapes Added",
-      description: `Added ${STANDARD_TRAMP_METALS.length} standard tramp metal shapes.`,
-    });
-  };
-
-  const handleDeleteTrampMetal = (id: string) => {
-    setTrampMetals(trampMetals.filter(metal => metal.id !== id));
-  };
-
-  const handleUpdateTrampMetal = (id: string, field: 'width' | 'length' | 'height', value: number) => {
-    setTrampMetals(trampMetals.map(metal => 
-      metal.id === id ? { ...metal, [field]: value } : metal
-    ));
-  };
-
   const handleCalculate = async () => {
     setIsCalculating(true);
     try {
@@ -263,11 +231,15 @@ const OCW = () => {
       const minSuffix = Math.round((beltWidth * coreBeltRatio) / 10);
       const widthMin = beltWidth * 0.9;
       const widthMax = beltWidth * 1.2;
+      const minGaussNum = minGauss ? parseFloat(minGauss) : 0;
+      const minForceNum = minForce ? parseFloat(minForce) : 0;
       
       const filtered = data.filter((unit: any) => {
         const suffixMatch = unit.Suffix >= minSuffix;
         const widthMatch = unit.width >= widthMin && unit.width <= widthMax;
-        return suffixMatch && widthMatch;
+        const gaussMatch = minGaussNum === 0 || unit.surface_gauss >= minGaussNum;
+        const forceMatch = minForceNum === 0 || unit.force_factor >= minForceNum;
+        return suffixMatch && widthMatch && gaussMatch && forceMatch;
       });
       
       const sorted = filtered.sort((a: any, b: any) => {
@@ -303,7 +275,6 @@ const OCW = () => {
         bulkDensity,
         waterContent,
         ambientTemp,
-        trampMetals,
       });
       
       if (allRecommendations.length > 0) {
@@ -389,6 +360,54 @@ const OCW = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Required Parameters */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Required Parameters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="beltWidth" className="text-xs">Belt Width (mm)</Label>
+                    <Input id="beltWidth" type="number" value={beltWidth} onChange={(e) => setBeltWidth(parseFloat(e.target.value))} className="h-8" placeholder="1200" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="coreBeltRatio" className="text-xs">Core/Belt Ratio</Label>
+                    <Input id="coreBeltRatio" type="number" value={coreBeltRatio} onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))} step="0.01" min="0" max="1" className="h-8" placeholder="0.3" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="minGauss" className="text-xs">Min Gauss (optional)</Label>
+                    <Input id="minGauss" type="number" value={minGauss} onChange={(e) => setMinGauss(e.target.value)} className="h-8" placeholder="3000" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="minForce" className="text-xs">Min Force (optional)</Label>
+                    <Input id="minForce" type="number" value={minForce} onChange={(e) => setMinForce(e.target.value)} className="h-8" placeholder="500000" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="trampProfile" className="text-xs">Tramp Metal Extraction Profile</Label>
+                  <Select value={trampMetalProfile} onValueChange={setTrampMetalProfile}>
+                    <SelectTrigger id="trampProfile" className="h-8">
+                      <SelectValue placeholder="Select profile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRAMP_METAL_PROFILES.map((profile) => (
+                        <SelectItem key={profile.value} value={profile.value}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{profile.label}</span>
+                            <span className="text-xs text-muted-foreground">{profile.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Process Parameters */}
             <Card>
               <CardHeader className="pb-3">
@@ -400,10 +419,6 @@ const OCW = () => {
                   <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="beltWidth" className="text-xs">Belt Width (mm)</Label>
-                  <Input id="beltWidth" type="number" value={beltWidth} onChange={(e) => setBeltWidth(parseFloat(e.target.value))} className="h-8" />
-                </div>
-                <div className="space-y-1.5">
                   <Label htmlFor="feedDepth" className="text-xs">Feed Depth (mm)</Label>
                   <Input id="feedDepth" type="number" value={feedDepth} onChange={(e) => setFeedDepth(parseFloat(e.target.value))} className="h-8" />
                 </div>
@@ -411,35 +426,9 @@ const OCW = () => {
                   <Label htmlFor="throughput" className="text-xs">Throughput (TPH)</Label>
                   <Input id="throughput" type="number" value={throughput} onChange={(e) => setThroughput(parseFloat(e.target.value))} className="h-8" />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Magnet & Shape */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Magnet & Shape</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-3 pt-0">
                 <div className="space-y-1.5">
                   <Label htmlFor="magnetGap" className="text-xs">Magnet Gap (mm)</Label>
                   <Input id="magnetGap" type="number" value={magnetGap} onChange={(e) => setMagnetGap(parseFloat(e.target.value))} className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="coreBeltRatio" className="text-xs">Core:Belt Ratio</Label>
-                  <Input id="coreBeltRatio" type="number" value={coreBeltRatio} onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))} step="0.1" min="0" max="1" className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
-                  <Select value={magnetPosition} onValueChange={setMagnetPosition}>
-                    <SelectTrigger id="magnetPosition" className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="overhead">Overhead</SelectItem>
-                      <SelectItem value="inline">Inline</SelectItem>
-                      <SelectItem value="drum">Drum</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -465,37 +454,25 @@ const OCW = () => {
               </CardContent>
             </Card>
 
-            {/* Tramp Metal */}
+            {/* Magnet Position */}
             <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Tramp Metal (mm)</CardTitle>
-                <Button onClick={handleAddStandard} variant="outline" size="sm" className="h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Standards
-                </Button>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Magnet Configuration</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 space-y-2 max-h-40 overflow-y-auto">
-                {trampMetals.map((metal) => (
-                  <div key={metal.id} className="grid grid-cols-[1fr_auto] gap-2 p-2 border rounded-lg">
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">{metal.name}</Label>
-                      </div>
-                      <div className="space-y-1">
-                        <Input type="number" value={metal.width} onChange={(e) => handleUpdateTrampMetal(metal.id, 'width', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="W" />
-                      </div>
-                      <div className="space-y-1">
-                        <Input type="number" value={metal.length} onChange={(e) => handleUpdateTrampMetal(metal.id, 'length', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="L" />
-                      </div>
-                      <div className="space-y-1">
-                        <Input type="number" value={metal.height} onChange={(e) => handleUpdateTrampMetal(metal.id, 'height', parseFloat(e.target.value))} className="h-7 text-xs" placeholder="H" />
-                      </div>
-                    </div>
-                    <Button onClick={() => handleDeleteTrampMetal(metal.id)} variant="ghost" size="sm" className="h-7 w-7 p-0 self-end">
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
+              <CardContent className="space-y-3 pt-0">
+                <div className="space-y-1.5">
+                  <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
+                  <Select value={magnetPosition} onValueChange={setMagnetPosition}>
+                    <SelectTrigger id="magnetPosition" className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="overhead">Overhead</SelectItem>
+                      <SelectItem value="inline">Inline</SelectItem>
+                      <SelectItem value="drum">Drum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
           </div>
