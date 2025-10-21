@@ -2,319 +2,140 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot, Label as ChartLabel, ReferenceArea } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface DecayData {
+  gap: number;
   gauss: number;
-  distance: number;
-  cube200Req: number;
-  nut300Req: number;
-  bolt350Req: number;
-  nut400Req: number;
-  plate700Req: number;
-}
-
-interface TrampConfig {
-  name: string;
-  baseThreshold: number;
-  gainFactor: number;
-  color: string;
-  fillColor: string;
-  dataKey: string;
-}
-
-interface IntersectionPoint {
-  gauss: number;
-  distance: number;
-  name: string;
-  color: string;
+  forceFactor: number;
 }
 
 export default function MagneticDecay() {
   const location = useLocation();
-  const { model, gauss, force, feedDepth: initialFeedDepth = 50, magnetGap: initialMagnetGap = 50 } = location.state || { model: "Unknown", gauss: 2410, force: 0, feedDepth: 50, magnetGap: 50 };
-  
-  const [feedDepth, setFeedDepth] = useState<number>(initialFeedDepth);
-  const [magnetGap, setMagnetGap] = useState<number>(initialMagnetGap);
+  const { model, gauss: initialGauss, force: initialForce } = location.state || { 
+    model: "Unknown", 
+    gauss: 2410, 
+    force: 0 
+  };
 
-  // Tramp configurations with base thresholds and gain factors
-  const trampConfigs: TrampConfig[] = [
-    { name: "25mm Cube", baseThreshold: 200, gainFactor: 0.0045, color: "#22c55e", fillColor: "rgba(34, 197, 94, 0.3)", dataKey: "cube200Req" },
-    { name: "M12 Nut", baseThreshold: 300, gainFactor: 0.0050, color: "#eab308", fillColor: "rgba(234, 179, 8, 0.3)", dataKey: "nut300Req" },
-    { name: "M16×75 Bolt", baseThreshold: 350, gainFactor: 0.0053, color: "#f97316", fillColor: "rgba(249, 115, 22, 0.3)", dataKey: "bolt350Req" },
-    { name: "M18 Nut", baseThreshold: 400, gainFactor: 0.0055, color: "#f59e0b", fillColor: "rgba(245, 158, 11, 0.3)", dataKey: "nut400Req" },
-    { name: "6mm Plate", baseThreshold: 700, gainFactor: 0.0060, color: "#dc2626", fillColor: "rgba(220, 38, 38, 0.3)", dataKey: "plate700Req" }
-  ];
-
-  // Generate data with X = Distance, Y = Gauss
+  // Generate decay data with gap on X-axis and field strength on Y-axis
   const generateDecayData = (): DecayData[] => {
     const data: DecayData[] = [];
-    const maxDistance = 800;
+    const maxGap = 500;
     
-    // Generate points for each distance value
-    for (let distance = 0; distance <= maxDistance; distance += 10) {
-      // Calculate magnet field at this distance using decay formula
-      // G(x) = 2410 × (0.866)^(x/25)
-      const gaussAtDistance = gauss * Math.pow(0.866, distance / 25);
+    // Generate points for each gap value
+    for (let gap = 0; gap <= maxGap; gap += 10) {
+      // Calculate magnetic field at this gap using decay formula
+      // G(x) = G₀ × (0.866)^(x/25)
+      const gaussAtGap = initialGauss * Math.pow(0.866, gap / 25);
       
-      // Calculate tramp pickup requirements at this distance
-      // Requirement increases with distance: Req(x) = baseThreshold × e^(gainFactor × x)
-      const cube200Req = trampConfigs[0].baseThreshold * Math.exp(trampConfigs[0].gainFactor * distance);
-      const nut300Req = trampConfigs[1].baseThreshold * Math.exp(trampConfigs[1].gainFactor * distance);
-      const bolt350Req = trampConfigs[2].baseThreshold * Math.exp(trampConfigs[2].gainFactor * distance);
-      const nut400Req = trampConfigs[3].baseThreshold * Math.exp(trampConfigs[3].gainFactor * distance);
-      const plate700Req = trampConfigs[4].baseThreshold * Math.exp(trampConfigs[4].gainFactor * distance);
+      // Calculate force factor (normalized to initial force)
+      // Force decreases with field strength squared approximately
+      const forceFactor = initialForce > 0 
+        ? (gaussAtGap / initialGauss) * (gaussAtGap / initialGauss) 
+        : 0;
       
       data.push({
-        distance: distance,
-        gauss: Math.round(gaussAtDistance),
-        cube200Req: Math.round(cube200Req),
-        nut300Req: Math.round(nut300Req),
-        bolt350Req: Math.round(bolt350Req),
-        nut400Req: Math.round(nut400Req),
-        plate700Req: Math.round(plate700Req)
+        gap: gap,
+        gauss: Math.round(gaussAtGap),
+        forceFactor: Math.round(forceFactor * 100) / 100
       });
     }
     
     return data;
   };
 
-  // Find intersection points between magnet field and tramp requirements
-  const findIntersections = (data: DecayData[]): IntersectionPoint[] => {
-    const intersections: IntersectionPoint[] = [];
-    
-    trampConfigs.forEach((tramp) => {
-      for (let i = 1; i < data.length; i++) {
-        const prev = data[i - 1];
-        const curr = data[i];
-        const prevReq = prev[tramp.dataKey as keyof DecayData] as number;
-        const currReq = curr[tramp.dataKey as keyof DecayData] as number;
-        
-        // Check if magnet field crosses below the requirement curve
-        if (prev.gauss >= prevReq && curr.gauss < currReq) {
-          // Linear interpolation to find exact intersection
-          const ratio = (prev.gauss - prevReq) / ((prev.gauss - prevReq) - (curr.gauss - currReq));
-          const intersectDistance = prev.distance + ratio * (curr.distance - prev.distance);
-          const intersectGauss = prev.gauss + ratio * (curr.gauss - prev.gauss);
-          
-          intersections.push({
-            distance: Math.round(intersectDistance),
-            gauss: Math.round(intersectGauss),
-            name: tramp.name,
-            color: tramp.color
-          });
-          break;
-        }
-      }
-    });
-    
-    return intersections;
-  };
-
   const decayData = generateDecayData();
-  const intersections = findIntersections(decayData);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Magnetic Field Decay & Capture Zones</h1>
+        <h1 className="text-3xl font-bold mb-2">Magnetic Field Decay Analysis</h1>
         <p className="text-muted-foreground">
-          Model: <span className="font-semibold">{model}</span> | Initial Gauss: {gauss} | Initial Force: {force} | Ambient: 20°C
+          Model: <span className="font-semibold">{model}</span> | Initial Gauss: {initialGauss} G | Initial Force: {initialForce} N
         </p>
       </div>
-
-      {/* Feed Depth Input */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="feedDepth">Feed Depth (mm)</Label>
-              <Input
-                id="feedDepth"
-                type="number"
-                min="0"
-                max="800"
-                value={feedDepth}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 0;
-                  setFeedDepth(Math.max(0, Math.min(800, value)));
-                }}
-                className="mt-1"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Material burden depth on the belt
-              </p>
-            </div>
-            
-            <div>
-              <Label htmlFor="magnetGap">Magnet Gap (mm)</Label>
-              <Input
-                id="magnetGap"
-                type="number"
-                min="0"
-                max="800"
-                value={magnetGap}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 0;
-                  setMagnetGap(Math.max(0, Math.min(800, value)));
-                }}
-                className="mt-1"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Distance from feed surface to magnet face
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Chart and Table Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart - Takes 2 columns */}
-        <Card className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-white">Magnet Field Decay vs. Tramp Pickup Requirement – {model}</CardTitle>
+            <CardTitle>Magnetic Field Decay – {model}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={700}>
-              <LineChart data={decayData} margin={{ top: 20, right: 30, left: 60, bottom: 60 }}>
-                <defs>
-                  {/* Capture zone fills for each tramp type */}
-                  {trampConfigs.map((tramp, idx) => (
-                    <linearGradient key={`gradient-${idx}`} id={`fill-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={tramp.color} stopOpacity={0.4} />
-                      <stop offset="100%" stopColor={tramp.color} stopOpacity={0.2} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
+            <ResponsiveContainer width="100%" height={500}>
+              <LineChart data={decayData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.2)" />
                 
                 <XAxis 
-                  dataKey="gauss" 
-                  stroke="#fff"
-                  domain={[0, 2500]}
-                  type="number"
-                  label={{ value: 'Magnetic Field Strength (Gauss)', position: 'insideBottom', offset: -15, fill: '#fff', fontSize: 14 }}
+                  dataKey="gap"
+                  stroke="hsl(var(--foreground))"
+                  label={{ 
+                    value: 'Gap Distance (mm)', 
+                    position: 'insideBottom', 
+                    offset: -10, 
+                    style: { fill: 'hsl(var(--foreground))' }
+                  }}
                 />
                 
                 <YAxis 
-                  dataKey="distance"
-                  domain={[0, 800]}
-                  stroke="#fff"
-                  label={{ value: 'Gap Distance (mm)', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 14 }}
-                  tickFormatter={(value) => value.toLocaleString()}
-                />
-                
-                {/* Feed depth shaded zone */}
-                <ReferenceArea
-                  y1={0}
-                  y2={feedDepth}
-                  fill="#94a3b8"
-                  fillOpacity={0.25}
+                  yAxisId="left"
+                  stroke="hsl(var(--primary))"
                   label={{ 
-                    value: `Feed Depth: ${feedDepth}mm`, 
+                    value: 'Field Strength (Gauss)', 
+                    angle: -90, 
                     position: 'insideLeft',
-                    fill: '#fff',
-                    fontSize: 11,
-                    fontWeight: 'bold'
+                    style: { fill: 'hsl(var(--primary))' }
                   }}
                 />
                 
-                {/* Magnet gap shaded zone */}
-                <ReferenceArea
-                  y1={feedDepth}
-                  y2={feedDepth + magnetGap}
-                  fill="#f59e0b"
-                  fillOpacity={0.2}
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="hsl(var(--chart-2))"
                   label={{ 
-                    value: `Magnet Gap: ${magnetGap}mm`, 
-                    position: 'insideLeft',
-                    fill: '#fff',
-                    fontSize: 11,
-                    fontWeight: 'bold'
+                    value: 'Force Factor', 
+                    angle: 90, 
+                    position: 'insideRight',
+                    style: { fill: 'hsl(var(--chart-2))' }
                   }}
                 />
                 
-                {/* Capture zone shaded areas - where magnet field > tramp requirement */}
-                {trampConfigs.map((tramp, idx) => (
-                  <Area 
-                    key={`area-${idx}`}
-                    type="monotone" 
-                    dataKey={tramp.dataKey}
-                    fill={`url(#fill-${idx})`}
-                    stroke="none"
-                    fillOpacity={1}
-                  />
-                ))}
-                
-                {/* Tramp-specific requirement curves - dashed, rising with distance */}
-                {trampConfigs.map((tramp, idx) => (
-                  <Line 
-                    key={`line-${idx}`}
-                    type="monotone" 
-                    dataKey={tramp.dataKey}
-                    stroke={tramp.color} 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name={`${tramp.name} Pickup Req`}
-                    dot={false}
-                  />
-                ))}
-                
-                {/* Main magnet field decay curve - solid blue, decreasing with distance */}
+                {/* Gauss decay line */}
                 <Line 
+                  yAxisId="left"
                   type="monotone" 
                   dataKey="gauss" 
-                  stroke="#3b82f6" 
-                  strokeWidth={4}
-                  name="Magnet Field Decay"
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  name="Gauss"
                   dot={false}
                 />
                 
-                {/* Intersection points with labels */}
-                {intersections.map((point, idx) => (
-                  <ReferenceDot
-                    key={`intersection-${idx}`}
-                    x={point.gauss}
-                    y={point.distance}
-                    r={6}
-                    fill={point.color}
-                    stroke="#fff"
-                    strokeWidth={2}
-                  >
-                    <ChartLabel
-                      value={`${point.name}\n≈${point.distance} mm`}
-                      position="top"
-                      fill={point.color}
-                      fontSize={11}
-                      fontWeight="bold"
-                    />
-                  </ReferenceDot>
-                ))}
+                {/* Force factor line */}
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="forceFactor" 
+                  stroke="hsl(var(--chart-2))" 
+                  strokeWidth={3}
+                  name="Force Factor"
+                  dot={false}
+                  strokeDasharray="5 5"
+                />
                 
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff'
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
                   }}
-                  labelStyle={{ color: '#fbbf24', fontWeight: 'bold' }}
-                  formatter={(value: number, name: string) => {
-                    if (name === "Magnet Field Decay") return [`${value} G`, name];
-                    if (name.includes("Pickup Req")) return [`${value} G req`, name];
-                    return [value, name];
-                  }}
+                  labelFormatter={(value) => `Gap: ${value} mm`}
                 />
                 <Legend 
-                  wrapperStyle={{ color: '#fff', paddingTop: '20px' }}
-                  iconType="line"
-                  verticalAlign="bottom"
+                  verticalAlign="top"
+                  height={36}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -324,41 +145,28 @@ export default function MagneticDecay() {
         {/* Table - Takes 1 column */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Capture Zone Data</CardTitle>
+            <CardTitle>Decay Data Table</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Intersection Summary */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Pickup Distances:</h3>
-                {intersections.map((point, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm p-2 rounded" style={{ backgroundColor: point.color + '20' }}>
-                    <span className="font-medium" style={{ color: point.color }}>{point.name}</span>
-                    <span className="font-mono">{point.distance} mm @ {point.gauss} G</span>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Sample Data Table */}
-              <div className="max-h-[500px] overflow-y-auto">
-                <h3 className="font-semibold text-sm mb-2">Sample Data Points:</h3>
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background">
-                    <TableRow>
-                      <TableHead>Gauss</TableHead>
-                      <TableHead className="text-right">Distance (mm)</TableHead>
+            <div className="max-h-[500px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background">
+                  <TableRow>
+                    <TableHead>Gap (mm)</TableHead>
+                    <TableHead className="text-right">Gauss</TableHead>
+                    <TableHead className="text-right">Force</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {decayData.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{row.gap}</TableCell>
+                      <TableCell className="text-right">{row.gauss}</TableCell>
+                      <TableCell className="text-right">{row.forceFactor}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {decayData.filter((_, idx) => idx % 5 === 0).map((row, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{row.gauss}</TableCell>
-                        <TableCell className="text-right">{row.distance}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
