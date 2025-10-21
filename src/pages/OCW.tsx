@@ -498,11 +498,12 @@ const OCW = () => {
                     <div className="font-semibold text-sm">
                       {unit.Prefix} OCW {unit.Suffix}
                     </div>
-                    <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-3">
+                    <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-5 gap-x-3">
                       <span>Gauss: {unit.surface_gauss}</span>
                       <span>Force: {unit.force_factor}</span>
                       <span>Watts: {unit.watts}</span>
                       <span>Width: {unit.width}mm</span>
+                      <span>Frame: {unit.frame}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
