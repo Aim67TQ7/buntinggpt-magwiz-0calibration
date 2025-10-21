@@ -128,7 +128,7 @@ const OCW = () => {
   const [feedDepth, setFeedDepth] = useState<number>(100);
   const [throughput, setThroughput] = useState<number>(500);
   const [magnetGap, setMagnetGap] = useState<number>(150);
-  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.7);
+  const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.25);
   const [magnetPosition, setMagnetPosition] = useState<string>("overhead");
   const [bulkDensity, setBulkDensity] = useState<number>(1.8);
   const [waterContent, setWaterContent] = useState<number>(8);
