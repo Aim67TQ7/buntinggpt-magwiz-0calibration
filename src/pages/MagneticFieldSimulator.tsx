@@ -56,17 +56,54 @@ export default function MagneticFieldSimulator() {
         setModels(data.models);
         setTrampObjects(data.tramps);
         
-        // Check if we have state from OCW page
-        const state = location.state as { model?: string; beltWidth?: number; magnetDimension?: string } | null;
+        // Check if we have state from OCW page or context
+        const state = location.state as { 
+          model?: string; 
+          beltWidth?: number; 
+          magnetDimension?: string;
+          density?: number;
+          waterContent?: number;
+        } | null;
+        
         if (state?.model) {
-          const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
-          setSelectedModel(matchedModel || data.models[0]);
+          // First check if it's from the OCW recommendations list
+          const ocwUnit = recommendations.find(r => `${r.Prefix} OCW ${r.Suffix}` === state.model);
           
-          if (state.beltWidth) {
-            setOcwBeltWidth(state.beltWidth);
-          }
-          if (state.magnetDimension) {
-            setOcwMagnetDimension(state.magnetDimension);
+          if (ocwUnit) {
+            // Use OCW unit data
+            const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
+            setSelectedModel(matchedModel || data.models[0]);
+            setOcwBeltWidth(ocwUnit.width || state.beltWidth || null);
+            setOcwMagnetDimension(state.magnetDimension || `${ocwUnit.Prefix}x${ocwUnit.Suffix}x${ocwUnit.width}`);
+            
+            // Set material properties if available
+            if (ocwUnit.density || state.density) {
+              setDensity(ocwUnit.density || state.density || 1.6);
+              setIncludeMaterialEffects(true);
+            }
+            if (ocwUnit.waterContent || state.waterContent) {
+              setWaterContent(ocwUnit.waterContent || state.waterContent || 5);
+              setIncludeMaterialEffects(true);
+            }
+          } else {
+            // Standard model from BMR_magwiz
+            const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
+            setSelectedModel(matchedModel || data.models[0]);
+            
+            if (state.beltWidth) {
+              setOcwBeltWidth(state.beltWidth);
+            }
+            if (state.magnetDimension) {
+              setOcwMagnetDimension(state.magnetDimension);
+            }
+            if (state.density) {
+              setDensity(state.density);
+              setIncludeMaterialEffects(true);
+            }
+            if (state.waterContent) {
+              setWaterContent(state.waterContent);
+              setIncludeMaterialEffects(true);
+            }
           }
         } else {
           setSelectedModel(data.models[0]);
@@ -259,8 +296,36 @@ export default function MagneticFieldSimulator() {
               <Select
                 value={selectedModel.name}
                 onValueChange={(value) => {
-                  const model = models.find((m) => m.name === value);
-                  if (model) setSelectedModel(model);
+                  // Check if it's from OCW list
+                  const ocwUnit = recommendations.find(r => `${r.Prefix} OCW ${r.Suffix}` === value);
+                  
+                  if (ocwUnit) {
+                    // Find or create model for this OCW unit
+                    const model = models.find((m) => m.name === value);
+                    if (model) {
+                      setSelectedModel(model);
+                      setOcwBeltWidth(ocwUnit.width);
+                      setOcwMagnetDimension(`${ocwUnit.Prefix}x${ocwUnit.Suffix}x${ocwUnit.width}`);
+                      
+                      // Set material properties if available
+                      if (ocwUnit.density) {
+                        setDensity(ocwUnit.density);
+                        setIncludeMaterialEffects(true);
+                      }
+                      if (ocwUnit.waterContent) {
+                        setWaterContent(ocwUnit.waterContent);
+                        setIncludeMaterialEffects(true);
+                      }
+                    }
+                  } else {
+                    // Standard model
+                    const model = models.find((m) => m.name === value);
+                    if (model) {
+                      setSelectedModel(model);
+                      setOcwBeltWidth(null);
+                      setOcwMagnetDimension(null);
+                    }
+                  }
                 }}
               >
                 <SelectTrigger>

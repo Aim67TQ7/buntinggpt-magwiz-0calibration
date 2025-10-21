@@ -19,13 +19,8 @@ export const Navigation = () => {
     },
     {
       path: "/ocw",
-      label: "OCW Specs",
+      label: "OCW Selector",
       icon: Zap,
-    },
-    {
-      path: "/calculator",
-      label: "OCW Shape Extraction",
-      icon: Calculator,
     },
     {
       path: "/configurator",
