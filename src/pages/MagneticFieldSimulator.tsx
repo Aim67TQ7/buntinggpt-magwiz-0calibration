@@ -241,7 +241,7 @@ export default function MagneticFieldSimulator() {
                   id="airGap"
                   type="range"
                   min="10"
-                  max="100"
+                  max="500"
                   value={airGap}
                   onChange={(e) => setAirGap(parseInt(e.target.value))}
                   className="w-full"
@@ -253,7 +253,7 @@ export default function MagneticFieldSimulator() {
                   id="burdenDepth"
                   type="range"
                   min="10"
-                  max="100"
+                  max="500"
                   value={burdenDepth}
                   onChange={(e) => setBurdenDepth(parseInt(e.target.value))}
                   className="w-full"
