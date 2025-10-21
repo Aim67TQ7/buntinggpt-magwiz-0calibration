@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,34 +13,10 @@ interface MagnetModel {
   width: number;        // mm - magnet width
   thickness: number;    // mm - magnet thickness
   beltWidth: number;    // mm - recommended belt width
+  prefix?: number;
+  suffix?: number;
+  frame?: string;
 }
-
-const MAGNET_MODELS: MagnetModel[] = [
-  {
-    name: "55 OCW 25",
-    G0: 2410,
-    k: 0.0058,
-    width: 300,
-    thickness: 50,
-    beltWidth: 600
-  },
-  {
-    name: "80 OCW 25",
-    G0: 3707,
-    k: 0.0045,
-    width: 400,
-    thickness: 60,
-    beltWidth: 800
-  },
-  {
-    name: "100 OCW 25",
-    G0: 4200,
-    k: 0.0040,
-    width: 500,
-    thickness: 70,
-    beltWidth: 1000
-  }
-];
 
 const TRAMP_OBJECTS = [
   { name: "25mm Cube", threshold: 200, icon: "⬛" },
@@ -57,10 +34,50 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const modelName = url.searchParams.get('model');
+    
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch OCW data from BMR_Top table
+    const { data: ocwData, error: ocwError } = await supabase
+      .from('BMR_Top')
+      .select('*');
+
+    if (ocwError) {
+      console.error('Error fetching OCW data:', ocwError);
+      throw ocwError;
+    }
+
+    // Convert OCW data to MagnetModel format
+    const models: MagnetModel[] = (ocwData || []).map((unit: any) => {
+      // Estimate G0 from surface_gauss
+      const G0 = unit.surface_gauss || 2000;
+      
+      // Estimate k based on suffix (larger suffix = slower decay)
+      // Typical range: 0.003 to 0.008 for OCW units
+      const k = unit.Suffix ? 0.008 - (unit.Suffix / 10000) : 0.005;
+      
+      // Estimate thickness from suffix (suffix is roughly in mm)
+      const thickness = unit.Suffix || 50;
+      
+      return {
+        name: `${unit.Prefix} OCW ${unit.Suffix}`,
+        G0: G0,
+        k: Math.max(0.003, Math.min(0.008, k)), // Clamp between 0.003 and 0.008
+        width: unit.Prefix || 300,
+        thickness: thickness,
+        beltWidth: unit.width || 1000,
+        prefix: unit.Prefix,
+        suffix: unit.Suffix,
+        frame: unit.frame
+      };
+    });
 
     if (modelName) {
       // Return specific model
-      const model = MAGNET_MODELS.find(m => m.name === modelName);
+      const model = models.find(m => m.name === modelName);
       if (!model) {
         return new Response(
           JSON.stringify({ error: 'Model not found' }),
@@ -75,7 +92,7 @@ serve(async (req) => {
 
     // Return all models
     return new Response(
-      JSON.stringify({ models: MAGNET_MODELS, tramps: TRAMP_OBJECTS }),
+      JSON.stringify({ models, tramps: TRAMP_OBJECTS }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

@@ -20,6 +20,9 @@ interface MagnetModel {
   width: number;
   thickness: number;
   beltWidth: number;
+  prefix?: number;
+  suffix?: number;
+  frame?: string;
 }
 
 interface TrampObject {
@@ -383,6 +386,12 @@ export default function MagneticFieldSimulator() {
                     {ocwBeltWidth ? `${ocwBeltWidth} mm (OCW)` : `${selectedModel.beltWidth} mm`}
                   </span>
                 </div>
+                {selectedModel.frame && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Frame:</span>
+                    <span className="font-mono text-primary">{selectedModel.frame}</span>
+                  </div>
+                )}
                 {ocwMagnetDimension && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Magnet Dimension:</span>
