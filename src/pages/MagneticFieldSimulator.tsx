@@ -105,18 +105,39 @@ export default function MagneticFieldSimulator() {
     return selectedModel.G0 * Math.exp(-effectiveK * depth);
   };
 
-  const getTrampStatus = (tramp: TrampObject): { captured: boolean; fieldStrength: number; captureDepth: number } => {
+  // Calculate capture probability using field strength ratio
+  const calculateCaptureProbability = (depth: number, threshold: number, n: number = 1.8): number => {
+    const fieldStrength = calculateFieldStrength(depth);
+    const ratio = fieldStrength / threshold;
+    const probability = Math.min(1, Math.pow(ratio, n));
+    return probability * 100; // Return as percentage
+  };
+
+  const getTrampStatus = (tramp: TrampObject): { 
+    probability: number; 
+    fieldStrength: number; 
+    captureDepth: number;
+    status: 'captured' | 'partial' | 'missed';
+  } => {
     const depth = airGap + burdenDepth;
     const fieldStrength = calculateFieldStrength(depth);
+    const probability = calculateCaptureProbability(depth, tramp.threshold);
+    
     // Calculate maximum depth where this tramp can be captured: d = ln(G₀/G_req) / (k × η)
     const captureDepth = tramp.threshold < selectedModel.G0 
       ? Math.log(selectedModel.G0 / tramp.threshold) / effectiveK
       : 0;
     
+    let status: 'captured' | 'partial' | 'missed';
+    if (probability >= 95) status = 'captured';
+    else if (probability >= 50) status = 'partial';
+    else status = 'missed';
+    
     return {
-      captured: fieldStrength >= tramp.threshold && depth <= captureDepth,
+      probability: Math.round(probability),
       fieldStrength: Math.round(fieldStrength),
       captureDepth: Math.round(captureDepth),
+      status
     };
   };
 
@@ -404,23 +425,53 @@ export default function MagneticFieldSimulator() {
               <div className="space-y-2">
                 {trampObjects.map((tramp) => {
                   const status = getTrampStatus(tramp);
+                  const statusColor = 
+                    status.status === 'captured' ? 'bg-green-100 dark:bg-green-950 border-green-500' :
+                    status.status === 'partial' ? 'bg-yellow-100 dark:bg-yellow-950 border-yellow-500' :
+                    'bg-red-100 dark:bg-red-950 border-red-500';
+                  
                   return (
                     <div
                       key={tramp.name}
-                      className="flex items-center justify-between p-2 rounded border"
+                      className={`p-3 rounded-lg border-2 space-y-2 ${statusColor}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{tramp.icon}</span>
-                        <div>
-                          <div className="font-medium text-sm">{tramp.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Limit: {status.captureDepth} mm @ {tramp.threshold} G
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{tramp.icon}</span>
+                          <div>
+                            <div className="font-medium text-sm">{tramp.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Limit: {status.captureDepth} mm @ {tramp.threshold} G
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold">
+                            {status.probability}%
+                          </div>
+                          <div className="text-xs">
+                            {status.fieldStrength} G
                           </div>
                         </div>
                       </div>
-                      <Badge variant={status.captured ? "default" : "destructive"}>
-                        {status.captured ? "✅ In Zone" : "⚠️ Too Deep"}
-                      </Badge>
+                      
+                      {/* Progress bar */}
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            status.status === 'captured' ? 'bg-green-500' :
+                            status.status === 'partial' ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${status.probability}%` }}
+                        />
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        {status.status === 'captured' && '✅ Highly likely to capture'}
+                        {status.status === 'partial' && '⚠️ Marginal capture zone'}
+                        {status.status === 'missed' && '❌ Field too weak'}
+                      </div>
                     </div>
                   );
                 })}
@@ -822,15 +873,19 @@ export default function MagneticFieldSimulator() {
 
                     return (
                       <g key={idx}>
-                        {/* Capture zone indicator for this specific tramp */}
-                        {status.captured && (
+                        {/* Capture zone indicator for this specific tramp - opacity based on probability */}
+                        {status.probability >= 50 && (
                           <>
                             <circle
                               cx={trampX}
                               cy={trampY}
                               r="30"
-                              fill="#22c55e"
-                              opacity="0.15"
+                              fill={
+                                status.status === 'captured' ? '#22c55e' :
+                                status.status === 'partial' ? '#eab308' :
+                                '#ef4444'
+                              }
+                              opacity={status.probability / 300} // Scale opacity by probability
                             >
                               <animate
                                 attributeName="r"
@@ -845,7 +900,11 @@ export default function MagneticFieldSimulator() {
                               y1={trampY - 25}
                               x2={trampX}
                               y2={magnetHeight + (airGap + burdenDepth) * scale}
-                              stroke="#22c55e"
+                              stroke={
+                                status.status === 'captured' ? '#22c55e' :
+                                status.status === 'partial' ? '#eab308' :
+                                '#ef4444'
+                              }
                               strokeWidth="2"
                               strokeDasharray="4,2"
                               opacity="0.6"
@@ -858,11 +917,15 @@ export default function MagneticFieldSimulator() {
                           y={trampY - 24}
                           width="48"
                           height="48"
-                          fill={status.captured ? "#22c55e" : "#ef4444"}
+                          fill={
+                            status.status === 'captured' ? '#22c55e' :
+                            status.status === 'partial' ? '#eab308' :
+                            '#ef4444'
+                          }
                           stroke="#fff"
                           strokeWidth="3"
                           rx="8"
-                          opacity={status.captured ? "0.95" : "0.5"}
+                          opacity={status.probability >= 50 ? "0.95" : "0.5"}
                         />
                         <text
                           x={trampX}
@@ -879,10 +942,14 @@ export default function MagneticFieldSimulator() {
                           y={trampY + 38}
                           textAnchor="middle"
                           fontSize="11"
-                          fill={status.captured ? "#166534" : "#991b1b"}
+                          fill={
+                            status.status === 'captured' ? '#166534' :
+                            status.status === 'partial' ? '#854d0e' :
+                            '#991b1b'
+                          }
                           fontWeight="bold"
                         >
-                          {status.captured ? "✅ IN ZONE" : "⚠️ TOO DEEP"}
+                          {status.probability}%
                         </text>
                         <text
                           x={trampX}
