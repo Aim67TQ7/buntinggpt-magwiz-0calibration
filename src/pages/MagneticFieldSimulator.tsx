@@ -404,23 +404,9 @@ export default function MagneticFieldSimulator() {
                   <span className="text-muted-foreground">Magnet Thickness:</span>
                   <span className="font-mono">{selectedModel.thickness} mm</span>
                 </div>
-                <div>
-                  <Label htmlFor="beltWidth">Belt Width: {userBeltWidth} mm</Label>
-                  <Input
-                    id="beltWidth"
-                    type="number"
-                    min="400"
-                    max="3000"
-                    step="50"
-                    value={userBeltWidth}
-                    onChange={(e) => setUserBeltWidth(parseInt(e.target.value) || 1200)}
-                    className="w-full mt-1"
-                  />
-                  {ocwBeltWidth && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Reference from OCW: {ocwBeltWidth}mm
-                    </div>
-                  )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Belt Width:</span>
+                  <span className="font-mono">{userBeltWidth} mm</span>
                 </div>
                 {selectedModel.frame && (
                   <div className="flex justify-between">
