@@ -222,6 +222,15 @@ const Configurator = () => {
   const [recommendations, setRecommendations] = useState<OCWUnit[]>([]);
   const [isLoadingOCW, setIsLoadingOCW] = useState(false);
   
+  // BOM Pricing states
+  const [selectedPrefix, setSelectedPrefix] = useState<number | null>(null);
+  const [selectedSuffix, setSelectedSuffix] = useState<number | null>(null);
+  const [availablePrefixes, setAvailablePrefixes] = useState<number[]>([]);
+  const [availableSuffixes, setAvailableSuffixes] = useState<number[]>([]);
+  const [bomData, setBomData] = useState<any>(null);
+  const [isLoadingBOM, setIsLoadingBOM] = useState(false);
+  const [selectedBOMType, setSelectedBOMType] = useState<'OCW' | 'Suspension' | 'Overband'>('OCW');
+  
   // Tramp Metal Profile states
   const [isTrampMetalOpen, setIsTrampMetalOpen] = useState(false);
   const [trampMaterialStream, setTrampMaterialStream] = useState("sand");
@@ -272,6 +281,16 @@ const Configurator = () => {
         
         if (data) {
           setOcwUnits(data as unknown as OCWUnit[]);
+          
+          // Populate prefix and suffix dropdowns
+          const prefixSet = new Set<number>();
+          const suffixSet = new Set<number>();
+          data.forEach((unit: any) => {
+            prefixSet.add(unit.Prefix);
+            suffixSet.add(unit.Suffix);
+          });
+          setAvailablePrefixes(Array.from(prefixSet).sort((a, b) => a - b));
+          setAvailableSuffixes(Array.from(suffixSet).sort((a, b) => a - b));
         }
       } catch (error) {
         console.error('Error fetching OCW data:', error);
@@ -282,6 +301,96 @@ const Configurator = () => {
 
     fetchOCWData();
   }, []);
+
+  // Calculate BOM Pricing
+  const calculateBOMPricing = async (prefix: number, suffix: number, bomType: 'OCW' | 'Suspension' | 'Overband' = 'OCW') => {
+    setIsLoadingBOM(true);
+    try {
+      // 1. Get magnet data from BMR_magwiz
+      const { data: magwizData, error: magwizError } = await supabase
+        .from('BMR_magwiz' as any)
+        .select('*')
+        .eq('prefix', prefix)
+        .eq('suffix', suffix)
+        .maybeSingle();
+      
+      if (magwizError) throw magwizError;
+      if (!magwizData) {
+        console.error('No magwiz data found for', prefix, suffix);
+        setBomData(null);
+        return;
+      }
+      
+      // 2. Get BOM ID (3=OCW, 6=Suspension, 7=Overband)
+      const bomId = bomType === 'OCW' ? 3 : bomType === 'Suspension' ? 6 : 7;
+      
+      // 3. Get parts list for this BOM type
+      const { data: partsData, error: partsError } = await supabase
+        .from('BMR_parts' as any)
+        .select('id, name, amount, material, BMR_materials(name, cost_per_unit, density)')
+        .eq('bom', bomId);
+      
+      if (partsError) throw partsError;
+      
+      // 4. Calculate costs for each part
+      const partsCostBreakdown = partsData.map((part: any) => {
+        const partNameLower = part.name.toLowerCase();
+        let mass = 0;
+        
+        // Map part names to BMR_magwiz mass columns
+        if (partNameLower.includes('core') && !partNameLower.includes('backbar')) {
+          mass = (magwizData as any).core_mass || 0;
+        } else if (partNameLower.includes('winding')) {
+          mass = (magwizData as any).winding_mass || 0;
+        } else if (partNameLower.includes('backbar') && !partNameLower.includes('core')) {
+          mass = (magwizData as any).backbar_mass || 0;
+        } else if (partNameLower.includes('core') && partNameLower.includes('backbar')) {
+          mass = (magwizData as any).core_backbar_mass || 0;
+        } else if (partNameLower.includes('side pole')) {
+          mass = (magwizData as any).side_pole_mass || 0;
+        } else if (partNameLower.includes('sealing')) {
+          mass = parseFloat((magwizData as any).sealing_plate_mass) || 0;
+        } else if (partNameLower.includes('insulator')) {
+          mass = parseFloat((magwizData as any).core_insulator_mass) || 0;
+        } else if (partNameLower.includes('conservator')) {
+          mass = (magwizData as any).conservator_mass || 0;
+        } else if (partNameLower.includes('coolant')) {
+          mass = (magwizData as any).coolant_mass || 0;
+        }
+        
+        const materialCost = part.BMR_materials?.cost_per_unit || 0;
+        const quantity = part.amount || 1;
+        const totalCost = mass * materialCost * quantity;
+        
+        return {
+          partName: part.name,
+          material: part.BMR_materials?.name || 'Unknown',
+          mass,
+          quantity,
+          materialCost,
+          totalCost
+        };
+      });
+      
+      const totalMass = partsCostBreakdown.reduce((sum, part) => sum + part.mass, 0);
+      const totalCost = partsCostBreakdown.reduce((sum, part) => sum + part.totalCost, 0);
+      
+      setBomData({
+        prefix,
+        suffix,
+        bomType,
+        parts: partsCostBreakdown,
+        totalMass,
+        totalCost,
+        magwizData
+      });
+      
+    } catch (error) {
+      console.error('Error calculating BOM pricing:', error);
+    } finally {
+      setIsLoadingBOM(false);
+    }
+  };
 
   // Calculate OCW recommendations
   const calculateRecommendations = () => {
@@ -704,29 +813,144 @@ const Configurator = () => {
             </CardContent>
           </Card>
           
-          {/* Selected Material Summary */}
-          {selectedMaterial && (
-            <Card className="h-fit">
-              <CardHeader>
-                <CardTitle>Selected Material</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <h3 className="font-semibold mb-3">{selectedMaterial.name}</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><span className="font-medium">Density:</span> {selectedMaterial.density}</div>
-                    <div><span className="font-medium">Surcharge:</span> {selectedMaterial.surcharge}</div>
-                    <div><span className="font-medium">Moisture:</span> {selectedMaterial.moisture}</div>
-                    <div><span className="font-medium">Lumps:</span> {selectedMaterial.lumps}</div>
-                  </div>
-                  {selectedMaterial.notes && (
-                    <div><span className="font-medium">Notes:</span> {selectedMaterial.notes}</div>
-                  )}
+          {/* Manual Selection Card */}
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle>Or select manually:</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="space-y-2 flex-1">
+                  <Label>BMR Prefix</Label>
+                  <Select 
+                    value={selectedPrefix?.toString() || ""} 
+                    onValueChange={(value) => setSelectedPrefix(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="000" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePrefixes.map((prefix) => (
+                        <SelectItem key={prefix} value={prefix.toString()}>
+                          {prefix}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                
+                <span className="mt-8">-</span>
+                
+                <div className="space-y-2 flex-1">
+                  <Label>Suffix</Label>
+                  <Select 
+                    value={selectedSuffix?.toString() || ""} 
+                    onValueChange={(value) => setSelectedSuffix(parseInt(value))}
+                    disabled={!selectedPrefix}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="00" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSuffixes
+                        .filter(suffix => {
+                          if (!selectedPrefix) return true;
+                          return ocwUnits.some(unit => 
+                            unit.Prefix === selectedPrefix && unit.Suffix === suffix
+                          );
+                        })
+                        .map((suffix) => (
+                          <SelectItem key={suffix} value={suffix.toString()}>
+                            {suffix}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>BOM Type</Label>
+                <Select value={selectedBOMType} onValueChange={(value: any) => setSelectedBOMType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OCW">OCW</SelectItem>
+                    <SelectItem value="Suspension">Suspension</SelectItem>
+                    <SelectItem value="Overband">Overband</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button 
+                onClick={() => selectedPrefix && selectedSuffix && calculateBOMPricing(selectedPrefix, selectedSuffix, selectedBOMType)}
+                disabled={!selectedPrefix || !selectedSuffix || isLoadingBOM}
+                className="w-full"
+              >
+                Calculate BOM & Pricing
+              </Button>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* BOM Breakdown Card */}
+        {bomData && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>
+                BOM Breakdown: {bomData.prefix} OCW {bomData.suffix}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Total Mass</div>
+                    <div className="text-2xl font-bold">{bomData.totalMass.toFixed(2)} kg</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Total Cost</div>
+                    <div className="text-2xl font-bold">
+                      {bomData.totalCost > 0 ? `£${bomData.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'No pricing data'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-3 text-sm font-medium">Part</th>
+                        <th className="text-left p-3 text-sm font-medium">Material</th>
+                        <th className="text-right p-3 text-sm font-medium">Mass (kg)</th>
+                        <th className="text-right p-3 text-sm font-medium">Qty</th>
+                        <th className="text-right p-3 text-sm font-medium">Cost/Unit</th>
+                        <th className="text-right p-3 text-sm font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bomData.parts.map((part: any, index: number) => (
+                        <tr key={index} className="border-t">
+                          <td className="p-3 text-sm">{part.partName}</td>
+                          <td className="p-3 text-sm">{part.material}</td>
+                          <td className="p-3 text-sm text-right">{part.mass.toFixed(2)}</td>
+                          <td className="p-3 text-sm text-right">{part.quantity}</td>
+                          <td className="p-3 text-sm text-right">
+                            {part.materialCost > 0 ? `£${part.materialCost.toLocaleString('en-GB')}` : '-'}
+                          </td>
+                          <td className="p-3 text-sm text-right font-medium">
+                            {part.totalCost > 0 ? `£${part.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* OCW Recommendations Card */}
         {beltWidth && coreBeltRatio && recommendations.length === 0 && ocwUnits.length === 0 && !isLoadingOCW && (
