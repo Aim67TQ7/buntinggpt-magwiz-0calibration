@@ -855,80 +855,8 @@ export default function MagneticFieldSimulator() {
                     {selectedModel.G0} G · {selectedModel.width}×{selectedModel.thickness} mm
                   </text>
 
-                  {/* MAGNETIC FIELD COVERAGE AREA */}
-                  <defs>
-                    <linearGradient id="magneticFieldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
-                      <stop offset="40%" stopColor="#60a5fa" stopOpacity="0.4" />
-                      <stop offset="70%" stopColor="#93c5fd" stopOpacity="0.2" />
-                      <stop offset="100%" stopColor="#dbeafe" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
-                  
-                  <motion.path
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.8 }}
-                    d={(() => {
-                      // Create field coverage area from magnet to effective depth
-                      const fieldDepth = Math.min(totalDepthToShow, 200); // Show field up to 200mm or total depth
-                      const fieldBottomY = magnetHeight + fieldDepth * scale;
-                      
-                      // Start at magnet bottom left
-                      let path = `M ${magnetX} ${magnetHeight}`;
-                      
-                      // Expand outward as field extends down (field spreads out)
-                      const spreadFactor = 0.3; // How much field spreads horizontally per mm depth
-                      const fieldWidth = magnetWidth + (fieldDepth * spreadFactor);
-                      const fieldX = magnetX - (fieldDepth * spreadFactor) / 2;
-                      
-                      // Top edge (magnet bottom)
-                      path += ` L ${magnetX + magnetWidth} ${magnetHeight}`;
-                      
-                      // Right side expanding down - follow trough shape
-                      if (troughingAngle > 0) {
-                        // Right edge with trough
-                        const rightEdgeX = fieldX + fieldWidth;
-                        const maxRightX = Math.min(rightEdgeX, beltX + beltWidth);
-                        path += ` L ${maxRightX} ${fieldBottomY - edgeRise * 0.5}`;
-                        
-                        // Bottom following trough shape
-                        const bottomSteps = 40;
-                        for (let i = bottomSteps; i >= 0; i--) {
-                          const progress = i / bottomSteps;
-                          const x = fieldX + progress * fieldWidth;
-                          const clampedX = Math.max(beltX, Math.min(x, beltX + beltWidth));
-                          
-                          // Calculate Y based on trough profile
-                          const relX = clampedX - beltX;
-                          let troughOffset = 0;
-                          if (relX < leftEdgeWidth) {
-                            troughOffset = edgeRise * (relX / leftEdgeWidth) * 0.5;
-                          } else if (relX > leftEdgeWidth + centerWidth) {
-                            const ratio = (beltWidth - relX) / rightEdgeWidth;
-                            troughOffset = edgeRise * ratio * 0.5;
-                          } else {
-                            troughOffset = edgeRise * 0.5;
-                          }
-                          
-                          path += ` L ${clampedX} ${fieldBottomY - troughOffset}`;
-                        }
-                      } else {
-                        // Flat belt - simple expansion
-                        path += ` L ${fieldX + fieldWidth} ${fieldBottomY}`;
-                        path += ` L ${fieldX} ${fieldBottomY}`;
-                      }
-                      
-                      // Close path back to start
-                      path += ` Z`;
-                      return path;
-                    })()}
-                    fill="url(#magneticFieldGradient)"
-                    stroke="none"
-                  />
-
-                  {/* TRAMP CAPTURE ZONES - Layered by capture depth */}
-                  {captureZones.map((zone, idx) => {
+                  {/* TRAMP CAPTURE ZONES - Hidden per user request */}
+                  {false && captureZones.map((zone, idx) => {
                     const y1 = magnetHeight + zone.startDepth * scale;
                     const y2 = magnetHeight + Math.min(zone.endDepth, totalDepthToShow) * scale;
                     const zoneHeight = y2 - y1;
@@ -1235,8 +1163,8 @@ export default function MagneticFieldSimulator() {
                             
                             return pathD;
                           })()}
-                          fill="url(#burdenGradient)"
-                          stroke="#78350f"
+                          fill="#c084a1"
+                          stroke="#8b5a3c"
                           strokeWidth="2"
                         />
                         
