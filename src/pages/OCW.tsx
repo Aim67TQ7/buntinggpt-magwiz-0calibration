@@ -575,30 +575,6 @@ const OCW = () => {
         </Card>
       )}
 
-      {/* Manual Selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Or select manually:</span>
-        <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
-          <span className="text-sm font-medium">BMR</span>
-          <Select value={selectedPrefix?.toString()} onValueChange={value => setSelectedPrefix(Number(value))}>
-            <SelectTrigger className="w-16 h-8">
-              <SelectValue placeholder="000" />
-            </SelectTrigger>
-            <SelectContent>
-              {prefixes.map(prefix => <SelectItem key={prefix} value={prefix.toString()}>{prefix}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <span className="text-sm">-</span>
-          <Select value={selectedSuffix?.toString()} onValueChange={value => setSelectedSuffix(Number(value))} disabled={selectedPrefix === undefined}>
-            <SelectTrigger className="w-16 h-8">
-              <SelectValue placeholder="00" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableSuffixes.map(suffix => <SelectItem key={suffix} value={suffix.toString()}>{suffix}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
       {selectedRecord && (
         <>
