@@ -79,8 +79,8 @@ export default function MagneticFieldSimulator() {
             // Use OCW unit data
             const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
             setSelectedModel(matchedModel || data.models[0]);
-            setOcwBeltWidth(ocwUnit.width || state.beltWidth || null);
-            setUserBeltWidth(ocwUnit.width || state.beltWidth || 1200);
+      setOcwBeltWidth(ocwUnit.belt_width || state.beltWidth || null);
+      setUserBeltWidth(ocwUnit.belt_width || state.beltWidth || 1200);
             setOcwMagnetDimension(matchedModel?.magnetDimension || state.magnetDimension || null);
             
             // Set material properties if available
@@ -376,11 +376,19 @@ export default function MagneticFieldSimulator() {
                       <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Standard Models</div>
                     </>
                   )}
-                  {models.map((model) => (
-                    <SelectItem key={model.name} value={model.name}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
+              {models
+                .filter((model) => {
+                  // If we have recommendations, exclude models that are already in the recommendations list
+                  if (hasActiveList && recommendations.length > 0) {
+                    return !recommendations.some(ocw => `${ocw.Prefix} OCW ${ocw.Suffix}` === model.name);
+                  }
+                  return true;
+                })
+                .map((model) => (
+                  <SelectItem key={model.name} value={model.name}>
+                    {model.name}
+                  </SelectItem>
+                ))}
                 </SelectContent>
               </Select>
             </div>
