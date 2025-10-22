@@ -1,7 +1,1 @@
 project_id = "kqhvsdntzgxazcfxqemb"
-
-[functions.pcb-chat]
-verify_jwt = false
-
-[functions.magnet-models]
-verify_jwt = false
