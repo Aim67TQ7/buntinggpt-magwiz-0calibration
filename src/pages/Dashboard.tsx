@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 interface Quote {
   id: number;
@@ -51,7 +51,6 @@ interface BOMItem {
 }
 
 const Dashboard = () => {
-  const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
