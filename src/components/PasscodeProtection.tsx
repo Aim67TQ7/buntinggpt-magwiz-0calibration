@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Navigation } from '@/components/Navigation';
 
 interface PasscodeProtectionProps {
   children: React.ReactNode;
@@ -64,5 +65,10 @@ export const PasscodeProtection = ({ children }: PasscodeProtectionProps) => {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <Navigation />
+      {children}
+    </>
+  );
 };
