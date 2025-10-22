@@ -25,8 +25,8 @@ export default function MagneticDecay() {
     const data: DecayData[] = [];
     const maxGap = 500;
     
-    // Generate points for each gap value
-    for (let gap = 0; gap <= maxGap; gap += 10) {
+    // Generate points for each gap value in 25mm increments
+    for (let gap = 0; gap <= maxGap; gap += 25) {
       // Calculate magnetic field at this gap using decay formula
       // G(x) = G₀ × (0.866)^(x/25)
       const gaussAtGap = initialGauss * Math.pow(0.866, gap / 25);
