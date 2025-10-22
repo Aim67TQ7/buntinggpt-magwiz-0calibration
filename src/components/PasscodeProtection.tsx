@@ -64,5 +64,5 @@ export const PasscodeProtection = ({ children }: PasscodeProtectionProps) => {
     );
   }
 
-  return children;
+  return <>{children}</>;
 };
