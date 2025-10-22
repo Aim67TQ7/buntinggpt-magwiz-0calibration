@@ -1141,25 +1141,26 @@ export default function MagneticFieldSimulator() {
                         {/* Burden fill - realistic settled material shape */}
                         <path
                           d={(() => {
+                            const beltTopY = magnetHeight + airGap * scale;
                             const steps = 80;
                             let pathD = '';
                             
                             // Draw top surface curve (burden surface)
                             for (let i = 0; i <= steps; i++) {
                               const x = beltX + (i / steps) * beltWidth;
-                              const surfaceY = magnetHeight - calculateBurdenSurface(x);
+                              const surfaceY = beltTopY - calculateBurdenSurface(x);
                               pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
                             }
                             
                             // Draw right edge down to belt surface
-                            pathD += `L ${beltX + beltWidth},${magnetHeight - edgeRise} `;
+                            pathD += `L ${beltX + beltWidth},${beltTopY - edgeRise} `;
                             
                             // Draw bottom following belt trough profile
-                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${magnetHeight} `;
-                            pathD += `L ${beltX + leftEdgeWidth},${magnetHeight} `;
+                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${beltTopY} `;
+                            pathD += `L ${beltX + leftEdgeWidth},${beltTopY} `;
                             
                             // Draw left edge back up
-                            pathD += `L ${beltX},${magnetHeight - edgeRise} Z`;
+                            pathD += `L ${beltX},${beltTopY - edgeRise} Z`;
                             
                             return pathD;
                           })()}
