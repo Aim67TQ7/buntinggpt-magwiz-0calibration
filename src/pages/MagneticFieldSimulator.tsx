@@ -855,8 +855,8 @@ export default function MagneticFieldSimulator() {
                     {selectedModel.G0} G · {selectedModel.width}×{selectedModel.thickness} mm
                   </text>
 
-                  {/* TRAMP CAPTURE ZONES - Hidden per user request */}
-                  {false && captureZones.map((zone, idx) => {
+                  {/* TRAMP CAPTURE ZONES - Layered by capture depth */}
+                  {captureZones.map((zone, idx) => {
                     const y1 = magnetHeight + zone.startDepth * scale;
                     const y2 = magnetHeight + Math.min(zone.endDepth, totalDepthToShow) * scale;
                     const zoneHeight = y2 - y1;
@@ -1138,61 +1138,47 @@ export default function MagneticFieldSimulator() {
                           </radialGradient>
                         </defs>
                         
-                        {/* Burden fill - realistic settled material shape */}
+                        {/* Burden fill - constrained to magnet width only */}
                         <path
                           d={(() => {
                             const steps = 80;
                             let pathD = '';
                             
-                            // Draw top surface curve (burden surface)
+                            // Constrain burden to magnet width only (not full belt)
+                            const burdenStartX = magnetX;
+                            const burdenEndX = magnetX + magnetWidth;
+                            const burdenWidth = magnetWidth;
+                            
+                            // Draw top surface curve (burden surface) - only over magnet
                             for (let i = 0; i <= steps; i++) {
-                              const x = beltX + (i / steps) * beltWidth;
+                              const x = burdenStartX + (i / steps) * burdenWidth;
                               const surfaceY = magnetHeight - calculateBurdenSurface(x);
                               pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
                             }
                             
-                            // Draw right edge down to belt surface
-                            pathD += `L ${beltX + beltWidth},${magnetHeight - edgeRise} `;
+                            // Draw right edge straight down to belt
+                            pathD += `L ${burdenEndX},${magnetHeight} `;
                             
-                            // Draw bottom following belt trough profile
-                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${magnetHeight} `;
-                            pathD += `L ${beltX + leftEdgeWidth},${magnetHeight} `;
+                            // Draw bottom line back to left
+                            pathD += `L ${burdenStartX},${magnetHeight} `;
                             
-                            // Draw left edge back up
-                            pathD += `L ${beltX},${magnetHeight - edgeRise} Z`;
+                            // Close path
+                            pathD += `Z`;
                             
                             return pathD;
                           })()}
                           fill="#c084a1"
+                          fillOpacity="1"
                           stroke="#8b5a3c"
                           strokeWidth="2"
                         />
                         
-                        {/* Burden surface line for clarity */}
-                        <path
-                          d={(() => {
-                            const beltTopY = magnetHeight + airGap * scale;
-                            const steps = 60;
-                            let pathD = '';
-                            
-                            for (let i = 0; i <= steps; i++) {
-                              const x = beltX + (i / steps) * beltWidth;
-                              const surfaceY = beltTopY - calculateBurdenSurface(x);
-                              pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
-                            }
-                            
-                            return pathD;
-                          })()}
-                          fill="none"
-                          stroke="#92400e"
-                          strokeWidth="3"
-                          opacity="0.8"
-                        />
+                        {/* Burden surface line removed - solid fill is sufficient */}
                       </>
                     )}
                     
-                    {/* Material particles following realistic burden surface */}
-                    {burdenDepth > 0 && Array.from({ length: 100 }).map((_, i) => {
+                    {/* Material particles - hidden to keep burden solid */}
+                    {false && burdenDepth > 0 && Array.from({ length: 100 }).map((_, i) => {
                       const col = i % 50;
                       const row = Math.floor(i / 50);
                       const xPos = beltX + 20 + col * (beltWidth / 50);
