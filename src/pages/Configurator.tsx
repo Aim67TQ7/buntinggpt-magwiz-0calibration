@@ -327,12 +327,25 @@ const Configurator = () => {
       // 3. Get parts list for this BOM type
       const { data: partsData, error: partsError } = await supabase
         .from('BMR_parts' as any)
-        .select('id, name, amount, material, BMR_materials(name, cost_per_unit, density)')
+        .select('id, name, amount, material')
         .eq('bom', bomId);
       
       if (partsError) throw partsError;
       
-      // 4. Calculate costs for each part
+      // 4. Get materials data
+      const { data: materialsData, error: materialsError } = await supabase
+        .from('BMR_materials' as any)
+        .select('id, name, cost_per_unit, density');
+      
+      if (materialsError) throw materialsError;
+      
+      // Create a map of materials by id
+      const materialsMap = new Map();
+      materialsData?.forEach((mat: any) => {
+        materialsMap.set(mat.id, mat);
+      });
+      
+      // 5. Calculate costs for each part
       const partsCostBreakdown = partsData.map((part: any) => {
         const partNameLower = part.name.toLowerCase();
         let mass = 0;
@@ -358,13 +371,15 @@ const Configurator = () => {
           mass = (magwizData as any).coolant_mass || 0;
         }
         
-        const materialCost = part.BMR_materials?.cost_per_unit || 0;
+        // Get material info from the map
+        const material = materialsMap.get(part.material);
+        const materialCost = material?.cost_per_unit || 0;
         const quantity = part.amount || 1;
         const totalCost = mass * materialCost * quantity;
         
         return {
           partName: part.name,
-          material: part.BMR_materials?.name || 'Unknown',
+          material: material?.name || 'Unknown',
           mass,
           quantity,
           materialCost,
