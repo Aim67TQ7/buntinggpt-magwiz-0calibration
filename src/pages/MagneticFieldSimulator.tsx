@@ -337,13 +337,13 @@ export default function MagneticFieldSimulator() {
   
   // Helper function to calculate burden surface curve
   const calculateBurdenSurface = (xPosition: number): number => {
-    // Returns Y offset from belt top at given X position
+    // Returns Y offset (in pixels) from belt top at given X position
     const relX = xPosition - beltX;
     const beltCenter = beltWidth / 2;
     
     if (burdenDepth === 0) return 0;
     
-    // Calculate how deep the burden goes at this X position based on trough shape
+    // Calculate how deep the burden goes at this X position based on trough shape (in pixels)
     let troughDepthAtX = 0;
     if (troughingAngle > 0) {
       if (relX < leftEdgeWidth) {
@@ -365,19 +365,20 @@ export default function MagneticFieldSimulator() {
       // Ellipse filling trough bottom
       const distFromCenter = Math.abs(relX - beltCenter);
       const maxRadius = beltWidth / 2;
-      if (distFromCenter > maxRadius) return troughDepthAtX / scale;
+      if (distFromCenter > maxRadius) return troughDepthAtX;
       
       const ellipseDepth = burdenDepth * scale * Math.sqrt(1 - Math.pow(distFromCenter / maxRadius, 2));
       return troughDepthAtX + ellipseDepth;
     } else {
       // Burden fills trough and rises above
+      const troughDepthInPixels = troughDepth * scale;
       const overflow = (burdenDepth - troughDepth) * scale;
       const distFromCenter = Math.abs(relX - beltCenter);
       const maxRadius = beltWidth / 2;
       
-      // Create dome shape for overflow
+      // Create dome shape for overflow above trough
       const domeHeight = overflow * (1 - Math.pow(distFromCenter / maxRadius, 1.5));
-      return troughDepthAtX + overflow + Math.max(0, domeHeight * 0.3);
+      return troughDepthAtX + troughDepthInPixels + Math.max(0, domeHeight * 0.3);
     }
   };
 
@@ -1140,26 +1141,25 @@ export default function MagneticFieldSimulator() {
                         {/* Burden fill - realistic settled material shape */}
                         <path
                           d={(() => {
-                            const beltTopY = magnetHeight + airGap * scale;
                             const steps = 80;
                             let pathD = '';
                             
                             // Draw top surface curve (burden surface)
                             for (let i = 0; i <= steps; i++) {
                               const x = beltX + (i / steps) * beltWidth;
-                              const surfaceY = beltTopY - calculateBurdenSurface(x);
+                              const surfaceY = magnetHeight - calculateBurdenSurface(x);
                               pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
                             }
                             
-                            // Draw right edge following trough
-                            pathD += `L ${beltX + beltWidth},${beltTopY - edgeRise} `;
+                            // Draw right edge down to belt surface
+                            pathD += `L ${beltX + beltWidth},${magnetHeight - edgeRise} `;
                             
-                            // Draw bottom following trough profile
-                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${beltTopY} `;
-                            pathD += `L ${beltX + leftEdgeWidth},${beltTopY} `;
+                            // Draw bottom following belt trough profile
+                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${magnetHeight} `;
+                            pathD += `L ${beltX + leftEdgeWidth},${magnetHeight} `;
                             
-                            // Draw left edge
-                            pathD += `L ${beltX},${beltTopY - edgeRise} Z`;
+                            // Draw left edge back up
+                            pathD += `L ${beltX},${magnetHeight - edgeRise} Z`;
                             
                             return pathD;
                           })()}
