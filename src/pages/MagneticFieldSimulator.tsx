@@ -42,7 +42,7 @@ export default function MagneticFieldSimulator() {
   const [loading, setLoading] = useState(true);
   const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
   const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
-  const [beltIncline, setBeltIncline] = useState(0); // degrees, 0-30
+  const [troughingAngle, setTroughingAngle] = useState(20); // degrees, typically 20-45
   
   // Material stream properties
   const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
@@ -274,9 +274,13 @@ export default function MagneticFieldSimulator() {
   const magnetX = (svgWidth - magnetWidth) / 2 - 50; // -50 to account for left margin
   const beltX = (svgWidth - beltWidth) / 2 - 50;
   
-  // Calculate rotation origin for belt incline
-  const beltRotationX = beltX + beltWidth / 2;
-  const beltRotationY = magnetHeight;
+  // Calculate troughing geometry
+  const leftEdgeWidth = beltWidth * 0.2;
+  const centerWidth = beltWidth * 0.6;
+  const rightEdgeWidth = beltWidth * 0.2;
+  const edgeRise = troughingAngle > 0 
+    ? (leftEdgeWidth * Math.tan(troughingAngle * Math.PI / 180)) 
+    : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -453,17 +457,20 @@ export default function MagneticFieldSimulator() {
                 />
               </div>
               <div>
-                <Label htmlFor="beltIncline">Belt Incline: {beltIncline}°</Label>
+                <Label htmlFor="troughingAngle">Belt Troughing Angle: {troughingAngle}°</Label>
                 <Input
-                  id="beltIncline"
+                  id="troughingAngle"
                   type="range"
                   min="0"
-                  max="30"
-                  step="1"
-                  value={beltIncline}
-                  onChange={(e) => setBeltIncline(parseInt(e.target.value))}
+                  max="45"
+                  step="5"
+                  value={troughingAngle}
+                  onChange={(e) => setTroughingAngle(parseInt(e.target.value))}
                   className="w-full"
                 />
+                <div className="text-xs text-muted-foreground mt-1">
+                  Common: 20° (shallow), 35° (standard), 45° (deep)
+                </div>
               </div>
               <div className="p-3 bg-muted rounded-md">
                 <div className="text-sm font-semibold">Total Depth to Tramps:</div>
@@ -867,19 +874,82 @@ export default function MagneticFieldSimulator() {
                     );
                   })}
 
-                  {/* AIR GAP + BURDEN DEPTH INDICATOR - with rotation */}
-                  <g transform={`rotate(${beltIncline}, ${beltRotationX}, ${beltRotationY})`}>
-                    {/* Air gap zone */}
-                    <rect 
-                      x={beltX} 
-                      y={magnetHeight} 
-                      width={beltWidth} 
-                      height={airGap * scale} 
-                      fill="none" 
-                      stroke="#0ea5e9" 
-                      strokeWidth="3" 
-                      strokeDasharray="8,4" 
-                    />
+                  {/* AIR GAP - Troughed Belt Profile */}
+                  <g>
+                    {/* Air gap zone - troughed profile */}
+                    {troughingAngle > 0 ? (
+                      <polygon
+                        points={`
+                          ${beltX},${magnetHeight - edgeRise}
+                          ${beltX + leftEdgeWidth},${magnetHeight}
+                          ${beltX + leftEdgeWidth + centerWidth},${magnetHeight}
+                          ${beltX + beltWidth},${magnetHeight - edgeRise}
+                          ${beltX + beltWidth},${magnetHeight + airGap * scale}
+                          ${beltX + leftEdgeWidth + centerWidth},${magnetHeight + airGap * scale}
+                          ${beltX + leftEdgeWidth},${magnetHeight + airGap * scale}
+                          ${beltX},${magnetHeight + airGap * scale}
+                        `}
+                        fill="none"
+                        stroke="#0ea5e9"
+                        strokeWidth="3"
+                        strokeDasharray="8,4"
+                      />
+                    ) : (
+                      <rect 
+                        x={beltX} 
+                        y={magnetHeight} 
+                        width={beltWidth} 
+                        height={airGap * scale} 
+                        fill="none" 
+                        stroke="#0ea5e9" 
+                        strokeWidth="3" 
+                        strokeDasharray="8,4" 
+                      />
+                    )}
+                    
+                    {/* Trough edge indicators */}
+                    {troughingAngle > 0 && (
+                      <>
+                        {/* Left edge angle line */}
+                        <line
+                          x1={beltX}
+                          y1={magnetHeight - edgeRise}
+                          x2={beltX + leftEdgeWidth}
+                          y2={magnetHeight}
+                          stroke="#3b82f6"
+                          strokeWidth="4"
+                        />
+                        {/* Right edge angle line */}
+                        <line
+                          x1={beltX + leftEdgeWidth + centerWidth}
+                          y1={magnetHeight}
+                          x2={beltX + beltWidth}
+                          y2={magnetHeight - edgeRise}
+                          stroke="#3b82f6"
+                          strokeWidth="4"
+                        />
+                        {/* Left angle indicator */}
+                        <path
+                          d={`M ${beltX + 30} ${magnetHeight - edgeRise} 
+                              L ${beltX + 30} ${magnetHeight}
+                              L ${beltX + leftEdgeWidth} ${magnetHeight}`}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="1.5"
+                          strokeDasharray="3,3"
+                        />
+                        <text
+                          x={beltX + 40}
+                          y={magnetHeight - edgeRise / 2}
+                          fontSize="11"
+                          fill="#3b82f6"
+                          fontWeight="bold"
+                        >
+                          {troughingAngle}°
+                        </text>
+                      </>
+                    )}
+                    
                     <text 
                       x={beltX - 180} 
                       y={magnetHeight + (airGap * scale) / 2 + 5} 
@@ -890,28 +960,54 @@ export default function MagneticFieldSimulator() {
                       Air Gap: {airGap}mm →
                     </text>
 
-                    {/* Burden depth zone */}
-                    <rect 
-                      x={beltX} 
-                      y={magnetHeight + airGap * scale} 
-                      width={beltWidth} 
-                      height={burdenDepth * scale} 
-                      fill="#92400e" 
-                      fillOpacity="0.25" 
-                      stroke="#78350f" 
-                      strokeWidth="3" 
+                    {/* Burden depth zone - follows trough profile */}
+                    <polygon
+                      points={`
+                        ${beltX},${magnetHeight + airGap * scale - edgeRise}
+                        ${beltX + leftEdgeWidth},${magnetHeight + airGap * scale}
+                        ${beltX + leftEdgeWidth + centerWidth},${magnetHeight + airGap * scale}
+                        ${beltX + beltWidth},${magnetHeight + airGap * scale - edgeRise}
+                        ${beltX + beltWidth},${magnetHeight + (airGap + burdenDepth) * scale}
+                        ${beltX},${magnetHeight + (airGap + burdenDepth) * scale}
+                      `}
+                      fill="#92400e"
+                      fillOpacity="0.25"
+                      stroke="#78350f"
+                      strokeWidth="3"
                     />
-                    {/* Material particles in burden */}
-                    {Array.from({ length: 80 }).map((_, i) => (
-                      <circle
-                        key={i}
-                        cx={beltX + 20 + (i % 40) * (beltWidth / 40)}
-                        cy={magnetHeight + airGap * scale + 10 + Math.floor(i / 40) * (burdenDepth * scale * 0.45)}
-                        r="2.5"
-                        fill="#78350f"
-                        opacity="0.6"
-                      />
-                    ))}
+                    
+                    {/* Material particles distributed across trough */}
+                    {Array.from({ length: 80 }).map((_, i) => {
+                      const col = i % 40;
+                      const row = Math.floor(i / 40);
+                      const xPos = beltX + 20 + col * (beltWidth / 40);
+                      
+                      // Adjust Y position based on trough shape
+                      let yAdjust = 0;
+                      if (troughingAngle > 0) {
+                        if (xPos < beltX + leftEdgeWidth) {
+                          // In left angled section
+                          const ratio = (xPos - beltX) / leftEdgeWidth;
+                          yAdjust = -edgeRise * (1 - ratio);
+                        } else if (xPos > beltX + leftEdgeWidth + centerWidth) {
+                          // In right angled section
+                          const ratio = (xPos - (beltX + leftEdgeWidth + centerWidth)) / rightEdgeWidth;
+                          yAdjust = -edgeRise * ratio;
+                        }
+                      }
+                      
+                      return (
+                        <circle
+                          key={i}
+                          cx={xPos}
+                          cy={magnetHeight + airGap * scale + yAdjust + 10 + row * (burdenDepth * scale * 0.45)}
+                          r="2.5"
+                          fill="#78350f"
+                          opacity="0.6"
+                        />
+                      );
+                    })}
+                    
                     <text 
                       x={beltX - 180} 
                       y={magnetHeight + airGap * scale + (burdenDepth * scale) / 2 + 5} 
@@ -982,16 +1078,32 @@ export default function MagneticFieldSimulator() {
                       Field at Tramp: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
                     </text>
                     
-                    {/* CONVEYOR BELT - inside rotation group */}
-                    <rect 
-                      x={beltX - 20} 
-                      y={magnetHeight + totalDepth} 
-                      width={beltWidth + 40} 
-                      height={beltHeight} 
-                      fill="#1f2937" 
-                      stroke="#111827" 
-                      strokeWidth="3" 
-                    />
+                    {/* CONVEYOR BELT - Troughed cross-section */}
+                    {troughingAngle > 0 ? (
+                      <polygon
+                        points={`
+                          ${beltX},${magnetHeight + totalDepth - edgeRise}
+                          ${beltX + leftEdgeWidth},${magnetHeight + totalDepth}
+                          ${beltX + leftEdgeWidth + centerWidth},${magnetHeight + totalDepth}
+                          ${beltX + beltWidth},${magnetHeight + totalDepth - edgeRise}
+                          ${beltX + beltWidth},${magnetHeight + totalDepth + beltHeight}
+                          ${beltX},${magnetHeight + totalDepth + beltHeight}
+                        `}
+                        fill="#1f2937"
+                        stroke="#111827"
+                        strokeWidth="3"
+                      />
+                    ) : (
+                      <rect 
+                        x={beltX - 20} 
+                        y={magnetHeight + totalDepth} 
+                        width={beltWidth + 40} 
+                        height={beltHeight} 
+                        fill="#1f2937" 
+                        stroke="#111827" 
+                        strokeWidth="3" 
+                      />
+                    )}
                     <text 
                       x={beltX + beltWidth / 2} 
                       y={magnetHeight + totalDepth + 14} 
@@ -1001,33 +1113,9 @@ export default function MagneticFieldSimulator() {
                       fontWeight="bold"
                     >
                       CONVEYOR BELT ({ocwBeltWidth || selectedModel.beltWidth}mm)
+                      {troughingAngle > 0 && ` · ${troughingAngle}° Trough`}
                     </text>
                   </g>
-
-                  {/* Belt Incline Indicator - outside rotation */}
-                  {beltIncline > 0 && (
-                    <>
-                      {/* Angle arc */}
-                      <path
-                        d={`M ${beltRotationX + 100} ${beltRotationY} 
-                            A 100 100 0 0 1 ${beltRotationX + 100 * Math.cos(beltIncline * Math.PI / 180)} ${beltRotationY + 100 * Math.sin(beltIncline * Math.PI / 180)}`}
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="2"
-                        strokeDasharray="5,5"
-                      />
-                      {/* Angle label */}
-                      <text
-                        x={beltRotationX + 110}
-                        y={beltRotationY + 20}
-                        fontSize="14"
-                        fontWeight="bold"
-                        fill="#3b82f6"
-                      >
-                        {beltIncline}°
-                      </text>
-                    </>
-                  )}
 
                   {/* TRAMP ICONS AT BOTTOM - Show if in capture zone */}
                   {trampObjects.map((tramp, idx) => {
