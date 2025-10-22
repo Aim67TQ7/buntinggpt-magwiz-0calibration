@@ -20,6 +20,7 @@ interface MagnetModel {
   width: number;
   thickness: number;
   beltWidth: number;
+  magnetDimension?: string;
   prefix?: number;
   suffix?: number;
   frame?: string;
@@ -78,7 +79,7 @@ export default function MagneticFieldSimulator() {
             const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
             setSelectedModel(matchedModel || data.models[0]);
             setOcwBeltWidth(ocwUnit.width || state.beltWidth || null);
-            setOcwMagnetDimension(state.magnetDimension || `${ocwUnit.Prefix}x${ocwUnit.Suffix}x${ocwUnit.width}`);
+            setOcwMagnetDimension(matchedModel?.magnetDimension || state.magnetDimension || null);
             
             // Set material properties if available
             if (ocwUnit.density || state.density) {
@@ -330,7 +331,7 @@ export default function MagneticFieldSimulator() {
                     if (model) {
                       setSelectedModel(model);
                       setOcwBeltWidth(ocwUnit.width);
-                      setOcwMagnetDimension(`${ocwUnit.Prefix}x${ocwUnit.Suffix}x${ocwUnit.width}`);
+                      setOcwMagnetDimension(model.magnetDimension || null);
                       
                       // Set material properties if available
                       if (ocwUnit.density) {

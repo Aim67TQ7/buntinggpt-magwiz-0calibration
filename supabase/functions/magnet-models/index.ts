@@ -13,6 +13,7 @@ interface MagnetModel {
   width: number;        // mm - magnet width
   thickness: number;    // mm - magnet thickness
   beltWidth: number;    // mm - recommended belt width
+  magnetDimension?: string; // Full magnet dimension string from BMR_magwiz
   prefix?: number;
   suffix?: number;
   frame?: string;
@@ -101,6 +102,7 @@ serve(async (req) => {
         width: dimensions.width,
         thickness: dimensions.thickness,
         beltWidth: 1200, // Default belt width - will be overridden by OCW configurator
+        magnetDimension: magwizRecord?.magnet_dimension || null,
         prefix: unit.Prefix,
         suffix: unit.Suffix,
         frame: unit.frame
