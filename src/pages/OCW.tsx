@@ -123,7 +123,7 @@ const OCW = () => {
   const [isWindingOpen, setIsWindingOpen] = useState(false);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(false);
   
-  const [beltSpeed, setBeltSpeed] = useState<number>(2.5);
+  const [beltSpeed, setBeltSpeed] = useState<number>(1.5);
   const [beltWidth, setBeltWidth] = useState<number>(1200);
   const [burdenDepth, setBurdenDepth] = useState<number>(100);
   const [throughput, setThroughput] = useState<number>(500);
