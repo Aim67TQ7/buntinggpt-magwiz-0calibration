@@ -34,7 +34,7 @@ interface TrampObject {
 
 export default function MagneticFieldSimulator() {
   const location = useLocation();
-  const { recommendations, hasActiveList } = useOCWList();
+  const { recommendations, hasActiveList, inputParameters } = useOCWList();
   const [models, setModels] = useState<MagnetModel[]>([]);
   const [trampObjects, setTrampObjects] = useState<TrampObject[]>([]);
   const [selectedModel, setSelectedModel] = useState<MagnetModel | null>(null);
@@ -69,6 +69,9 @@ export default function MagneticFieldSimulator() {
           magnetDimension?: string;
           density?: number;
           waterContent?: number;
+          airGap?: number;
+          burdenDepth?: number;
+          beltTroughingAngle?: number;
         } | null;
         
         if (state?.model) {
@@ -92,6 +95,23 @@ export default function MagneticFieldSimulator() {
               setWaterContent(ocwUnit.waterContent || state.waterContent || 5);
               setIncludeMaterialEffects(true);
             }
+            
+            // Initialize installation parameters from state or context
+            if (state?.airGap !== undefined) {
+              setAirGap(state.airGap);
+            } else if (inputParameters?.airGap !== undefined) {
+              setAirGap(inputParameters.airGap);
+            }
+            if (state?.burdenDepth !== undefined) {
+              setBurdenDepth(state.burdenDepth);
+            } else if (inputParameters?.burdenDepth !== undefined) {
+              setBurdenDepth(inputParameters.burdenDepth);
+            }
+            if (state?.beltTroughingAngle !== undefined) {
+              setTroughingAngle(state.beltTroughingAngle);
+            } else if (inputParameters?.beltTroughingAngle !== undefined) {
+              setTroughingAngle(inputParameters.beltTroughingAngle);
+            }
           } else {
             // Standard model from BMR_magwiz
             const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
@@ -112,6 +132,23 @@ export default function MagneticFieldSimulator() {
               setWaterContent(state.waterContent);
               setIncludeMaterialEffects(true);
             }
+            
+            // Initialize installation parameters from state or context
+            if (state?.airGap !== undefined) {
+              setAirGap(state.airGap);
+            } else if (inputParameters?.airGap !== undefined) {
+              setAirGap(inputParameters.airGap);
+            }
+            if (state?.burdenDepth !== undefined) {
+              setBurdenDepth(state.burdenDepth);
+            } else if (inputParameters?.burdenDepth !== undefined) {
+              setBurdenDepth(inputParameters.burdenDepth);
+            }
+            if (state?.beltTroughingAngle !== undefined) {
+              setTroughingAngle(state.beltTroughingAngle);
+            } else if (inputParameters?.beltTroughingAngle !== undefined) {
+              setTroughingAngle(inputParameters.beltTroughingAngle);
+            }
           }
           } else {
             setSelectedModel(data.models[0]);
@@ -126,7 +163,7 @@ export default function MagneticFieldSimulator() {
     };
 
     fetchModels();
-  }, [location]);
+  }, [location, recommendations, inputParameters]);
 
   if (loading || !selectedModel) {
     return (

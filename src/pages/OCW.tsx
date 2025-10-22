@@ -125,9 +125,9 @@ const OCW = () => {
   
   const [beltSpeed, setBeltSpeed] = useState<number>(2.5);
   const [beltWidth, setBeltWidth] = useState<number>(1200);
-  const [feedDepth, setFeedDepth] = useState<number>(100);
+  const [burdenDepth, setBurdenDepth] = useState<number>(100);
   const [throughput, setThroughput] = useState<number>(500);
-  const [magnetGap, setMagnetGap] = useState<number>(150);
+  const [airGap, setAirGap] = useState<number>(150);
   const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.25);
   const [magnetPosition, setMagnetPosition] = useState<string>("overhead");
   const [bulkDensity, setBulkDensity] = useState<number>(1.8);
@@ -135,7 +135,7 @@ const OCW = () => {
   const [ambientTemp, setAmbientTemp] = useState<number>(25);
   const [minGauss, setMinGauss] = useState<string>("");
   const [minForce, setMinForce] = useState<string>("");
-  const [beltIncline, setBeltIncline] = useState<number>(0);
+  const [beltTroughingAngle, setBeltTroughingAngle] = useState<number>(0);
   const [isCalculating, setIsCalculating] = useState(false);
   const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -269,15 +269,15 @@ const OCW = () => {
       setInputParameters({
         beltSpeed,
         beltWidth,
-        feedDepth,
+        burdenDepth,
         throughput,
-        magnetGap,
+        airGap,
         coreBeltRatio,
         magnetPosition,
         bulkDensity,
         waterContent,
         ambientTemp,
-        beltIncline,
+        beltTroughingAngle,
       });
       
       if (allRecommendations.length > 0) {
@@ -404,20 +404,20 @@ const OCW = () => {
                   <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="beltIncline" className="text-xs">Belt Incline (degrees)</Label>
-                  <Input id="beltIncline" type="number" value={beltIncline} onChange={(e) => setBeltIncline(parseFloat(e.target.value))} step="1" className="h-8" placeholder="0" />
+                  <Label htmlFor="beltTroughingAngle" className="text-xs">Belt Troughing Angle (degrees)</Label>
+                  <Input id="beltTroughingAngle" type="number" value={beltTroughingAngle} onChange={(e) => setBeltTroughingAngle(parseFloat(e.target.value))} step="1" className="h-8" placeholder="0" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="feedDepth" className="text-xs">Feed Depth (mm)</Label>
-                  <Input id="feedDepth" type="number" value={feedDepth} onChange={(e) => setFeedDepth(parseFloat(e.target.value))} className="h-8" />
+                  <Label htmlFor="burdenDepth" className="text-xs">Burden Depth (mm)</Label>
+                  <Input id="burdenDepth" type="number" value={burdenDepth} onChange={(e) => setBurdenDepth(parseFloat(e.target.value))} className="h-8" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="throughput" className="text-xs">Throughput (TPH)</Label>
                   <Input id="throughput" type="number" value={throughput} onChange={(e) => setThroughput(parseFloat(e.target.value))} className="h-8" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="magnetGap" className="text-xs">Magnet Gap (mm)</Label>
-                  <Input id="magnetGap" type="number" value={magnetGap} onChange={(e) => setMagnetGap(parseFloat(e.target.value))} className="h-8" />
+                  <Label htmlFor="airGap" className="text-xs">Air Gap (mm)</Label>
+                  <Input id="airGap" type="number" value={airGap} onChange={(e) => setAirGap(parseFloat(e.target.value))} className="h-8" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
@@ -557,7 +557,10 @@ const OCW = () => {
                           beltWidth: unit.belt_width,
                           magnetDimension: `${unit.Prefix}x${unit.Suffix}x${unit.width}`,
                           density: unit.density,
-                          waterContent: unit.waterContent
+                          waterContent: unit.waterContent,
+                          airGap,
+                          burdenDepth,
+                          beltTroughingAngle
                         }
                       });
                     }} variant="default" size="sm">
@@ -610,7 +613,16 @@ const OCW = () => {
             <Button variant="default" size="sm" onClick={() => {
               const modelMatch = selectedRecord.filename?.match(/(\d+)\s*OCW\s*(\d+)/);
               const modelName = modelMatch ? `${modelMatch[1]} OCW ${modelMatch[2]}` : '55 OCW 25';
-              navigate('/field-simulator', { state: { model: modelName, beltWidth: selectedRecord.belt_width, magnetDimension: selectedRecord.magnet_dimension }});
+              navigate('/field-simulator', { 
+                state: { 
+                  model: modelName, 
+                  beltWidth: selectedRecord.belt_width, 
+                  magnetDimension: selectedRecord.magnet_dimension,
+                  airGap,
+                  burdenDepth,
+                  beltTroughingAngle
+                }
+              });
             }}>
               <Waves className="w-4 h-4 mr-2" />
               Field Simulator

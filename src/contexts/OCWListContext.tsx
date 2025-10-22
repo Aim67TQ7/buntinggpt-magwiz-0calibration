@@ -22,15 +22,15 @@ export interface OCWRecommendation {
 export interface OCWInputParameters {
   beltSpeed?: number;
   beltWidth: number;
-  feedDepth?: number;
+  burdenDepth?: number;
   throughput?: number;
-  magnetGap?: number;
+  airGap?: number;
   coreBeltRatio: number;
   magnetPosition?: string;
   bulkDensity?: number;
   waterContent?: number;
   ambientTemp?: number;
-  beltIncline?: number;
+  beltTroughingAngle?: number;
   trampMetals?: Array<{
     id: string;
     name: string;
