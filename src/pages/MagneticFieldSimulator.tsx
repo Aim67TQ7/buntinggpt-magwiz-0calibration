@@ -42,6 +42,7 @@ export default function MagneticFieldSimulator() {
   const [loading, setLoading] = useState(true);
   const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
   const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
+  const [beltIncline, setBeltIncline] = useState(0); // degrees, 0-30
   
   // Material stream properties
   const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
@@ -272,6 +273,10 @@ export default function MagneticFieldSimulator() {
   // Center magnet over belt
   const magnetX = (svgWidth - magnetWidth) / 2 - 50; // -50 to account for left margin
   const beltX = (svgWidth - beltWidth) / 2 - 50;
+  
+  // Calculate rotation origin for belt incline
+  const beltRotationX = beltX + beltWidth / 2;
+  const beltRotationY = magnetHeight;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -444,6 +449,19 @@ export default function MagneticFieldSimulator() {
                   max="500"
                   value={burdenDepth}
                   onChange={(e) => setBurdenDepth(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <Label htmlFor="beltIncline">Belt Incline: {beltIncline}°</Label>
+                <Input
+                  id="beltIncline"
+                  type="range"
+                  min="0"
+                  max="30"
+                  step="1"
+                  value={beltIncline}
+                  onChange={(e) => setBeltIncline(parseInt(e.target.value))}
                   className="w-full"
                 />
               </div>
@@ -849,8 +867,8 @@ export default function MagneticFieldSimulator() {
                     );
                   })}
 
-                  {/* AIR GAP + BURDEN DEPTH INDICATOR */}
-                  <g>
+                  {/* AIR GAP + BURDEN DEPTH INDICATOR - with rotation */}
+                  <g transform={`rotate(${beltIncline}, ${beltRotationX}, ${beltRotationY})`}>
                     {/* Air gap zone */}
                     <rect 
                       x={beltX} 
@@ -963,28 +981,53 @@ export default function MagneticFieldSimulator() {
                     >
                       Field at Tramp: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
                     </text>
+                    
+                    {/* CONVEYOR BELT - inside rotation group */}
+                    <rect 
+                      x={beltX - 20} 
+                      y={magnetHeight + totalDepth} 
+                      width={beltWidth + 40} 
+                      height={beltHeight} 
+                      fill="#1f2937" 
+                      stroke="#111827" 
+                      strokeWidth="3" 
+                    />
+                    <text 
+                      x={beltX + beltWidth / 2} 
+                      y={magnetHeight + totalDepth + 14} 
+                      textAnchor="middle" 
+                      fill="#9ca3af" 
+                      fontSize="12" 
+                      fontWeight="bold"
+                    >
+                      CONVEYOR BELT ({ocwBeltWidth || selectedModel.beltWidth}mm)
+                    </text>
                   </g>
 
-                  {/* CONVEYOR BELT */}
-                  <rect 
-                    x={beltX - 20} 
-                    y={magnetHeight + totalDepth} 
-                    width={beltWidth + 40} 
-                    height={beltHeight} 
-                    fill="#1f2937" 
-                    stroke="#111827" 
-                    strokeWidth="3" 
-                  />
-                  <text 
-                    x={beltX + beltWidth / 2} 
-                    y={magnetHeight + totalDepth + 14} 
-                    textAnchor="middle" 
-                    fill="#9ca3af" 
-                    fontSize="12" 
-                    fontWeight="bold"
-                  >
-                    CONVEYOR BELT ({ocwBeltWidth || selectedModel.beltWidth}mm)
-                  </text>
+                  {/* Belt Incline Indicator - outside rotation */}
+                  {beltIncline > 0 && (
+                    <>
+                      {/* Angle arc */}
+                      <path
+                        d={`M ${beltRotationX + 100} ${beltRotationY} 
+                            A 100 100 0 0 1 ${beltRotationX + 100 * Math.cos(beltIncline * Math.PI / 180)} ${beltRotationY + 100 * Math.sin(beltIncline * Math.PI / 180)}`}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                      />
+                      {/* Angle label */}
+                      <text
+                        x={beltRotationX + 110}
+                        y={beltRotationY + 20}
+                        fontSize="14"
+                        fontWeight="bold"
+                        fill="#3b82f6"
+                      >
+                        {beltIncline}°
+                      </text>
+                    </>
+                  )}
 
                   {/* TRAMP ICONS AT BOTTOM - Show if in capture zone */}
                   {trampObjects.map((tramp, idx) => {

@@ -50,8 +50,43 @@ serve(async (req) => {
       throw ocwError;
     }
 
+    // Fetch magnet dimensions from BMR_magwiz table
+    const { data: magwizData, error: magwizError } = await supabase
+      .from('BMR_magwiz')
+      .select('filename, magnet_dimension');
+
+    if (magwizError) {
+      console.error('Error fetching magwiz data:', magwizError);
+    }
+
+    // Helper function to parse magnet dimensions (e.g., "398 x 398 x 211mm")
+    const parseMagnetDimension = (dimension: string | null): { width: number; thickness: number } => {
+      if (!dimension) return { width: 400, thickness: 200 };
+      
+      const parts = dimension.replace('mm', '').split('x').map(p => parseFloat(p.trim()));
+      if (parts.length >= 3) {
+        return {
+          width: parts[0] || 400,
+          thickness: parts[2] || 200
+        };
+      }
+      return { width: 400, thickness: 200 };
+    };
+
+    // Create a map of magwiz data by filename
+    const magwizMap = new Map();
+    (magwizData || []).forEach((item: any) => {
+      magwizMap.set(item.filename, item);
+    });
+
     // Convert OCW data to MagnetModel format
     const models: MagnetModel[] = (ocwData || []).map((unit: any) => {
+      const modelName = `${unit.Prefix} OCW ${unit.Suffix}`;
+      const magwizRecord = magwizMap.get(modelName);
+      
+      // Parse actual magnet dimensions from BMR_magwiz
+      const dimensions = parseMagnetDimension(magwizRecord?.magnet_dimension);
+      
       // Estimate G0 from surface_gauss
       const G0 = unit.surface_gauss || 2000;
       
@@ -59,16 +94,13 @@ serve(async (req) => {
       // Typical range: 0.003 to 0.008 for OCW units
       const k = unit.Suffix ? 0.008 - (unit.Suffix / 10000) : 0.005;
       
-      // Estimate thickness from suffix (suffix is roughly in mm)
-      const thickness = unit.Suffix || 50;
-      
       return {
-        name: `${unit.Prefix} OCW ${unit.Suffix}`,
+        name: modelName,
         G0: G0,
         k: Math.max(0.003, Math.min(0.008, k)), // Clamp between 0.003 and 0.008
-        width: unit.width || 1000, // width field from BMR_Top is the magnet/belt width
-        thickness: thickness,
-        beltWidth: unit.width || 1000, // Same as width for OCW units
+        width: dimensions.width,
+        thickness: dimensions.thickness,
+        beltWidth: 1200, // Default belt width - will be overridden by OCW configurator
         prefix: unit.Prefix,
         suffix: unit.Suffix,
         frame: unit.frame
