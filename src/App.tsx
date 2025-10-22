@@ -26,9 +26,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PasscodeProtection>
-        <OCWListProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <PasscodeProtection>
+          <OCWListProvider>
             <Navigation />
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -45,9 +45,9 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </OCWListProvider>
-      </PasscodeProtection>
+          </OCWListProvider>
+        </PasscodeProtection>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
