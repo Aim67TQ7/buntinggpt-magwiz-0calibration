@@ -13,8 +13,8 @@ export const Navigation = () => {
 
   const navItems = [
     {
-      path: "/dashboard",
-      label: "BMR Dashboard",
+      path: "/",
+      label: "OCW History",
       icon: BarChart3,
     },
     {
@@ -33,7 +33,7 @@ export const Navigation = () => {
       icon: MessageSquare,
     },
     {
-      path: "/",
+      path: "/bom-manager",
       label: "BOM Manager",
       icon: Database,
     },

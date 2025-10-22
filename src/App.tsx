@@ -31,8 +31,8 @@ const App = () => (
           <BrowserRouter>
             <Navigation />
             <Routes>
-              <Route path="/" element={<BOMManager />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/bom-manager" element={<BOMManager />} />
               <Route path="/quote/:quoteId" element={<QuoteDetails />} />
               <Route path="/ocw" element={<OCW />} />
               <Route path="/ocw-specs" element={<OCWSpecs />} />
