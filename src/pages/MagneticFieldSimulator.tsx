@@ -43,6 +43,7 @@ export default function MagneticFieldSimulator() {
   const [loading, setLoading] = useState(true);
   const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
   const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
+  const [userBeltWidth, setUserBeltWidth] = useState<number>(1200); // User-controlled belt width
   const [troughingAngle, setTroughingAngle] = useState(20); // degrees, typically 20-45
   
   // Material stream properties
@@ -79,6 +80,7 @@ export default function MagneticFieldSimulator() {
             const matchedModel = data.models.find((m: MagnetModel) => m.name === state.model);
             setSelectedModel(matchedModel || data.models[0]);
             setOcwBeltWidth(ocwUnit.width || state.beltWidth || null);
+            setUserBeltWidth(ocwUnit.width || state.beltWidth || 1200);
             setOcwMagnetDimension(matchedModel?.magnetDimension || state.magnetDimension || null);
             
             // Set material properties if available
@@ -97,6 +99,7 @@ export default function MagneticFieldSimulator() {
             
             if (state.beltWidth) {
               setOcwBeltWidth(state.beltWidth);
+              setUserBeltWidth(state.beltWidth);
             }
             if (state.magnetDimension) {
               setOcwMagnetDimension(state.magnetDimension);
@@ -110,9 +113,10 @@ export default function MagneticFieldSimulator() {
               setIncludeMaterialEffects(true);
             }
           }
-        } else {
-          setSelectedModel(data.models[0]);
-        }
+          } else {
+            setSelectedModel(data.models[0]);
+            setUserBeltWidth(data.models[0]?.beltWidth || 1200);
+          }
       } catch (error) {
         console.error('Error fetching magnet models:', error);
         toast.error('Failed to load magnet models');
@@ -265,7 +269,7 @@ export default function MagneticFieldSimulator() {
   // Calculate SVG dimensions based on real proportions
   const magnetWidth = selectedModel.width * scale;
   const magnetHeight = selectedModel.thickness * scale;
-  const beltWidth = (ocwBeltWidth || selectedModel.beltWidth) * scale;
+  const beltWidth = userBeltWidth * scale;
   const totalDepth = (airGap + burdenDepth) * scale;
   
   const svgWidth = beltWidth + 200; // Extra space for labels
@@ -331,6 +335,7 @@ export default function MagneticFieldSimulator() {
                     if (model) {
                       setSelectedModel(model);
                       setOcwBeltWidth(ocwUnit.width);
+                      setUserBeltWidth(ocwUnit.width);
                       setOcwMagnetDimension(model.magnetDimension || null);
                       
                       // Set material properties if available
@@ -349,6 +354,7 @@ export default function MagneticFieldSimulator() {
                     if (model) {
                       setSelectedModel(model);
                       setOcwBeltWidth(null);
+                      setUserBeltWidth(model.beltWidth);
                       setOcwMagnetDimension(null);
                     }
                   }
@@ -363,7 +369,7 @@ export default function MagneticFieldSimulator() {
                       <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">From OCW List</div>
                       {recommendations.map((ocw) => (
                         <SelectItem key={`ocw-${ocw.Prefix}-${ocw.Suffix}`} value={`${ocw.Prefix} OCW ${ocw.Suffix}`}>
-                          {ocw.Prefix} OCW {ocw.Suffix} ({ocw.surface_gauss}G, {ocw.width}mm)
+                          {ocw.Prefix} OCW {ocw.Suffix}
                         </SelectItem>
                       ))}
                       <Separator className="my-2" />
@@ -390,11 +396,23 @@ export default function MagneticFieldSimulator() {
                   <span className="text-muted-foreground">Magnet Thickness:</span>
                   <span className="font-mono">{selectedModel.thickness} mm</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Belt Width:</span>
-                  <span className="font-mono">
-                    {ocwBeltWidth || selectedModel.beltWidth} mm
-                  </span>
+                <div>
+                  <Label htmlFor="beltWidth">Belt Width: {userBeltWidth} mm</Label>
+                  <Input
+                    id="beltWidth"
+                    type="number"
+                    min="400"
+                    max="3000"
+                    step="50"
+                    value={userBeltWidth}
+                    onChange={(e) => setUserBeltWidth(parseInt(e.target.value) || 1200)}
+                    className="w-full mt-1"
+                  />
+                  {ocwBeltWidth && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Reference from OCW: {ocwBeltWidth}mm
+                    </div>
+                  )}
                 </div>
                 {selectedModel.frame && (
                   <div className="flex justify-between">
@@ -711,7 +729,7 @@ export default function MagneticFieldSimulator() {
                     y={10 + magnetHeight / 2 - 8} 
                     textAnchor="middle" 
                     fill="white" 
-                    fontSize="14" 
+                    fontSize="16" 
                     fontWeight="bold"
                   >
                     🧲 {selectedModel.name}
@@ -721,7 +739,7 @@ export default function MagneticFieldSimulator() {
                     y={10 + magnetHeight / 2 + 8} 
                     textAnchor="middle" 
                     fill="white" 
-                    fontSize="11"
+                    fontSize="13"
                   >
                     {selectedModel.G0} G · {selectedModel.width}×{selectedModel.thickness} mm
                   </text>
@@ -762,7 +780,7 @@ export default function MagneticFieldSimulator() {
                             <text 
                               x={beltX + 15} 
                               y={y1 + 20} 
-                              fontSize="14" 
+                              fontSize="16" 
                               fontWeight="bold" 
                               fill="#1e293b"
                             >
@@ -771,7 +789,7 @@ export default function MagneticFieldSimulator() {
                             <text 
                               x={beltX + 15} 
                               y={y1 + 36} 
-                              fontSize="11" 
+                              fontSize="13" 
                               fill="#475569"
                               fontWeight="bold"
                             >
@@ -831,7 +849,7 @@ export default function MagneticFieldSimulator() {
                             <text 
                               x={beltX + beltWidth + 32} 
                               y={y2 + 5} 
-                              fontSize="11" 
+                              fontSize="13" 
                               fontWeight="bold" 
                               fill="white"
                             >
@@ -865,7 +883,7 @@ export default function MagneticFieldSimulator() {
                         <text
                           x={beltX + beltWidth + 10}
                           y={y + 4}
-                          fontSize="10"
+                          fontSize="12"
                           fill="#64748b"
                           fontWeight="bold"
                         >
@@ -954,7 +972,7 @@ export default function MagneticFieldSimulator() {
                     <text 
                       x={beltX - 180} 
                       y={magnetHeight + (airGap * scale) / 2 + 5} 
-                      fontSize="12" 
+                      fontSize="14" 
                       fontWeight="bold" 
                       fill="#0ea5e9"
                     >
@@ -1012,7 +1030,7 @@ export default function MagneticFieldSimulator() {
                     <text 
                       x={beltX - 180} 
                       y={magnetHeight + airGap * scale + (burdenDepth * scale) / 2 + 5} 
-                      fontSize="12" 
+                      fontSize="14" 
                       fontWeight="bold" 
                       fill="#78350f"
                     >
@@ -1051,7 +1069,7 @@ export default function MagneticFieldSimulator() {
                       x={beltX + beltWidth / 2}
                       y={magnetHeight + (airGap + burdenDepth) * scale - 16}
                       textAnchor="middle"
-                      fontSize="14"
+                      fontSize="16"
                       fontWeight="bold"
                       fill="#fbbf24"
                     >
@@ -1072,7 +1090,7 @@ export default function MagneticFieldSimulator() {
                       x={beltX + beltWidth / 2}
                       y={magnetHeight + (airGap + burdenDepth) * scale + 25}
                       textAnchor="middle"
-                      fontSize="13"
+                      fontSize="15"
                       fontWeight="bold"
                       fill="white"
                     >
@@ -1110,10 +1128,10 @@ export default function MagneticFieldSimulator() {
                       y={magnetHeight + totalDepth + 14} 
                       textAnchor="middle" 
                       fill="#9ca3af" 
-                      fontSize="12" 
+                      fontSize="14" 
                       fontWeight="bold"
                     >
-                      CONVEYOR BELT ({ocwBeltWidth || selectedModel.beltWidth}mm)
+                      CONVEYOR BELT ({userBeltWidth}mm)
                       {troughingAngle > 0 && ` · ${troughingAngle}° Trough`}
                     </text>
                   </g>
@@ -1195,7 +1213,7 @@ export default function MagneticFieldSimulator() {
                           x={trampX}
                           y={trampY + 38}
                           textAnchor="middle"
-                          fontSize="11"
+                          fontSize="13"
                           fill={
                             status.status === 'captured' ? '#166534' :
                             status.status === 'partial' ? '#854d0e' :
@@ -1209,7 +1227,7 @@ export default function MagneticFieldSimulator() {
                           x={trampX}
                           y={trampY + 52}
                           textAnchor="middle"
-                          fontSize="10"
+                          fontSize="12"
                           fill="#64748b"
                         >
                           {tramp.name}
