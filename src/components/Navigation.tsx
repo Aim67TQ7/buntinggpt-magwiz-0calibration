@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Navigation = () => {
   const location = useLocation();
@@ -46,7 +47,7 @@ export const Navigation = () => {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center space-x-2">
               <Home className="h-6 w-6" />
-              <span className="font-bold text-lg">MagWiz 2</span>
+              <span className="font-bold text-lg">MagWiz 3.1</span>
             </Link>
           </div>
           
@@ -63,6 +64,7 @@ export const Navigation = () => {
                 </Button>
               </Link>
             ))}
+            <ThemeToggle />
           </div>
         </div>
       </div>

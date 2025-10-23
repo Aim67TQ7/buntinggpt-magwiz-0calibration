@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PasscodeProtection } from "@/components/PasscodeProtection";
 import { OCWListProvider } from "@/contexts/OCWListContext";
+import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import QuoteDetails from "./pages/QuoteDetails";
@@ -22,13 +23,14 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <OCWListProvider>
-          <PasscodeProtection>
-            <Routes>
+    <ThemeProvider defaultTheme="light" storageKey="magwiz-ui-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <OCWListProvider>
+            <PasscodeProtection>
+              <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/bom-manager" element={<BOMManager />} />
               <Route path="/quote/:quoteId" element={<QuoteDetails />} />
@@ -42,11 +44,12 @@ const App = () => (
               <Route path="/field-simulator" element={<MagneticFieldSimulator />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </PasscodeProtection>
-        </OCWListProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+              </Routes>
+            </PasscodeProtection>
+          </OCWListProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
