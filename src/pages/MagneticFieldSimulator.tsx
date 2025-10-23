@@ -24,6 +24,7 @@ interface MagnetModel {
   prefix?: number;
   suffix?: number;
   frame?: string;
+  faceCoverage?: number; // Assembly face width in mm
 }
 
 interface TrampObject {
@@ -45,6 +46,7 @@ export default function MagneticFieldSimulator() {
   const [ocwMagnetDimension, setOcwMagnetDimension] = useState<string | null>(null);
   const [userBeltWidth, setUserBeltWidth] = useState<number>(1200); // User-controlled belt width
   const [troughingAngle, setTroughingAngle] = useState(20); // degrees, typically 20-45
+  const [snappedAngle, setSnappedAngle] = useState(false);
   
   // Material stream properties
   const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
@@ -164,6 +166,85 @@ export default function MagneticFieldSimulator() {
 
     fetchModels();
   }, [location, recommendations, inputParameters]);
+
+  // Trough angle multipliers
+  const TROUGH_MULTIPLIERS: { [key: number]: number } = {
+    0: 1.00,
+    20: 1.09,
+    35: 1.12,
+    45: 1.18,
+  };
+
+  const getTroughMultiplier = (angle: number): { multiplier: number; snapped: boolean } => {
+    if (TROUGH_MULTIPLIERS[angle]) {
+      return { multiplier: TROUGH_MULTIPLIERS[angle], snapped: false };
+    }
+    // Snap to nearest valid angle
+    const validAngles = Object.keys(TROUGH_MULTIPLIERS).map(Number);
+    const nearest = validAngles.reduce((prev, curr) => 
+      Math.abs(curr - angle) < Math.abs(prev - angle) ? curr : prev
+    );
+    return { multiplier: TROUGH_MULTIPLIERS[nearest], snapped: true };
+  };
+
+  const { multiplier: troughMultiplier, snapped } = getTroughMultiplier(troughingAngle);
+  const requiredFaceWidth = Math.round(userBeltWidth * troughMultiplier);
+  
+  // Get model face coverage (use model width as default if faceCoverage not provided)
+  const modelFaceCoverage = selectedModel?.faceCoverage || selectedModel?.width || 0;
+  
+  // Coverage check
+  const coverageCheck = {
+    passes: modelFaceCoverage >= requiredFaceWidth,
+    delta: modelFaceCoverage - requiredFaceWidth,
+  };
+
+  // Find next wider model
+  const findNextWiderModel = (): MagnetModel | null => {
+    const sortedModels = [...models].sort((a, b) => {
+      const aFace = a.faceCoverage || a.width;
+      const bFace = b.faceCoverage || b.width;
+      return aFace - bFace;
+    });
+    
+    return sortedModels.find(m => {
+      const mFace = m.faceCoverage || m.width;
+      return mFace >= requiredFaceWidth && mFace > modelFaceCoverage;
+    }) || null;
+  };
+
+  const suggestNextWiderModel = () => {
+    const nextModel = findNextWiderModel();
+    if (nextModel) {
+      setSelectedModel(nextModel);
+      setUserBeltWidth(nextModel.beltWidth);
+      toast.success(`Switched to ${nextModel.name} with ${nextModel.faceCoverage || nextModel.width}mm face coverage`);
+    } else {
+      toast.error('No wider model available');
+    }
+  };
+
+  // Update snapped state when angle changes
+  useEffect(() => {
+    setSnappedAngle(snapped);
+  }, [snapped]);
+
+  // Telemetry logging
+  useEffect(() => {
+    if (selectedModel) {
+      console.log('[Coverage Check Telemetry]', {
+        beltWidth: userBeltWidth,
+        troughAngle: troughingAngle,
+        troughMultiplier,
+        requiredFaceWidth,
+        selectedModel: selectedModel.name,
+        modelFaceCoverage,
+        coverageCheck: coverageCheck.passes ? 'PASS' : 'FAIL',
+        delta: coverageCheck.delta,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [userBeltWidth, troughingAngle, selectedModel, requiredFaceWidth, modelFaceCoverage, coverageCheck.passes, coverageCheck.delta, troughMultiplier]);
 
   if (loading || !selectedModel) {
     return (
@@ -409,6 +490,45 @@ export default function MagneticFieldSimulator() {
         </div>
       </div>
 
+      {/* Coverage Warning Banner */}
+      {!coverageCheck.passes && (
+        <div className="p-4 bg-destructive/10 border-2 border-destructive rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">⚠️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-destructive text-lg mb-1">
+                Coverage Shortfall Detected
+              </h3>
+              <p className="text-sm mb-2">
+                The selected model does not provide adequate face coverage for the specified belt width and trough angle.
+              </p>
+              <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+                <div>
+                  <span className="text-muted-foreground">Required:</span>
+                  <span className="font-mono font-bold ml-2">{requiredFaceWidth} mm</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Model Provides:</span>
+                  <span className="font-mono font-bold ml-2">{modelFaceCoverage} mm</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-destructive">Shortfall:</span>
+                  <span className="font-mono font-bold text-destructive ml-2">{Math.abs(coverageCheck.delta)} mm</span>
+                </div>
+              </div>
+              <Button 
+                onClick={suggestNextWiderModel} 
+                size="sm" 
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                Suggest Next Wider Model
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Control Panel */}
         <Card>
@@ -492,16 +612,35 @@ export default function MagneticFieldSimulator() {
               <h3 className="font-semibold text-sm">Physical Dimensions</h3>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Belt Width:</span>
+                  <span className="font-mono">{userBeltWidth} mm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Trough Angle:</span>
+                  <span className="font-mono">{troughingAngle}° {snappedAngle && <span className="text-orange-500">(snapped)</span>}</span>
+                </div>
+                <div className="flex justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground font-semibold">Required Face Width:</span>
+                  <span className="font-mono font-bold text-orange-600">{requiredFaceWidth} mm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-semibold">Model Face Coverage:</span>
+                  <span className="font-mono font-bold">{modelFaceCoverage} mm</span>
+                </div>
+                <div className="flex justify-between items-center border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Coverage Status:</span>
+                  <Badge variant={coverageCheck.passes ? "default" : "destructive"}>
+                    {coverageCheck.passes ? "PASS" : "FAIL"}
+                  </Badge>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Magnet Width:</span>
                   <span className="font-mono">{selectedModel.width} mm</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Magnet Thickness:</span>
                   <span className="font-mono">{selectedModel.thickness} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Belt Width:</span>
-                  <span className="font-mono">{userBeltWidth} mm</span>
                 </div>
                 {selectedModel.frame && (
                   <div className="flex justify-between">
@@ -516,6 +655,33 @@ export default function MagneticFieldSimulator() {
                   </div>
                 )}
               </div>
+              
+              {/* Coverage failure warning */}
+              {!coverageCheck.passes && (
+                <div className="mt-3 p-3 bg-destructive/10 border-2 border-destructive rounded-lg space-y-2">
+                  <div className="text-sm font-semibold text-destructive">
+                    ⚠️ Coverage Shortfall
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div>Required: <span className="font-mono font-bold">{requiredFaceWidth} mm</span></div>
+                    <div>Model: <span className="font-mono font-bold">{modelFaceCoverage} mm</span></div>
+                    <div className="text-destructive font-bold">
+                      Deficit: <span className="font-mono">{Math.abs(coverageCheck.delta)} mm</span>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={suggestNextWiderModel} 
+                    size="sm" 
+                    variant="outline"
+                    className="w-full mt-2"
+                  >
+                    Suggest Next Wider Model
+                  </Button>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Choose a wider frame or reduce trough angle.
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -566,18 +732,22 @@ export default function MagneticFieldSimulator() {
               </div>
               <div>
                 <Label htmlFor="troughingAngle">Belt Troughing Angle: {troughingAngle}°</Label>
-                <Input
-                  id="troughingAngle"
-                  type="range"
-                  min="0"
-                  max="45"
-                  step="5"
-                  value={troughingAngle}
-                  onChange={(e) => setTroughingAngle(parseInt(e.target.value))}
-                  className="w-full"
-                />
+                <Select
+                  value={troughingAngle.toString()}
+                  onValueChange={(value) => setTroughingAngle(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0° (Flat)</SelectItem>
+                    <SelectItem value="20">20° (Shallow)</SelectItem>
+                    <SelectItem value="35">35° (Standard)</SelectItem>
+                    <SelectItem value="45">45° (Deep)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Common: 20° (shallow), 35° (standard), 45° (deep)
+                  Multiplier: {troughMultiplier.toFixed(2)}× {snappedAngle && <span className="text-orange-500">(angle snapped to nearest)</span>}
                 </div>
                 
                 {/* Trough depth and air gap info */}

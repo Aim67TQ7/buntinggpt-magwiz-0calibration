@@ -17,6 +17,7 @@ interface MagnetModel {
   prefix?: number;
   suffix?: number;
   frame?: string;
+  faceCoverage?: number; // Assembly face width in mm
 }
 
 const TRAMP_OBJECTS = [
@@ -105,7 +106,8 @@ serve(async (req) => {
         magnetDimension: magwizRecord?.magnet_dimension || null,
         prefix: unit.Prefix,
         suffix: unit.Suffix,
-        frame: unit.frame
+        frame: unit.frame,
+        faceCoverage: unit.width || dimensions.width // Use width from BMR_Top or default to magnet width
       };
     });
 
