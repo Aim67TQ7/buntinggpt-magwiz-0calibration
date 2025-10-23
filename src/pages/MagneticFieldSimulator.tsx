@@ -25,13 +25,31 @@ interface MagnetModel {
   suffix?: number;
   frame?: string;
   faceCoverage?: number; // Assembly face width in mm
+  fieldCurves?: {
+    crossbelt: Array<{ wd_mm: number; gauss_center: number }>;
+    inline: Array<{ wd_mm: number; gauss_center: number }>;
+  };
 }
 
 interface TrampObject {
   name: string;
   threshold: number;
   icon: string;
+  size_mm?: number;
 }
+
+interface TrampThreshold {
+  size_mm: number;
+  name: string;
+  G_req_base: number;
+  icon: string;
+}
+
+const TRAMP_THRESHOLDS: TrampThreshold[] = [
+  { size_mm: 25, name: "25mm Cube", G_req_base: 1400, icon: "⬛" },
+  { size_mm: 50, name: "50mm Plate", G_req_base: 1900, icon: "▬" },
+  { size_mm: 100, name: "100mm Object", G_req_base: 2400, icon: "🔩" },
+];
 
 export default function MagneticFieldSimulator() {
   const location = useLocation();
@@ -47,6 +65,7 @@ export default function MagneticFieldSimulator() {
   const [userBeltWidth, setUserBeltWidth] = useState<number>(1200); // User-controlled belt width
   const [troughingAngle, setTroughingAngle] = useState(20); // degrees, typically 20-45
   const [snappedAngle, setSnappedAngle] = useState(false);
+  const [magnetPosition, setMagnetPosition] = useState<'inline' | 'crossbelt'>('inline');
   
   // Material stream properties
   const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
@@ -232,19 +251,30 @@ export default function MagneticFieldSimulator() {
   // Telemetry logging
   useEffect(() => {
     if (selectedModel) {
-      console.log('[Coverage Check Telemetry]', {
-        beltWidth: userBeltWidth,
+      const wd = airGap + burdenDepth;
+      const evals = TRAMP_THRESHOLDS.map(tramp => {
+        const result = evaluateTrampCapture(tramp, wd, magnetPosition);
+        return {
+          size: tramp.size_mm,
+          ...result
+        };
+      });
+      
+      console.log('[Field Simulator Telemetry]', {
+        model: selectedModel.name,
+        position: magnetPosition,
+        WD_mm: wd,
+        airGap,
+        burdenDepth,
         troughAngle: troughingAngle,
-        troughMultiplier,
+        beltWidth: userBeltWidth,
         requiredFaceWidth,
-        selectedModel: selectedModel.name,
-        modelFaceCoverage,
-        coverageCheck: coverageCheck.passes ? 'PASS' : 'FAIL',
-        delta: coverageCheck.delta,
+        coverageRatio: modelFaceCoverage / requiredFaceWidth,
+        trampEvaluations: evals,
         timestamp: new Date().toISOString(),
       });
     }
-  }, [userBeltWidth, troughingAngle, selectedModel, requiredFaceWidth, modelFaceCoverage, coverageCheck.passes, coverageCheck.delta, troughMultiplier]);
+  }, [selectedModel, magnetPosition, airGap, burdenDepth, troughingAngle, userBeltWidth, requiredFaceWidth, modelFaceCoverage]);
 
   if (loading || !selectedModel) {
     return (
@@ -271,6 +301,123 @@ export default function MagneticFieldSimulator() {
   const calculateFieldStrength = (depth: number): number => {
     return selectedModel.G0 * Math.exp(-effectiveK * depth);
   };
+
+  // Linear interpolation in log-space for more accurate field decay
+  const interpolateGauss = (wd_mm: number, position: 'inline' | 'crossbelt'): number => {
+    if (!selectedModel.fieldCurves) {
+      // Fallback to exponential if no curves
+      return calculateFieldStrength(wd_mm / 1000); // Convert to meters
+    }
+    
+    const curve = selectedModel.fieldCurves[position];
+    
+    // Clamp to curve range
+    if (wd_mm <= curve[0].wd_mm) return curve[0].gauss_center;
+    if (wd_mm >= curve[curve.length - 1].wd_mm) return curve[curve.length - 1].gauss_center;
+    
+    // Find bracketing points
+    let i = 0;
+    while (i < curve.length - 1 && curve[i + 1].wd_mm < wd_mm) i++;
+    
+    const p1 = curve[i];
+    const p2 = curve[i + 1];
+    
+    // Linear interpolation in log space
+    const logG1 = Math.log(p1.gauss_center);
+    const logG2 = Math.log(p2.gauss_center);
+    const t = (wd_mm - p1.wd_mm) / (p2.wd_mm - p1.wd_mm);
+    const logG = logG1 + t * (logG2 - logG1);
+    
+    return Math.exp(logG);
+  };
+
+  // Edge field derate based on coverage ratio
+  const interpolateGaussEdge = (wd_mm: number, position: 'inline' | 'crossbelt', coverageRatio: number): number => {
+    const centerGauss = interpolateGauss(wd_mm, position);
+    
+    if (coverageRatio >= 1.0) return centerGauss;
+    
+    // Linear falloff for now (can calibrate later)
+    // If 90% coverage, edge field is ~80% of center
+    const edgeDerate = 0.6 + (0.4 * coverageRatio);
+    return centerGauss * edgeDerate;
+  };
+
+  // Calculate derate multiplier based on conditions
+  const calculateDerateMultiplier = (
+    troughAngle: number,
+    burdenDepth: number,
+    density: number
+  ): number => {
+    // Start with base derate
+    let derate = 1.0;
+    
+    // Trough angle derate (higher angle = more burden dispersion)
+    if (troughAngle > 35) derate *= 0.90;
+    else if (troughAngle > 20) derate *= 0.95;
+    
+    // Burden depth derate (deeper = more material attenuation)
+    if (burdenDepth > 100) derate *= 0.92;
+    else if (burdenDepth > 50) derate *= 0.96;
+    
+    // Density effect
+    if (includeMaterialEffects && density > 1.8) derate *= 0.93;
+    
+    return derate;
+  };
+
+  // New evaluation function for tramp capture
+  const evaluateTrampCapture = (
+    tramp: TrampThreshold,
+    wd_mm: number,
+    position: 'inline' | 'crossbelt'
+  ): {
+    G_center: number;
+    G_edge: number | null;
+    G_req: number;
+    status_center: 'PASS' | 'FAIL';
+    status_edge: 'PASS' | 'FAIL' | null;
+    margin_center: number;
+    margin_edge: number | null;
+  } => {
+    const coverageRatio = modelFaceCoverage / requiredFaceWidth;
+    
+    // Get field at WD
+    const G_center = Math.round(interpolateGauss(wd_mm, position));
+    const G_edge = coverageRatio < 1.0 
+      ? Math.round(interpolateGaussEdge(wd_mm, position, coverageRatio))
+      : null;
+    
+    // Calculate required field with derates
+    const derateMultiplier = calculateDerateMultiplier(troughingAngle, burdenDepth, density);
+    const G_req = Math.round(tramp.G_req_base / derateMultiplier);
+    
+    // Evaluate pass/fail
+    const status_center = G_center >= G_req ? 'PASS' : 'FAIL';
+    const status_edge = G_edge !== null 
+      ? (G_edge >= G_req ? 'PASS' : 'FAIL')
+      : null;
+    
+    // Calculate margins
+    const margin_center = G_center - G_req;
+    const margin_edge = G_edge !== null ? G_edge - G_req : null;
+    
+    return {
+      G_center,
+      G_edge,
+      G_req,
+      status_center,
+      status_edge,
+      margin_center,
+      margin_edge
+    };
+  };
+
+  // Check if WD is out of range
+  const wdOutOfRange = selectedModel.fieldCurves && (
+    (airGap + burdenDepth) < selectedModel.fieldCurves[magnetPosition][0].wd_mm ||
+    (airGap + burdenDepth) > selectedModel.fieldCurves[magnetPosition][selectedModel.fieldCurves[magnetPosition].length - 1].wd_mm
+  );
 
   // Calculate capture probability using field strength ratio
   const calculateCaptureProbability = (depth: number, threshold: number, n: number = 1.8): number => {
@@ -635,7 +782,7 @@ export default function MagneticFieldSimulator() {
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Magnet Width:</span>
+                  <span className="text-muted-foreground">Coil Width:</span>
                   <span className="font-mono">{selectedModel.width} mm</span>
                 </div>
                 <div className="flex justify-between">
@@ -685,7 +832,8 @@ export default function MagneticFieldSimulator() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold text-sm">Magnetic Properties</h3>
+              <h3 className="font-semibold text-sm">Magnetic Properties <span className="text-xs text-muted-foreground">(Reference)</span></h3>
+              <div className="text-xs text-muted-foreground mb-2">Using per-model field curves for calculations</div>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Surface Gauss (G₀):</span>
@@ -772,13 +920,50 @@ export default function MagneticFieldSimulator() {
                   </div>
                 )}
               </div>
-              <div className="p-3 bg-muted rounded-md">
-                <div className="text-sm font-semibold">Total Depth to Tramps:</div>
-                <div className="text-2xl font-bold">{airGap + burdenDepth} mm</div>
+              
+              <div>
+                <Label htmlFor="magnetPosition">Magnet Position</Label>
+                <Select
+                  value={magnetPosition}
+                  onValueChange={(value) => setMagnetPosition(value as 'inline' | 'crossbelt')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inline">Inline</SelectItem>
+                    <SelectItem value="crossbelt">Crossbelt</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Field at depth: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
+                  Crossbelt typically ~12% lower field than inline
                 </div>
               </div>
+              
+              <div className="p-3 bg-muted rounded-md space-y-2">
+                <Label htmlFor="workingDistance">Working Distance (WD): {airGap + burdenDepth} mm</Label>
+                <div className="text-xs text-muted-foreground">
+                  WD = Air Gap ({airGap}mm) + Burden Depth ({burdenDepth}mm)
+                </div>
+              </div>
+              
+              {/* Range Warning */}
+              {wdOutOfRange && (
+                <div className="p-3 bg-yellow-500/10 border-2 border-yellow-500 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="text-lg">⚠️</div>
+                    <div>
+                      <h3 className="font-bold text-yellow-700 text-sm mb-1">
+                        Working Distance Out of Range
+                      </h3>
+                      <p className="text-xs">
+                        WD = {airGap + burdenDepth}mm is outside the calibrated range for this model.
+                        Field values are extrapolated and may be less accurate.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Material Stream Effects */}
@@ -848,77 +1033,50 @@ export default function MagneticFieldSimulator() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold text-sm">Tramp Capture Zones</h3>
-              <div className="space-y-2">
-                {trampObjects.map((tramp) => {
-                  const status = getTrampStatus(tramp);
-                  const statusColor = 
-                    status.status === 'captured' ? 'bg-green-100 dark:bg-green-950 border-green-500' :
-                    status.status === 'partial' ? 'bg-yellow-100 dark:bg-yellow-950 border-yellow-500' :
-                    'bg-red-100 dark:bg-red-950 border-red-500';
-                  
-                  // Calculate material attenuation impact
-                  const attenuationImpact = includeMaterialEffects 
-                    ? `η = ${eta.toFixed(2)}×`
-                    : null;
-                  const etaColor = eta < 1.2 ? 'text-green-600 dark:text-green-400' :
-                                   eta < 1.5 ? 'text-yellow-600 dark:text-yellow-400' :
-                                   'text-red-600 dark:text-red-400';
-                  
+              <h3 className="font-semibold text-sm">Tramp Capture Evaluation at WD = {airGap + burdenDepth} mm</h3>
+              <div className="space-y-3">
+                {TRAMP_THRESHOLDS.map(tramp => {
+                  const result = evaluateTrampCapture(tramp, airGap + burdenDepth, magnetPosition);
                   return (
-                    <div
-                      key={tramp.name}
-                      className={`p-3 rounded-lg border-2 space-y-2 ${statusColor}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <div key={tramp.size_mm} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold flex items-center gap-2">
                           <span className="text-xl">{tramp.icon}</span>
-                          <div>
-                            <div className="font-medium text-sm">{tramp.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Limit: {status.captureDepth} mm @ {status.fieldAtCaptureDepth} G
-                            </div>
-                            {includeMaterialEffects && (
-                              <div className="text-xs font-semibold mt-0.5">
-                                Required: <span className={etaColor}>{status.effectiveThreshold} G</span> (with material)
-                              </div>
-                            )}
-                          </div>
+                          {tramp.name}
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold">
-                            {status.probability}%
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Field at burden: {status.fieldStrength} G
-                          </div>
+                        <Badge variant={result.status_center === 'PASS' ? 'default' : 'destructive'}>
+                          {result.status_center}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">G_center:</span>
+                          <span className="font-mono ml-1 font-bold">{result.G_center} G</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">G_req:</span>
+                          <span className="font-mono ml-1">{result.G_req} G</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Margin:</span>
+                          <span className={`font-mono ml-1 font-bold ${result.margin_center >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.margin_center >= 0 ? '+' : ''}{result.margin_center} G
+                          </span>
                         </div>
                       </div>
-                      
-                      {/* Progress bar */}
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all ${
-                            status.status === 'captured' ? 'bg-green-500' :
-                            status.status === 'partial' ? 'bg-yellow-500' :
-                            'bg-red-500'
-                          }`}
-                          style={{ width: `${status.probability}%` }}
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">
-                          {status.status === 'captured' && '✅ Highly likely to capture'}
-                          {status.status === 'partial' && '⚠️ Marginal capture zone'}
-                          {status.status === 'missed' && '❌ Field too weak'}
-                        </div>
-                        {attenuationImpact && (
-                          <div className={`text-xs font-bold ${etaColor}`}>
-                            {attenuationImpact}
+                      {result.G_edge !== null && (
+                        <div className="mt-2 pt-2 border-t text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Edge Field (coverage {Math.round((modelFaceCoverage / requiredFaceWidth) * 100)}%):</span>
+                            <Badge variant={result.status_edge === 'PASS' ? 'default' : 'destructive'} className="text-xs">
+                              {result.status_edge}
+                            </Badge>
                           </div>
-                        )}
-                      </div>
+                          <div className="font-mono mt-1">
+                            G_edge: {result.G_edge} G (margin: {result.margin_edge !== null && result.margin_edge >= 0 ? '+' : ''}{result.margin_edge} G)
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

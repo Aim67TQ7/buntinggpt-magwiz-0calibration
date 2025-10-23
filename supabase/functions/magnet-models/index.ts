@@ -18,14 +18,31 @@ interface MagnetModel {
   suffix?: number;
   frame?: string;
   faceCoverage?: number; // Assembly face width in mm
+  fieldCurves?: {
+    crossbelt: Array<{ wd_mm: number; gauss_center: number }>;
+    inline: Array<{ wd_mm: number; gauss_center: number }>;
+  };
 }
 
 const TRAMP_OBJECTS = [
-  { name: "25mm Cube", threshold: 200, icon: "⬛" },
-  { name: "M12 Nut", threshold: 300, icon: "⬢" },
-  { name: "M16×75 Bolt", threshold: 350, icon: "🔩" },
-  { name: "6mm Plate", threshold: 700, icon: "▬" }
+  { name: "25mm Cube", threshold: 1400, icon: "⬛", size_mm: 25 },
+  { name: "50mm Plate", threshold: 1900, icon: "▬", size_mm: 50 },
+  { name: "100mm Object", threshold: 2400, icon: "🔩", size_mm: 100 }
 ];
+
+// Generate field curves from G0 and k values
+const generateFieldCurves = (G0: number, k: number) => {
+  const wdPoints = [50, 75, 100, 125, 150, 175, 200, 250, 300, 350, 400, 450, 500];
+  const crossbelt = wdPoints.map(wd => ({
+    wd_mm: wd,
+    gauss_center: Math.round(G0 * Math.exp(-k * wd / 1000) * 0.88) // 12% reduction for crossbelt, k is per mm so divide by 1000
+  }));
+  const inline = wdPoints.map(wd => ({
+    wd_mm: wd,
+    gauss_center: Math.round(G0 * Math.exp(-k * wd / 1000))
+  }));
+  return { crossbelt, inline };
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -96,10 +113,12 @@ serve(async (req) => {
       // Typical range: 0.003 to 0.008 for OCW units
       const k = unit.Suffix ? 0.008 - (unit.Suffix / 10000) : 0.005;
       
+      const clampedK = Math.max(0.003, Math.min(0.008, k));
+      
       return {
         name: modelName,
         G0: G0,
-        k: Math.max(0.003, Math.min(0.008, k)), // Clamp between 0.003 and 0.008
+        k: clampedK,
         width: dimensions.width,
         thickness: dimensions.thickness,
         beltWidth: 1200, // Default belt width - will be overridden by OCW configurator
@@ -107,7 +126,8 @@ serve(async (req) => {
         prefix: unit.Prefix,
         suffix: unit.Suffix,
         frame: unit.frame,
-        faceCoverage: unit.width || dimensions.width // Use width from BMR_Top or default to magnet width
+        faceCoverage: unit.width || dimensions.width, // Use width from BMR_Top or default to magnet width
+        fieldCurves: generateFieldCurves(G0, clampedK)
       };
     });
 
