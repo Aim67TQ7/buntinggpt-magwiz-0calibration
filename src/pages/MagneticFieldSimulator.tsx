@@ -67,6 +67,7 @@ export default function MagneticFieldSimulator() {
   const [troughingAngle, setTroughingAngle] = useState(20); // degrees, typically 20-45
   const [snappedAngle, setSnappedAngle] = useState(false);
   const [magnetPosition, setMagnetPosition] = useState<'inline' | 'crossbelt'>('inline');
+  const [wdRule, setWdRule] = useState<'bottom' | 'center'>('center'); // WD measurement rule
   
   // Burden geometry parameters
   const [centerFlat, setCenterFlat] = useState(0.4); // Fraction of belt width (wc/B)
@@ -85,6 +86,12 @@ export default function MagneticFieldSimulator() {
   
   // Clamp burden depth to minimum (trough edge height)
   const burdenDepth = Math.max(burdenDepthUser, h_edge);
+  
+  // Working distance calculations
+  const WD_top = airGap;
+  const WD_center = airGap + 0.5 * burdenDepth;
+  const WD_bottom = airGap + burdenDepth;
+  const WD_selected = wdRule === 'bottom' ? WD_bottom : WD_center;
 
   // Fetch magnet models from Supabase Edge function
   useEffect(() => {
@@ -265,9 +272,8 @@ export default function MagneticFieldSimulator() {
   // Telemetry logging
   useEffect(() => {
     if (selectedModel) {
-      const wd = airGap + burdenDepth;
       const evals = TRAMP_THRESHOLDS.map(tramp => {
-        const result = evaluateTrampCapture(tramp, wd, magnetPosition);
+        const result = evaluateTrampCapture(tramp, WD_selected, magnetPosition);
         return {
           size: tramp.size_mm,
           ...result
@@ -277,9 +283,14 @@ export default function MagneticFieldSimulator() {
       console.log('[Field Simulator Telemetry]', {
         model: selectedModel.name,
         position: magnetPosition,
-        WD_mm: wd,
+        WD_rule: wdRule,
+        WD_top: WD_top,
+        WD_center: WD_center,
+        WD_bottom: WD_bottom,
+        WD_selected: WD_selected,
         airGap,
         burdenDepth,
+        h_edge,
         troughAngle: troughingAngle,
         beltWidth: userBeltWidth,
         requiredFaceWidth,
@@ -288,7 +299,7 @@ export default function MagneticFieldSimulator() {
         timestamp: new Date().toISOString(),
       });
     }
-  }, [selectedModel, magnetPosition, airGap, burdenDepth, troughingAngle, userBeltWidth, requiredFaceWidth, modelFaceCoverage]);
+  }, [selectedModel, magnetPosition, wdRule, WD_selected, WD_top, WD_center, WD_bottom, airGap, burdenDepth, h_edge, troughingAngle, userBeltWidth, requiredFaceWidth, modelFaceCoverage]);
 
   if (loading || !selectedModel) {
     return (
@@ -429,8 +440,8 @@ export default function MagneticFieldSimulator() {
 
   // Check if WD is out of range
   const wdOutOfRange = selectedModel.fieldCurves && (
-    (airGap + burdenDepth) < selectedModel.fieldCurves[magnetPosition][0].wd_mm ||
-    (airGap + burdenDepth) > selectedModel.fieldCurves[magnetPosition][selectedModel.fieldCurves[magnetPosition].length - 1].wd_mm
+    WD_selected < selectedModel.fieldCurves[magnetPosition][0].wd_mm ||
+    WD_selected > selectedModel.fieldCurves[magnetPosition][selectedModel.fieldCurves[magnetPosition].length - 1].wd_mm
   );
 
   // Calculate capture probability using field strength ratio
@@ -991,7 +1002,7 @@ export default function MagneticFieldSimulator() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50 bg-popover">
                     <SelectItem value="inline">Inline</SelectItem>
                     <SelectItem value="crossbelt">Crossbelt</SelectItem>
                   </SelectContent>
@@ -1001,10 +1012,44 @@ export default function MagneticFieldSimulator() {
                 </div>
               </div>
               
+              <div>
+                <Label htmlFor="wdRule">WD Measurement Rule</Label>
+                <Select
+                  value={wdRule}
+                  onValueChange={(value) => setWdRule(value as 'bottom' | 'center')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    <SelectItem value="center">Center (WD = Air Gap + 0.5 × Depth)</SelectItem>
+                    <SelectItem value="bottom">Bottom (WD = Air Gap + Depth)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Center: Average field | Bottom: Conservative estimate
+                </div>
+              </div>
+              
               <div className="p-3 bg-muted rounded-md space-y-2">
-                <Label htmlFor="workingDistance">Working Distance (WD): {airGap + burdenDepth} mm</Label>
-                <div className="text-xs text-muted-foreground">
-                  WD = Air Gap ({airGap}mm) + Burden Depth ({burdenDepth}mm)
+                <Label>Working Distance Calculations</Label>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>WD Top:</span>
+                    <span className="font-mono">{WD_top} mm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>WD Center:</span>
+                    <span className="font-mono">{WD_center.toFixed(1)} mm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>WD Bottom:</span>
+                    <span className="font-mono">{WD_bottom.toFixed(1)} mm</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-1 mt-1">
+                    <span className="font-semibold">WD Selected ({wdRule}):</span>
+                    <span className="font-mono font-bold text-primary">{WD_selected.toFixed(1)} mm</span>
+                  </div>
                 </div>
               </div>
               
@@ -1094,10 +1139,15 @@ export default function MagneticFieldSimulator() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold text-sm">Tramp Capture Evaluation at WD = {airGap + burdenDepth} mm</h3>
+              <h3 className="font-semibold text-sm">Tramp Capture Evaluation at WD = {WD_selected.toFixed(1)} mm</h3>
+              <div className="text-xs text-muted-foreground mb-2">
+                WD Rule: {wdRule === 'center' ? 'Center' : 'Bottom'} | 
+                {wdRule === 'center' && ` WD = ${airGap} + 0.5 × ${burdenDepth.toFixed(1)} = ${WD_selected.toFixed(1)} mm`}
+                {wdRule === 'bottom' && ` WD = ${airGap} + ${burdenDepth.toFixed(1)} = ${WD_selected.toFixed(1)} mm`}
+              </div>
               <div className="space-y-3">
                 {TRAMP_THRESHOLDS.map(tramp => {
-                  const result = evaluateTrampCapture(tramp, airGap + burdenDepth, magnetPosition);
+                  const result = evaluateTrampCapture(tramp, WD_selected, magnetPosition);
                   return (
                     <div key={tramp.size_mm} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
@@ -1605,7 +1655,7 @@ export default function MagneticFieldSimulator() {
                       fontWeight="bold"
                       fill="white"
                     >
-                      Field at Tramp: {Math.round(calculateFieldStrength(airGap + burdenDepth))} G
+                      Field at Tramp: {Math.round(interpolateGauss(WD_bottom, magnetPosition))} G
                     </text>
                     
                     {/* CONVEYOR BELT - Troughed cross-section */}
@@ -1797,15 +1847,25 @@ export default function MagneticFieldSimulator() {
                     </div>
                     <div className="flex items-center justify-between p-2 bg-background rounded">
                       <span className="text-muted-foreground">Burden Depth:</span>
-                      <span className="font-mono font-bold text-amber-700">{burdenDepth} mm</span>
+                      <span className="font-mono font-bold text-amber-700">{burdenDepth.toFixed(1)} mm</span>
                     </div>
-                    <div className="flex items-center justify-between p-2 bg-red-600 text-white rounded font-bold">
-                      <span>Total Depth to Tramps:</span>
-                      <span className="font-mono">{airGap + burdenDepth} mm</span>
+                    <div className="flex items-center justify-between p-2 bg-background rounded border-2 border-primary">
+                      <span className="text-muted-foreground font-semibold">WD Selected ({wdRule}):</span>
+                      <span className="font-mono font-bold text-primary">{WD_selected.toFixed(1)} mm</span>
                     </div>
-                    <div className="flex items-center justify-between p-2 bg-yellow-500 text-black rounded font-bold">
-                      <span>Field at Tramp Depth:</span>
-                      <span className="font-mono">{Math.round(calculateFieldStrength(airGap + burdenDepth))} G</span>
+                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                      <div className="flex justify-between">
+                        <span>WD Top:</span>
+                        <span className="font-mono">{WD_top} mm</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>WD Center:</span>
+                        <span className="font-mono">{WD_center.toFixed(1)} mm</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>WD Bottom:</span>
+                        <span className="font-mono">{WD_bottom.toFixed(1)} mm</span>
+                      </div>
                     </div>
                   </div>
                 </div>
