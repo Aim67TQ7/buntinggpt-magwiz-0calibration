@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOCWList } from "@/contexts/OCWListContext";
 import { Separator } from "@/components/ui/separator";
+import polygonClipping from 'polygon-clipping';
 
 interface MagnetModel {
   name: string;
@@ -57,7 +58,7 @@ export default function MagneticFieldSimulator() {
   const [models, setModels] = useState<MagnetModel[]>([]);
   const [trampObjects, setTrampObjects] = useState<TrampObject[]>([]);
   const [selectedModel, setSelectedModel] = useState<MagnetModel | null>(null);
-  const [burdenDepth, setBurdenDepth] = useState(50);
+  const [burdenDepthUser, setBurdenDepthUser] = useState(100); // User's desired depth
   const [airGap, setAirGap] = useState(50);
   const [loading, setLoading] = useState(true);
   const [ocwBeltWidth, setOcwBeltWidth] = useState<number | null>(null);
@@ -67,10 +68,23 @@ export default function MagneticFieldSimulator() {
   const [snappedAngle, setSnappedAngle] = useState(false);
   const [magnetPosition, setMagnetPosition] = useState<'inline' | 'crossbelt'>('inline');
   
+  // Burden geometry parameters
+  const [centerFlat, setCenterFlat] = useState(0.4); // Fraction of belt width (wc/B)
+  const [surchargeAngle, setSurchargeAngle] = useState(20); // degrees
+  
   // Material stream properties
   const [includeMaterialEffects, setIncludeMaterialEffects] = useState(false);
   const [density, setDensity] = useState(1.6); // t/m³
   const [waterContent, setWaterContent] = useState(5); // %
+  
+  // Calculate trough geometry and minimum burden depth
+  const centerFlat_mm = userBeltWidth * centerFlat;
+  const h_edge = troughingAngle > 0 
+    ? Math.tan(troughingAngle * Math.PI / 180) * (userBeltWidth - centerFlat_mm) / 2
+    : 0;
+  
+  // Clamp burden depth to minimum (trough edge height)
+  const burdenDepth = Math.max(burdenDepthUser, h_edge);
 
   // Fetch magnet models from Supabase Edge function
   useEffect(() => {
@@ -124,9 +138,9 @@ export default function MagneticFieldSimulator() {
               setAirGap(inputParameters.airGap);
             }
             if (state?.burdenDepth !== undefined) {
-              setBurdenDepth(state.burdenDepth);
+              setBurdenDepthUser(state.burdenDepth);
             } else if (inputParameters?.burdenDepth !== undefined) {
-              setBurdenDepth(inputParameters.burdenDepth);
+              setBurdenDepthUser(inputParameters.burdenDepth);
             }
             if (state?.beltTroughingAngle !== undefined) {
               setTroughingAngle(state.beltTroughingAngle);
@@ -161,9 +175,9 @@ export default function MagneticFieldSimulator() {
               setAirGap(inputParameters.airGap);
             }
             if (state?.burdenDepth !== undefined) {
-              setBurdenDepth(state.burdenDepth);
+              setBurdenDepthUser(state.burdenDepth);
             } else if (inputParameters?.burdenDepth !== undefined) {
-              setBurdenDepth(inputParameters.burdenDepth);
+              setBurdenDepthUser(inputParameters.burdenDepth);
             }
             if (state?.beltTroughingAngle !== undefined) {
               setTroughingAngle(state.beltTroughingAngle);
@@ -563,51 +577,94 @@ export default function MagneticFieldSimulator() {
   // Corrected air gap: measure from magnet bottom to top of trough OR top of burden (whichever is higher)
   const effectiveAirGap = airGap - burdenAboveTrough;
   
-  // Helper function to calculate burden surface curve
-  const calculateBurdenSurface = (xPosition: number): number => {
-    // Returns Y offset (in pixels) from belt top at given X position
-    const relX = xPosition - beltX;
-    const beltCenter = beltWidth / 2;
+  // Calculate burden polygon using polygon intersection
+  const calculateBurdenPolygon = (): string => {
+    const beltTopY = magnetHeight + airGap * scale;
+    const steps = 80;
     
-    if (burdenDepth === 0) return 0;
+    // Build trough surface polygon (region ABOVE trough surface)
+    const troughPolygon: number[][][] = [[]];
     
-    // Calculate how deep the burden goes at this X position based on trough shape (in pixels)
-    let troughDepthAtX = 0;
-    if (troughingAngle > 0) {
-      if (relX < leftEdgeWidth) {
-        // Left slope
-        const ratio = relX / leftEdgeWidth;
-        troughDepthAtX = edgeRise * ratio;
-      } else if (relX >= leftEdgeWidth && relX <= leftEdgeWidth + centerWidth) {
-        // Flat center
-        troughDepthAtX = edgeRise;
-      } else {
-        // Right slope
-        const ratio = (beltWidth - relX) / rightEdgeWidth;
-        troughDepthAtX = edgeRise * ratio;
+    // Left edge of belt
+    troughPolygon[0].push([beltX, beltTopY - edgeRise]);
+    
+    // Sample across belt width
+    for (let i = 0; i <= steps; i++) {
+      const x = beltX + (i / steps) * beltWidth;
+      const relX = x - beltX;
+      
+      // Calculate trough surface z(x)
+      let troughY = beltTopY; // default (flat belt)
+      if (troughingAngle > 0) {
+        const wc = centerFlat_mm * scale;
+        if (relX <= wc / 2) {
+          troughY = beltTopY; // center flat
+        } else if (relX <= beltWidth / 2) {
+          const offset = relX - wc / 2;
+          const rise = Math.tan(troughingAngle * Math.PI / 180) * offset;
+          troughY = beltTopY - rise;
+        } else if (relX < beltWidth - wc / 2) {
+          const offset = beltWidth - relX - wc / 2;
+          const rise = Math.tan(troughingAngle * Math.PI / 180) * offset;
+          troughY = beltTopY - rise;
+        } else {
+          troughY = beltTopY; // center flat on right
+        }
       }
+      
+      troughPolygon[0].push([x, troughY]);
     }
     
-    // If burden is shallow (within trough), create elliptical surface
-    if (burdenDepth <= troughDepth) {
-      // Ellipse filling trough bottom
-      const distFromCenter = Math.abs(relX - beltCenter);
-      const maxRadius = beltWidth / 2;
-      if (distFromCenter > maxRadius) return troughDepthAtX;
-      
-      const ellipseDepth = burdenDepth * scale * Math.sqrt(1 - Math.pow(distFromCenter / maxRadius, 2));
-      return troughDepthAtX + ellipseDepth;
-    } else {
-      // Burden fills trough and rises above
-      const troughDepthInPixels = troughDepth * scale;
-      const overflow = (burdenDepth - troughDepth) * scale;
-      const distFromCenter = Math.abs(relX - beltCenter);
-      const maxRadius = beltWidth / 2;
-      
-      // Create dome shape for overflow above trough
-      const domeHeight = overflow * (1 - Math.pow(distFromCenter / maxRadius, 1.5));
-      return troughDepthAtX + troughDepthInPixels + Math.max(0, domeHeight * 0.3);
+    // Right edge of belt
+    troughPolygon[0].push([beltX + beltWidth, beltTopY - edgeRise]);
+    
+    // Close polygon with top boundary (far above)
+    troughPolygon[0].push([beltX + beltWidth, beltTopY - burdenDepth * scale - 100]);
+    troughPolygon[0].push([beltX, beltTopY - burdenDepth * scale - 100]);
+    
+    // Build free surface polygon (region BELOW free surface)
+    const freePolygon: number[][][] = [[]];
+    
+    // Top of free surface (apex at centerline)
+    const apexY = beltTopY - burdenDepth * scale;
+    freePolygon[0].push([beltX + beltWidth / 2, apexY]);
+    
+    // Left slope
+    for (let i = 0; i <= steps / 2; i++) {
+      const x = beltX + beltWidth / 2 - (i / (steps / 2)) * (beltWidth / 2);
+      const distFromCenter = Math.abs(x - (beltX + beltWidth / 2));
+      const z = burdenDepth * scale - Math.tan(surchargeAngle * Math.PI / 180) * distFromCenter;
+      freePolygon[0].push([x, beltTopY - z]);
     }
+    
+    // Bottom boundary
+    freePolygon[0].push([beltX, beltTopY + 100]);
+    freePolygon[0].push([beltX + beltWidth, beltTopY + 100]);
+    
+    // Right slope
+    for (let i = steps / 2; i >= 0; i--) {
+      const x = beltX + beltWidth / 2 + (i / (steps / 2)) * (beltWidth / 2);
+      const distFromCenter = Math.abs(x - (beltX + beltWidth / 2));
+      const z = burdenDepth * scale - Math.tan(surchargeAngle * Math.PI / 180) * distFromCenter;
+      freePolygon[0].push([x, beltTopY - z]);
+    }
+    
+    // Intersect the two polygons
+    try {
+      const intersection = polygonClipping.intersection(troughPolygon as any, freePolygon as any);
+      
+      if (intersection.length > 0 && intersection[0].length > 0) {
+        // Convert to SVG path
+        return intersection[0][0].map((pt, idx) => 
+          `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
+        ).join(' ') + ' Z';
+      }
+    } catch (e) {
+      console.error('Polygon intersection failed:', e);
+    }
+    
+    // Fallback: simple shape
+    return `M ${beltX},${beltTopY} L ${beltX + beltWidth},${beltTopY} L ${beltX + beltWidth},${beltTopY - burdenDepth * scale * 0.5} L ${beltX},${beltTopY - burdenDepth * scale * 0.5} Z`;
   };
 
   return (
@@ -867,16 +924,20 @@ export default function MagneticFieldSimulator() {
                 />
               </div>
               <div>
-                <Label htmlFor="burdenDepth">Burden Depth: {burdenDepth} mm</Label>
+                <Label htmlFor="burdenDepth">Burden Depth: {burdenDepth.toFixed(1)} mm</Label>
                 <Input
                   id="burdenDepth"
                   type="range"
-                  min="10"
+                  min={Math.ceil(h_edge)}
                   max="500"
-                  value={burdenDepth}
-                  onChange={(e) => setBurdenDepth(parseInt(e.target.value))}
+                  value={burdenDepthUser}
+                  onChange={(e) => setBurdenDepthUser(parseInt(e.target.value))}
                   className="w-full"
                 />
+                <div className="text-xs text-muted-foreground mt-1">
+                  Min Depth (trough edges): {h_edge.toFixed(1)} mm
+                  {burdenDepthUser < h_edge && <span className="text-orange-500 ml-2">⚠️ Snapped to minimum</span>}
+                </div>
               </div>
               <div>
                 <Label htmlFor="troughingAngle">Belt Troughing Angle: {troughingAngle}°</Label>
@@ -1466,87 +1527,16 @@ export default function MagneticFieldSimulator() {
                           </radialGradient>
                         </defs>
                         
-                        {/* Burden fill - realistic settled material shape */}
+                        {/* Burden fill - polygon intersection */}
                         <path
-                          d={(() => {
-                            const beltTopY = magnetHeight + airGap * scale;
-                            const steps = 80;
-                            let pathD = '';
-                            
-                            // Draw top surface curve (burden surface)
-                            for (let i = 0; i <= steps; i++) {
-                              const x = beltX + (i / steps) * beltWidth;
-                              const surfaceY = beltTopY - calculateBurdenSurface(x);
-                              pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
-                            }
-                            
-                            // Draw right edge down to belt surface
-                            pathD += `L ${beltX + beltWidth},${beltTopY - edgeRise} `;
-                            
-                            // Draw bottom following belt trough profile
-                            pathD += `L ${beltX + leftEdgeWidth + centerWidth},${beltTopY} `;
-                            pathD += `L ${beltX + leftEdgeWidth},${beltTopY} `;
-                            
-                            // Draw left edge back up
-                            pathD += `L ${beltX},${beltTopY - edgeRise} Z`;
-                            
-                            return pathD;
-                          })()}
+                          d={calculateBurdenPolygon()}
                           fill="url(#burdenGradient)"
                           stroke="#78350f"
                           strokeWidth="2"
                         />
-                        
-                        {/* Burden surface line for clarity */}
-                        <path
-                          d={(() => {
-                            const beltTopY = magnetHeight + airGap * scale;
-                            const steps = 60;
-                            let pathD = '';
-                            
-                            for (let i = 0; i <= steps; i++) {
-                              const x = beltX + (i / steps) * beltWidth;
-                              const surfaceY = beltTopY - calculateBurdenSurface(x);
-                              pathD += `${i === 0 ? 'M' : 'L'} ${x},${surfaceY} `;
-                            }
-                            
-                            return pathD;
-                          })()}
-                          fill="none"
-                          stroke="#92400e"
-                          strokeWidth="3"
-                          opacity="0.8"
-                        />
                       </>
                     )}
                     
-                    {/* Material particles following realistic burden surface */}
-                    {burdenDepth > 0 && Array.from({ length: 100 }).map((_, i) => {
-                      const col = i % 50;
-                      const row = Math.floor(i / 50);
-                      const xPos = beltX + 20 + col * (beltWidth / 50);
-                      const beltTopY = magnetHeight + airGap * scale;
-                      
-                      // Calculate position along burden depth
-                      const depthRatio = (row + 0.5) / 3; // Distribute through burden depth
-                      const maxSurface = calculateBurdenSurface(xPos);
-                      const particleY = beltTopY - (maxSurface * depthRatio);
-                      
-                      // Only show particles within the burden volume
-                      if (maxSurface > 0) {
-                        return (
-                          <circle
-                            key={i}
-                            cx={xPos}
-                            cy={particleY}
-                            r="2"
-                            fill="#451a03"
-                            opacity="0.5"
-                          />
-                        );
-                      }
-                      return null;
-                    })}
                     
                     <text 
                       x={beltX - 180} 
