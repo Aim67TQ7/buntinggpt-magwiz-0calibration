@@ -590,83 +590,104 @@ export default function MagneticFieldSimulator() {
   
   // Calculate burden polygon using polygon intersection
   const calculateBurdenPolygon = (): string => {
-    const beltTopY = magnetHeight + airGap * scale;
-    const steps = 80;
+    // Define coordinate system - pure math to screen mapping
+    const B_mm = userBeltWidth;
+    const B_px = beltWidth;
+    const alpha_rad = troughingAngle * Math.PI / 180;
+    const phi_rad = surchargeAngle * Math.PI / 180;
+    const wc_mm = centerFlat_mm;
+    const wc_px = wc_mm * scale;
     
-    // Build trough surface polygon (region ABOVE trough surface)
+    // yZero is the trough centerline
+    const yZero = magnetHeight + airGap * scale;
+    
+    // Coordinate mapping functions
+    const sx = (x_mm: number) => beltX + (beltWidth / 2) + x_mm * scale;
+    const sy = (z_mm: number) => yZero - z_mm * scale;
+    
+    // Trough surface z_trough(x) in mm
+    const z_trough = (x_mm: number) => {
+      const absX = Math.abs(x_mm);
+      if (absX <= wc_mm / 2) return 0;
+      return Math.tan(alpha_rad) * (absX - wc_mm / 2);
+    };
+    
+    // Free surface roof z_free(x) in mm
+    const depth_mm = burdenDepth;
+    const z_free = (x_mm: number) => depth_mm - Math.tan(phi_rad) * Math.abs(x_mm);
+    
+    // Sample points across width
+    const N = 80;
+    const xs_mm: number[] = [];
+    for (let i = 0; i <= N; i++) {
+      xs_mm.push(-B_mm / 2 + (i / N) * B_mm);
+    }
+    
+    // Build baseline points (trough surface) - SAVE THESE
+    const basePts: [number, number][] = xs_mm.map(x => [sx(x), sy(z_trough(x))]);
+    
+    // Build trough polygon (area ABOVE trough, z >= z_trough(x))
     const troughPolygon: number[][][] = [[]];
     
-    // Left edge of belt
-    troughPolygon[0].push([beltX, beltTopY - edgeRise]);
-    
-    // Sample across belt width
-    for (let i = 0; i <= steps; i++) {
-      const x = beltX + (i / steps) * beltWidth;
-      const relX = x - beltX;
-      
-      // Calculate trough surface z(x)
-      let troughY = beltTopY; // default (flat belt)
-      if (troughingAngle > 0) {
-        const wc = centerFlat_mm * scale;
-        if (relX <= wc / 2) {
-          troughY = beltTopY; // center flat
-        } else if (relX <= beltWidth / 2) {
-          const offset = relX - wc / 2;
-          const rise = Math.tan(troughingAngle * Math.PI / 180) * offset;
-          troughY = beltTopY - rise;
-        } else if (relX < beltWidth - wc / 2) {
-          const offset = beltWidth - relX - wc / 2;
-          const rise = Math.tan(troughingAngle * Math.PI / 180) * offset;
-          troughY = beltTopY - rise;
-        } else {
-          troughY = beltTopY; // center flat on right
-        }
-      }
-      
-      troughPolygon[0].push([x, troughY]);
+    // Start from left edge, go along trough surface
+    for (const pt of basePts) {
+      troughPolygon[0].push([pt[0], pt[1]]);
     }
     
-    // Right edge of belt
-    troughPolygon[0].push([beltX + beltWidth, beltTopY - edgeRise]);
+    // Close with top boundary (far above)
+    const topY = sy(depth_mm + 50); // Well above the pile
+    troughPolygon[0].push([sx(B_mm / 2), topY]);
+    troughPolygon[0].push([sx(-B_mm / 2), topY]);
+    troughPolygon[0].push(basePts[0]); // Close the loop
     
-    // Close polygon with top boundary (far above)
-    troughPolygon[0].push([beltX + beltWidth, beltTopY - burdenDepth * scale - 100]);
-    troughPolygon[0].push([beltX, beltTopY - burdenDepth * scale - 100]);
-    
-    // Build free surface polygon (region BELOW free surface)
+    // Build free surface polygon (area BELOW roof, z <= z_free(x))
     const freePolygon: number[][][] = [[]];
     
-    // Top of free surface (apex at centerline)
-    const apexY = beltTopY - burdenDepth * scale;
-    freePolygon[0].push([beltX + beltWidth / 2, apexY]);
+    // Start from left edge at bottom
+    const bottomY = sy(-50); // Well below
+    freePolygon[0].push([sx(-B_mm / 2), bottomY]);
+    freePolygon[0].push([sx(B_mm / 2), bottomY]);
     
-    // Left slope
-    for (let i = 0; i <= steps / 2; i++) {
-      const x = beltX + beltWidth / 2 - (i / (steps / 2)) * (beltWidth / 2);
-      const distFromCenter = Math.abs(x - (beltX + beltWidth / 2));
-      const z = burdenDepth * scale - Math.tan(surchargeAngle * Math.PI / 180) * distFromCenter;
-      freePolygon[0].push([x, beltTopY - z]);
+    // Go along roof from right to left
+    for (let i = N; i >= 0; i--) {
+      const x_mm = xs_mm[i];
+      freePolygon[0].push([sx(x_mm), sy(z_free(x_mm))]);
     }
     
-    // Bottom boundary
-    freePolygon[0].push([beltX, beltTopY + 100]);
-    freePolygon[0].push([beltX + beltWidth, beltTopY + 100]);
-    
-    // Right slope
-    for (let i = steps / 2; i >= 0; i--) {
-      const x = beltX + beltWidth / 2 + (i / (steps / 2)) * (beltWidth / 2);
-      const distFromCenter = Math.abs(x - (beltX + beltWidth / 2));
-      const z = burdenDepth * scale - Math.tan(surchargeAngle * Math.PI / 180) * distFromCenter;
-      freePolygon[0].push([x, beltTopY - z]);
-    }
+    freePolygon[0].push([sx(-B_mm / 2), bottomY]); // Close
     
     // Intersect the two polygons
     try {
       const intersection = polygonClipping.intersection(troughPolygon as any, freePolygon as any);
       
       if (intersection.length > 0 && intersection[0].length > 0) {
+        const burdenPts = intersection[0][0];
+        
+        // Snap vertices to baseline within epsilon
+        const EPS = 0.75;
+        for (const pt of burdenPts) {
+          // Find nearest baseline point at same or close x
+          let minDist = Infinity;
+          let nearestY = pt[1];
+          
+          for (const basePt of basePts) {
+            if (Math.abs(basePt[0] - pt[0]) < 2) { // Within 2px horizontally
+              const dist = Math.abs(pt[1] - basePt[1]);
+              if (dist < minDist) {
+                minDist = dist;
+                nearestY = basePt[1];
+              }
+            }
+          }
+          
+          // Snap if within 2*EPS
+          if (minDist < 2 * EPS) {
+            pt[1] = nearestY;
+          }
+        }
+        
         // Convert to SVG path
-        return intersection[0][0].map((pt, idx) => 
+        return burdenPts.map((pt, idx) => 
           `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
         ).join(' ') + ' Z';
       }
@@ -674,8 +695,14 @@ export default function MagneticFieldSimulator() {
       console.error('Polygon intersection failed:', e);
     }
     
-    // Fallback: simple shape
-    return `M ${beltX},${beltTopY} L ${beltX + beltWidth},${beltTopY} L ${beltX + beltWidth},${beltTopY - burdenDepth * scale * 0.5} L ${beltX},${beltTopY - burdenDepth * scale * 0.5} Z`;
+    // Fallback: simple shape aligned to trough
+    const fallbackPts = basePts.slice(0, Math.floor(N / 4)).concat(
+      [[sx(0), sy(depth_mm)]],
+      basePts.slice(Math.floor(3 * N / 4))
+    );
+    return fallbackPts.map((pt, idx) => 
+      `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
+    ).join(' ') + ' Z';
   };
 
   return (
@@ -1577,17 +1604,84 @@ export default function MagneticFieldSimulator() {
                           </radialGradient>
                         </defs>
                         
-                        {/* Burden fill - polygon intersection */}
+                        {/* Burden fill - polygon intersection (no stroke, fill only) */}
                         <path
                           d={calculateBurdenPolygon()}
                           fill="url(#burdenGradient)"
-                          stroke="#78350f"
-                          strokeWidth="2"
+                          shapeRendering="geometricPrecision"
                         />
                       </>
                     )}
                     
                     
+                    {/* WD Lines: Top, Center, Bottom */}
+                    {burdenDepth > 0 && (
+                      <g>
+                        {/* WD Top Line */}
+                        <line
+                          x1={beltX - 50}
+                          y1={magnetHeight + WD_top * scale}
+                          x2={beltX + beltWidth + 50}
+                          y2={magnetHeight + WD_top * scale}
+                          stroke={wdRule === 'center' ? '#94a3b8' : '#22c55e'}
+                          strokeWidth={wdRule === 'center' ? '2' : '3'}
+                          strokeDasharray="5,5"
+                          opacity={wdRule === 'center' ? '0.5' : '0.8'}
+                        />
+                        <text
+                          x={beltX + beltWidth + 60}
+                          y={magnetHeight + WD_top * scale + 5}
+                          fontSize="12"
+                          fill={wdRule === 'center' ? '#94a3b8' : '#22c55e'}
+                          fontWeight={wdRule === 'center' ? 'normal' : 'bold'}
+                        >
+                          WD Top: {WD_top}mm
+                        </text>
+                        
+                        {/* WD Center Line */}
+                        <line
+                          x1={beltX - 50}
+                          y1={magnetHeight + WD_center * scale}
+                          x2={beltX + beltWidth + 50}
+                          y2={magnetHeight + WD_center * scale}
+                          stroke={wdRule === 'center' ? '#22c55e' : '#94a3b8'}
+                          strokeWidth={wdRule === 'center' ? '3' : '2'}
+                          strokeDasharray="5,5"
+                          opacity={wdRule === 'center' ? '0.8' : '0.5'}
+                        />
+                        <text
+                          x={beltX + beltWidth + 60}
+                          y={magnetHeight + WD_center * scale + 5}
+                          fontSize="12"
+                          fill={wdRule === 'center' ? '#22c55e' : '#94a3b8'}
+                          fontWeight={wdRule === 'center' ? 'bold' : 'normal'}
+                        >
+                          WD Center: {WD_center.toFixed(1)}mm
+                        </text>
+                        
+                        {/* WD Bottom Line */}
+                        <line
+                          x1={beltX - 50}
+                          y1={magnetHeight + WD_bottom * scale}
+                          x2={beltX + beltWidth + 50}
+                          y2={magnetHeight + WD_bottom * scale}
+                          stroke={wdRule === 'bottom' ? '#22c55e' : '#94a3b8'}
+                          strokeWidth={wdRule === 'bottom' ? '3' : '2'}
+                          strokeDasharray="5,5"
+                          opacity={wdRule === 'bottom' ? '0.8' : '0.5'}
+                        />
+                        <text
+                          x={beltX + beltWidth + 60}
+                          y={magnetHeight + WD_bottom * scale + 5}
+                          fontSize="12"
+                          fill={wdRule === 'bottom' ? '#22c55e' : '#94a3b8'}
+                          fontWeight={wdRule === 'bottom' ? 'bold' : 'normal'}
+                        >
+                          WD Bottom: {WD_bottom.toFixed(1)}mm
+                        </text>
+                      </g>
+                    )}
+
                     <text 
                       x={beltX - 180} 
                       y={magnetHeight + airGap * scale + (burdenDepth * scale) / 2 + 5} 
