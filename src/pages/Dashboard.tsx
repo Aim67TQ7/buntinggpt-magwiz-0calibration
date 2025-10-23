@@ -202,7 +202,7 @@ const Dashboard = () => {
 
   const getItemDisplayCost = (item: QuoteItem) => {
     if (item.cost <= 0) return 'TBD';
-    return `$${item.cost.toFixed(2)}`;
+    return `£${item.cost.toFixed(2)}`;
   };
 
   const getSelectedQuoteItems = () => {
@@ -350,7 +350,7 @@ const Dashboard = () => {
                       <TableRow className="border-t-2 font-semibold bg-muted/30 h-8">
                         <TableCell colSpan={3} className="text-right text-xs py-1 px-3">Total</TableCell>
                         <TableCell className="text-right text-xs py-1 px-3">
-                          ${getQuoteTotal(selectedQuote.id).toFixed(2)}
+                          £{getQuoteTotal(selectedQuote.id).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableBody>

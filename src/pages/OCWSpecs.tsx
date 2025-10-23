@@ -260,58 +260,60 @@ export default function OCWSpecs() {
             </Card>
           </Collapsible>
 
-          {/* Winding Information */}
-          <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
-            <Card>
-              <CollapsibleTrigger className="w-full">
-                <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-accent/50 transition-colors">
-                  <CardTitle>Winding Information</CardTitle>
-                  <ChevronDown className={`h-5 w-5 transition-transform ${isWindingOpen ? 'rotate-180' : ''}`} />
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Number of Sections</div>
-                      <div className="font-semibold">{ocwData.number_of_sections}</div>
+          {/* Winding Information and Temperature Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Winding Information */}
+            <Collapsible open={isWindingOpen} onOpenChange={setIsWindingOpen}>
+              <Card>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardTitle>Winding Information</CardTitle>
+                    <ChevronDown className={`h-5 w-5 transition-transform ${isWindingOpen ? 'rotate-180' : ''}`} />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Number of Sections</div>
+                        <div className="font-semibold">{ocwData.number_of_sections}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Radial Depth (mm)</div>
+                        <div className="font-semibold">{ocwData.radial_depth}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Coil Height (mm)</div>
+                        <div className="font-semibold">{ocwData.coil_height?.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Diameter (mm)</div>
+                        <div className="font-semibold">{ocwData.diameter?.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Mean Length of Turn (mm)</div>
+                        <div className="font-semibold">{ocwData.mean_length_of_turn?.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Number of Turns</div>
+                        <div className="font-semibold">{ocwData.number_of_turns}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Surface Area (m²)</div>
+                        <div className="font-semibold">{ocwData.surface_area?.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Wires in Parallel</div>
+                        <div className="font-semibold">{ocwData.wires_in_parallel}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Radial Depth (mm)</div>
-                      <div className="font-semibold">{ocwData.radial_depth}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Coil Height (mm)</div>
-                      <div className="font-semibold">{ocwData.coil_height?.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Diameter (mm)</div>
-                      <div className="font-semibold">{ocwData.diameter?.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Mean Length of Turn (mm)</div>
-                      <div className="font-semibold">{ocwData.mean_length_of_turn?.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Number of Turns</div>
-                      <div className="font-semibold">{ocwData.number_of_turns}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Surface Area (m²)</div>
-                      <div className="font-semibold">{ocwData.surface_area?.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Wires in Parallel</div>
-                      <div className="font-semibold">{ocwData.wires_in_parallel}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
-          {/* Temperature & Electrical Properties */}
-          <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
+            {/* Temperature & Electrical Properties */}
+            <Collapsible open={isTempElectricalOpen} onOpenChange={setIsTempElectricalOpen}>
             <Card>
               <CollapsibleTrigger className="w-full">
                 <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-accent/50 transition-colors">
@@ -403,6 +405,7 @@ export default function OCWSpecs() {
               </CollapsibleContent>
             </Card>
           </Collapsible>
+          </div>
         </>}
 
       {!loading && !ocwData && <Card>
