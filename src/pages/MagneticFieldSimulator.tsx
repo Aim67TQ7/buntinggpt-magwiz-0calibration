@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOCWList } from "@/contexts/OCWListContext";
 import { Separator } from "@/components/ui/separator";
-import polygonClipping from 'polygon-clipping';
+// polygon-clipping removed - using direct polygon construction
 
 interface MagnetModel {
   name: string;
@@ -588,17 +588,14 @@ export default function MagneticFieldSimulator() {
   // Corrected air gap: measure from magnet bottom to top of trough OR top of burden (whichever is higher)
   const effectiveAirGap = airGap - burdenAboveTrough;
   
-  // Calculate burden polygon using polygon intersection
+  // Calculate burden polygon using direct tracing (no polygon-clipping)
   const calculateBurdenPolygon = (): string => {
-    // Define coordinate system - pure math to screen mapping
     const B_mm = userBeltWidth;
-    const B_px = beltWidth;
     const alpha_rad = troughingAngle * Math.PI / 180;
     const phi_rad = surchargeAngle * Math.PI / 180;
     const wc_mm = centerFlat_mm;
-    const wc_px = wc_mm * scale;
     
-    // yZero is the trough centerline
+    // yZero is the trough center baseline
     const yZero = magnetHeight + airGap * scale;
     
     // Coordinate mapping functions
@@ -608,11 +605,10 @@ export default function MagneticFieldSimulator() {
     // Trough surface z_trough(x) in mm
     const z_trough = (x_mm: number) => {
       const absX = Math.abs(x_mm);
-      if (absX <= wc_mm / 2) return 0;
-      return Math.tan(alpha_rad) * (absX - wc_mm / 2);
+      return (absX <= wc_mm / 2) ? 0 : Math.tan(alpha_rad) * (absX - wc_mm / 2);
     };
     
-    // Free surface roof z_free(x) in mm
+    // Free surface (surcharge roof) z_free(x) in mm
     const depth_mm = burdenDepth;
     const z_free = (x_mm: number) => depth_mm - Math.tan(phi_rad) * Math.abs(x_mm);
     
@@ -623,86 +619,48 @@ export default function MagneticFieldSimulator() {
       xs_mm.push(-B_mm / 2 + (i / N) * B_mm);
     }
     
-    // Build baseline points (trough surface) - SAVE THESE
-    const basePts: [number, number][] = xs_mm.map(x => [sx(x), sy(z_trough(x))]);
+    // Build polygon by directly tracing the burden outline
+    const pathCommands: string[] = [];
     
-    // Build trough polygon (area ABOVE trough, z >= z_trough(x))
-    const troughPolygon: number[][][] = [[]];
+    // 1. Start at left edge, bottom (trough surface)
+    const leftX = xs_mm[0];
+    const leftZ_trough = z_trough(leftX);
+    pathCommands.push(`M ${sx(leftX)},${sy(leftZ_trough)}`);
     
-    // Start from left edge, go along trough surface
-    for (const pt of basePts) {
-      troughPolygon[0].push([pt[0], pt[1]]);
+    // 2. Trace bottom edge (trough surface) from left to right
+    for (let i = 1; i <= N; i++) {
+      const x = xs_mm[i];
+      const z = z_trough(x);
+      pathCommands.push(`L ${sx(x)},${sy(z)}`);
     }
     
-    // Close with top boundary (far above)
-    const topY = sy(depth_mm + 50); // Well above the pile
-    troughPolygon[0].push([sx(B_mm / 2), topY]);
-    troughPolygon[0].push([sx(-B_mm / 2), topY]);
-    troughPolygon[0].push(basePts[0]); // Close the loop
+    // 3. At right edge, rise to free surface (or trough, whichever is higher)
+    const rightX = xs_mm[N];
+    const rightZ_free = Math.max(z_free(rightX), z_trough(rightX));
+    pathCommands.push(`L ${sx(rightX)},${sy(rightZ_free)}`);
     
-    // Build free surface polygon (area BELOW roof, z <= z_free(x))
-    const freePolygon: number[][][] = [[]];
-    
-    // Start from left edge at bottom
-    const bottomY = sy(-50); // Well below
-    freePolygon[0].push([sx(-B_mm / 2), bottomY]);
-    freePolygon[0].push([sx(B_mm / 2), bottomY]);
-    
-    // Go along roof from right to left
-    for (let i = N; i >= 0; i--) {
-      const x_mm = xs_mm[i];
-      freePolygon[0].push([sx(x_mm), sy(z_free(x_mm))]);
-    }
-    
-    freePolygon[0].push([sx(-B_mm / 2), bottomY]); // Close
-    
-    // Intersect the two polygons
-    try {
-      const intersection = polygonClipping.intersection(troughPolygon as any, freePolygon as any);
+    // 4. Trace top edge (free surface) from right to left
+    for (let i = N - 1; i >= 0; i--) {
+      const x = xs_mm[i];
+      const z_free_val = z_free(x);
+      const z_trough_val = z_trough(x);
       
-      if (intersection.length > 0 && intersection[0].length > 0) {
-        const burdenPts = intersection[0][0];
-        
-        // Snap vertices to baseline within epsilon
-        const EPS = 0.75;
-        for (const pt of burdenPts) {
-          // Find nearest baseline point at same or close x
-          let minDist = Infinity;
-          let nearestY = pt[1];
-          
-          for (const basePt of basePts) {
-            if (Math.abs(basePt[0] - pt[0]) < 2) { // Within 2px horizontally
-              const dist = Math.abs(pt[1] - basePt[1]);
-              if (dist < minDist) {
-                minDist = dist;
-                nearestY = basePt[1];
-              }
-            }
-          }
-          
-          // Snap if within 2*EPS
-          if (minDist < 2 * EPS) {
-            pt[1] = nearestY;
-          }
-        }
-        
-        // Convert to SVG path
-        return burdenPts.map((pt, idx) => 
-          `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
-        ).join(' ') + ' Z';
+      // Only draw free surface where it's above trough
+      if (z_free_val > z_trough_val) {
+        pathCommands.push(`L ${sx(x)},${sy(z_free_val)}`);
       }
-    } catch (e) {
-      console.error('Polygon intersection failed:', e);
     }
     
-    // Fallback: simple shape aligned to trough
-    const fallbackPts = basePts.slice(0, Math.floor(N / 4)).concat(
-      [[sx(0), sy(depth_mm)]],
-      basePts.slice(Math.floor(3 * N / 4))
-    );
-    return fallbackPts.map((pt, idx) => 
-      `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
-    ).join(' ') + ' Z';
+    // 5. At left edge, close to free surface height (or stay at trough)
+    const leftZ_free = Math.max(z_free(leftX), z_trough(leftX));
+    if (leftZ_free > leftZ_trough) {
+      pathCommands.push(`L ${sx(leftX)},${sy(leftZ_free)}`);
+    }
+    
+    // 6. Close path
+    pathCommands.push('Z');
+    
+    return pathCommands.join(' ');
   };
 
   return (
