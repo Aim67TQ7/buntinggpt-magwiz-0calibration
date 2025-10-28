@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useOCWList } from "@/contexts/OCWListContext";
 import { Separator } from "@/components/ui/separator";
+import polygonClipping from 'polygon-clipping';
 
 interface MagnetModel {
   name: string;
@@ -587,13 +588,15 @@ export default function MagneticFieldSimulator() {
   // Corrected air gap: measure from magnet bottom to top of trough OR top of burden (whichever is higher)
   const effectiveAirGap = airGap - burdenAboveTrough;
   
-  // Calculate burden polygon using direct construction (not intersection)
+  // Calculate burden polygon using polygon intersection
   const calculateBurdenPolygon = (): string => {
     // Define coordinate system - pure math to screen mapping
     const B_mm = userBeltWidth;
+    const B_px = beltWidth;
     const alpha_rad = troughingAngle * Math.PI / 180;
     const phi_rad = surchargeAngle * Math.PI / 180;
     const wc_mm = centerFlat_mm;
+    const wc_px = wc_mm * scale;
     
     // yZero is the trough centerline
     const yZero = magnetHeight + airGap * scale;
@@ -620,43 +623,86 @@ export default function MagneticFieldSimulator() {
       xs_mm.push(-B_mm / 2 + (i / N) * B_mm);
     }
     
-    // Build the burden polygon directly by following the boundary
-    const burdenPts: [number, number][] = [];
+    // Build baseline points (trough surface) - SAVE THESE
+    const basePts: [number, number][] = xs_mm.map(x => [sx(x), sy(z_trough(x))]);
     
-    // 1. Start from left edge: go along trough surface from left to right
-    //    But only where z_free(x) >= z_trough(x) (i.e., there's actual burden)
-    for (let i = 0; i <= N; i++) {
-      const x_mm = xs_mm[i];
-      const z_t = z_trough(x_mm);
-      const z_f = z_free(x_mm);
-      
-      if (z_f >= z_t) {
-        // At this x, the burden extends from trough to free surface
-        burdenPts.push([sx(x_mm), sy(z_t)]);
-      }
+    // Build trough polygon (area ABOVE trough, z >= z_trough(x))
+    const troughPolygon: number[][][] = [[]];
+    
+    // Start from left edge, go along trough surface
+    for (const pt of basePts) {
+      troughPolygon[0].push([pt[0], pt[1]]);
     }
     
-    // 2. Now go back along the free surface from right to left
+    // Close with top boundary (far above)
+    const topY = sy(depth_mm + 50); // Well above the pile
+    troughPolygon[0].push([sx(B_mm / 2), topY]);
+    troughPolygon[0].push([sx(-B_mm / 2), topY]);
+    troughPolygon[0].push(basePts[0]); // Close the loop
+    
+    // Build free surface polygon (area BELOW roof, z <= z_free(x))
+    const freePolygon: number[][][] = [[]];
+    
+    // Start from left edge at bottom
+    const bottomY = sy(-50); // Well below
+    freePolygon[0].push([sx(-B_mm / 2), bottomY]);
+    freePolygon[0].push([sx(B_mm / 2), bottomY]);
+    
+    // Go along roof from right to left
     for (let i = N; i >= 0; i--) {
       const x_mm = xs_mm[i];
-      const z_t = z_trough(x_mm);
-      const z_f = z_free(x_mm);
+      freePolygon[0].push([sx(x_mm), sy(z_free(x_mm))]);
+    }
+    
+    freePolygon[0].push([sx(-B_mm / 2), bottomY]); // Close
+    
+    // Intersect the two polygons
+    try {
+      const intersection = polygonClipping.intersection(troughPolygon as any, freePolygon as any);
       
-      if (z_f >= z_t) {
-        // Cap at the free surface
-        burdenPts.push([sx(x_mm), sy(z_f)]);
+      if (intersection.length > 0 && intersection[0].length > 0) {
+        const burdenPts = intersection[0][0];
+        
+        // Snap vertices to baseline within epsilon
+        const EPS = 0.75;
+        for (const pt of burdenPts) {
+          // Find nearest baseline point at same or close x
+          let minDist = Infinity;
+          let nearestY = pt[1];
+          
+          for (const basePt of basePts) {
+            if (Math.abs(basePt[0] - pt[0]) < 2) { // Within 2px horizontally
+              const dist = Math.abs(pt[1] - basePt[1]);
+              if (dist < minDist) {
+                minDist = dist;
+                nearestY = basePt[1];
+              }
+            }
+          }
+          
+          // Snap if within 2*EPS
+          if (minDist < 2 * EPS) {
+            pt[1] = nearestY;
+          }
+        }
+        
+        // Convert to SVG path
+        return burdenPts.map((pt, idx) => 
+          `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
+        ).join(' ') + ' Z';
       }
+    } catch (e) {
+      console.error('Polygon intersection failed:', e);
     }
     
-    // Convert to SVG path
-    if (burdenPts.length > 0) {
-      return burdenPts.map((pt, idx) => 
-        `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
-      ).join(' ') + ' Z';
-    }
-    
-    // Fallback empty path
-    return 'M 0,0';
+    // Fallback: simple shape aligned to trough
+    const fallbackPts = basePts.slice(0, Math.floor(N / 4)).concat(
+      [[sx(0), sy(depth_mm)]],
+      basePts.slice(Math.floor(3 * N / 4))
+    );
+    return fallbackPts.map((pt, idx) => 
+      `${idx === 0 ? 'M' : 'L'} ${pt[0]},${pt[1]}`
+    ).join(' ') + ' Z';
   };
 
   return (
