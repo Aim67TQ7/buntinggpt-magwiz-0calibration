@@ -171,15 +171,7 @@ const QuoteDetails = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/dashboard">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold">Quote Details - {quote.quote_number || `Quote ${quote.id}`}</h1>
-      </div>
+      <h1 className="text-3xl font-bold">Quote Details - {quote.quote_number || `Quote ${quote.id}`}</h1>
 
       {/* Quote Information Card */}
       <Card>

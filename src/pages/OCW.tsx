@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calculator, Waves, Settings, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator, Waves, Settings, X, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface OCWData {
   filename: string;
@@ -139,6 +140,7 @@ const OCW = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -359,7 +361,10 @@ const OCW = () => {
       {/* Calculator Inputs Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Calculate OCW Recommendations</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Calculate OCW Recommendations</CardTitle>
+            <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" onClick={() => setShowHelpDialog(true)} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -800,6 +805,187 @@ const OCW = () => {
           </div>
         </>
       )}
+
+      {/* Help Dialog */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Determining OCW Magnet Configuration Parameters</DialogTitle>
+            <DialogDescription>Standardized method for OCW selection using the Recommendation Tool</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 text-sm">
+            <section>
+              <h3 className="font-semibold text-base mb-2">Purpose</h3>
+              <p>To standardize the method of determining Overhead Conveyor Magnet (OCW) selection parameters using the OCW Recommendation Tool. Ensures consistent design criteria for throughput, belt speed, magnetic performance, and dimensional requirements.</p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">1. Required Parameters</h3>
+              
+              <div className="space-y-3 ml-4">
+                <div>
+                  <h4 className="font-medium">1.1 Belt Width (mm)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Conveyor belt width at the magnet location.</p>
+                  <p className="mt-1"><strong>How to Determine:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Measure the usable conveyor width (material flow width, not frame width).</li>
+                    <li>Select the next standard belt size (e.g., 600, 900, 1200 mm).</li>
+                  </ul>
+                  <p className="mt-1 italic">Note: Belt width directly affects core size and magnet span.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">1.2 Core/Belt Ratio</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Ratio between magnet core width and conveyor belt width.</p>
+                  <p className="mt-1"><strong>Typical Range:</strong> 0.20 – 0.30.</p>
+                  <p className="mt-1"><strong>Selection Guidance:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Use 0.25 as standard (balanced coverage & magnetic performance).</li>
+                    <li>Increase ratio for deep burdens or wide material distribution.</li>
+                    <li>Decrease for fine, uniform burdens or tight installations.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">1.3 Minimum Gauss (optional)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Minimum field intensity at the burden surface required for capture.</p>
+                  <p className="mt-1"><strong>Selection Guidance:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Ferrous fines: 1500–3000 Gauss</li>
+                    <li>Tramp steel / larger objects: 3000–5000 Gauss</li>
+                    <li>Leave blank to let the system optimize based on force and air gap.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">1.4 Minimum Force (optional)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Required attractive force at the material surface.</p>
+                  <p className="mt-1"><strong>Use Case:</strong> When a specific pick-up force is known (from tests or spec sheets).</p>
+                  <p className="mt-1"><strong>Typical Range:</strong> 250,000 – 800,000 dynes.</p>
+                  <p className="mt-1 italic">Leave blank if you want the algorithm to infer force based on throughput and air gap.</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">2. Process Parameters</h3>
+              
+              <div className="space-y-3 ml-4">
+                <div>
+                  <h4 className="font-medium">2.1 Belt Speed (m/s)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Conveyor belt velocity under the magnet.</p>
+                  <p className="mt-1"><strong>Selection:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Use process data or measure actual line speed.</li>
+                    <li>High belt speeds reduce exposure time, requiring stronger or lower-mounted magnets.</li>
+                  </ul>
+                  <table className="w-full mt-2 border">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="border p-2 text-left">Application</th>
+                        <th className="border p-2 text-left">Typical Speed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td className="border p-2">Light-duty recycling</td><td className="border p-2">0.8 – 1.2 m/s</td></tr>
+                      <tr><td className="border p-2">Aggregates</td><td className="border p-2">1.2 – 2.0 m/s</td></tr>
+                      <tr><td className="border p-2">Mining / High throughput</td><td className="border p-2">2.0 – 3.0 m/s</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">2.2 Belt Troughing Angle (°)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Angle of side idlers.</p>
+                  <p className="mt-1">Input "0" for flat conveyors.</p>
+                  <p className="mt-1"><strong>Effect:</strong> Higher troughing angles increase material depth and can require more magnetic depth or adjusted air gap.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">2.3 Burden Depth (mm)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Material thickness on the belt under normal loading conditions.</p>
+                  <p className="mt-1"><strong>Measurement:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Measure average height of the material profile.</li>
+                    <li>Avoid peak loads—use nominal running depth.</li>
+                  </ul>
+                  <p className="mt-1"><strong>Effect:</strong> Increased depth → greater air gap → requires higher magnetic power.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">2.4 Throughput (TPH)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Tons per hour of conveyed material.</p>
+                  <p className="mt-1"><strong>Used to:</strong> Estimate mass loading and particle density.</p>
+                  <p className="mt-1"><strong>Input:</strong> From process line specs or weigh belt data.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">2.5 Air Gap (mm)</h4>
+                  <p className="mt-1"><strong>Definition:</strong> Vertical distance from magnet face to top of burden.</p>
+                  <p className="mt-1"><strong>Determination Steps:</strong></p>
+                  <ol className="list-decimal ml-5 mt-1 space-y-1">
+                    <li>Measure from conveyor belt surface to magnet face.</li>
+                    <li>Subtract burden depth (mm).</li>
+                    <li>Verify clearance for belt splice and bounce (add 25–50 mm buffer).</li>
+                  </ol>
+                  <p className="mt-1"><strong>Typical Range:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>100–150 mm for standard OCW</li>
+                    <li>200–300 mm for high-speed or deep burden applications</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium">2.6 Magnet Position</h4>
+                  <p className="mt-1"><strong>Options:</strong> Overhead, Inline, Crossbelt.</p>
+                  <p className="mt-1"><strong>Effect on Design:</strong></p>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li><strong>Overhead:</strong> Captures ferrous contamination from the top, most common.</li>
+                    <li><strong>Inline:</strong> Magnet installed parallel to belt, suited for tramp metal removal in material flow direction.</li>
+                    <li><strong>Crossbelt:</strong> Magnet positioned across belt width; typically requires greater core width.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">3. Calculation Workflow</h3>
+              <ol className="list-decimal ml-5 space-y-2">
+                <li>Input required parameters: Belt width and core/belt ratio (start with 0.25).</li>
+                <li>Enter process data: Belt speed, burden depth, throughput, and air gap.</li>
+                <li>Select magnet position.</li>
+                <li>Click "Calculate OCW Recommendations."</li>
+                <li>Review outputs:
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li>Magnet width recommendation (core width = belt width × ratio).</li>
+                    <li>Suggested air gap or field strength adjustments.</li>
+                    <li>Warnings if throughput or air gap exceed recommended magnetic performance limits.</li>
+                  </ul>
+                </li>
+              </ol>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-base mb-2">4. Adjustment Guidelines</h3>
+              <table className="w-full border">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="border p-2 text-left">Scenario</th>
+                    <th className="border p-2 text-left">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="border p-2">Burden depth exceeds spec</td><td className="border p-2">Increase air gap or magnet size</td></tr>
+                  <tr><td className="border p-2">Weak pickup</td><td className="border p-2">Increase field strength or lower magnet</td></tr>
+                  <tr><td className="border p-2">Over-saturation</td><td className="border p-2">Reduce core width or increase air gap</td></tr>
+                  <tr><td className="border p-2">Excessive belt speed</td><td className="border p-2">Use stronger magnet or longer exposure</td></tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
