@@ -179,7 +179,7 @@ const BOMManager = () => {
               Back
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">BOM Manager</h1>
+          <h1 className="text-3xl font-bold">Cost Inputs</h1>
           {hasChanges && (
             <span className="text-sm text-orange-600 font-medium">
               Unsaved changes
