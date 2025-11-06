@@ -474,7 +474,7 @@ const Configurator = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Magnet Configurator</h1>
+          <h1 className="text-3xl font-bold">OCW Design</h1>
         </div>
         
         <div className="max-w-2xl mx-auto">

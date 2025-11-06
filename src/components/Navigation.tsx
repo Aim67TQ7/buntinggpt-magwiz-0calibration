@@ -25,7 +25,7 @@ export const Navigation = () => {
     },
     {
       path: "/configurator",
-      label: "Configurator",
+      label: "OCW Design",
       icon: Settings,
     },
     {

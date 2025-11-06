@@ -1,8 +1,8 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LineChart } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -75,6 +75,7 @@ interface OCWData {
 }
 export default function OCWSpecs() {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     unit
   } = location.state || {};
@@ -189,7 +190,25 @@ export default function OCWSpecs() {
       {/* Performance Specifications */}
       <Card>
         <CardHeader>
-          <CardTitle>Performance Specifications</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Performance Specifications</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/magnetic-decay', { 
+                state: { 
+                  modelParams: {
+                    gauss: unit.surface_gauss,
+                    force: unit.force_factor,
+                    model: `${unit.Prefix} OCW ${unit.Suffix}`
+                  }
+                } 
+              })}
+            >
+              <LineChart className="w-4 h-4 mr-2" />
+              View Magnetic Decay
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
