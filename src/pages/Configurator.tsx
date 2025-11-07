@@ -534,88 +534,26 @@ const Configurator = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label>BOM Type</Label>
-                <Select value={selectedBOMType} onValueChange={(value: any) => setSelectedBOMType(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OCW">OCW</SelectItem>
-                    <SelectItem value="Suspension">Suspension</SelectItem>
-                    <SelectItem value="Overband">Overband</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
               <Button 
-                onClick={() => selectedPrefix && selectedSuffix && calculateBOMPricing(selectedPrefix, selectedSuffix, selectedBOMType)}
-                disabled={!selectedPrefix || !selectedSuffix || isLoadingBOM}
+                onClick={() => {
+                  if (selectedPrefix && selectedSuffix) {
+                    const selectedUnit = ocwUnits.find(
+                      u => u.Prefix === selectedPrefix && u.Suffix === selectedSuffix
+                    );
+                    if (selectedUnit) {
+                      navigate('/ocw-specs', { state: { unit: selectedUnit } });
+                    }
+                  }
+                }}
+                disabled={!selectedPrefix || !selectedSuffix}
                 className="w-full"
               >
-                Calculate BOM & Pricing
+                View OCW Specifications
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Select Unit to Quote */}
-        {bomData && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>
-                Select Unit to Quote: {bomData.prefix} OCW {bomData.suffix}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total Mass</div>
-                    <div className="text-2xl font-bold">{bomData.totalMass.toFixed(2)} kg</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total Cost</div>
-                    <div className="text-2xl font-bold">
-                      {bomData.totalCost > 0 ? `£${bomData.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'No pricing data'}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="text-left p-3 text-sm font-medium">Part</th>
-                        <th className="text-left p-3 text-sm font-medium">Material</th>
-                        <th className="text-right p-3 text-sm font-medium">Mass (kg)</th>
-                        <th className="text-right p-3 text-sm font-medium">Qty</th>
-                        <th className="text-right p-3 text-sm font-medium">Cost/Unit</th>
-                        <th className="text-right p-3 text-sm font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bomData.parts.map((part: any, index: number) => (
-                        <tr key={index} className="border-t">
-                          <td className="p-3 text-sm">{part.partName}</td>
-                          <td className="p-3 text-sm">{part.material}</td>
-                          <td className="p-3 text-sm text-right">{part.mass.toFixed(2)}</td>
-                          <td className="p-3 text-sm text-right">{part.quantity}</td>
-                          <td className="p-3 text-sm text-right">
-                            {part.materialCost > 0 ? `£${part.materialCost.toLocaleString('en-GB')}` : '-'}
-                          </td>
-                          <td className="p-3 text-sm text-right font-medium">
-                            {part.totalCost > 0 ? `£${part.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* OCW Recommendations Card */}
         {beltWidth && coreBeltRatio && recommendations.length === 0 && ocwUnits.length === 0 && !isLoadingOCW && (

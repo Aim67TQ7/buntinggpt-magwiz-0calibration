@@ -2,11 +2,12 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LineChart } from "lucide-react";
+import { ArrowLeft, LineChart, Download } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadOCWSpecifications } from "@/components/OCWSpecificationsPDF";
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -192,22 +193,48 @@ export default function OCWSpecs() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Performance Specifications</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/magnetic-decay', { 
-                state: { 
-                  modelParams: {
-                    gauss: unit.surface_gauss,
-                    force: unit.force_factor,
-                    model: `${unit.Prefix} OCW ${unit.Suffix}`
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (ocwData) {
+                    downloadOCWSpecifications({
+                      prefix: unit.Prefix,
+                      suffix: unit.Suffix,
+                      surface_gauss: unit.surface_gauss,
+                      force_factor: unit.force_factor,
+                      watts: unit.watts,
+                      width: unit.width,
+                      frame: unit.frame,
+                      ...ocwData,
+                      sealing_plate_mass: ocwData.sealing_plate_mass ? parseFloat(ocwData.sealing_plate_mass) : undefined,
+                      core_insulator_mass: ocwData.core_insulator_mass ? parseFloat(ocwData.core_insulator_mass) : undefined,
+                    });
                   }
-                } 
-              })}
-            >
-              <LineChart className="w-4 h-4 mr-2" />
-              View Magnetic Decay
-            </Button>
+                }}
+                disabled={!ocwData}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/magnetic-decay', { 
+                  state: { 
+                    modelParams: {
+                      gauss: unit.surface_gauss,
+                      force: unit.force_factor,
+                      model: `${unit.Prefix} OCW ${unit.Suffix}`
+                    }
+                  } 
+                })}
+              >
+                <LineChart className="w-4 h-4 mr-2" />
+                View Magnetic Decay
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
