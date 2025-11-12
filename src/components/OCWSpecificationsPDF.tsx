@@ -297,37 +297,43 @@ const OCWSpecificationsPDF: React.FC<OCWSpecificationsPDFProps> = ({ data }) => 
           <View style={styles.rightColumn}>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>WINDING INFORMATION</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Sections:</Text>
-                <Text style={styles.infoValue}>{data.number_of_sections}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Radial Depth:</Text>
-                <Text style={styles.infoValue}>{data.radial_depth} mm</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Coil Height:</Text>
-                <Text style={styles.infoValue}>{data.coil_height?.toFixed(2)} mm</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Diameter:</Text>
-                <Text style={styles.infoValue}>{data.diameter?.toFixed(2)} mm</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Mean Length/Turn:</Text>
-                <Text style={styles.infoValue}>{data.mean_length_of_turn?.toFixed(2)} mm</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Number of Turns:</Text>
-                <Text style={styles.infoValue}>{data.number_of_turns}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Surface Area:</Text>
-                <Text style={styles.infoValue}>{data.surface_area?.toFixed(2)} m²</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Wires in Parallel:</Text>
-                <Text style={styles.infoValue}>{data.wires_in_parallel}</Text>
+              <View style={styles.table}>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableColHeader, { width: '50%' }]}>Parameter</Text>
+                  <Text style={[styles.tableColHeader, { width: '50%' }]}>Value</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Sections</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.number_of_sections}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Radial Depth</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.radial_depth} mm</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Coil Height</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.coil_height?.toFixed(2)} mm</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Diameter</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.diameter?.toFixed(2)} mm</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Mean Length/Turn</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.mean_length_of_turn?.toFixed(2)} mm</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Number of Turns</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.number_of_turns}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Surface Area</Text>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>{data.surface_area?.toFixed(2)} m²</Text>
+                </View>
+                <View style={styles.tableRowLast}>
+                  <Text style={[styles.tableCol, { width: '50%' }]}>Wires in Parallel</Text>
+                  <Text style={[styles.tableColLast, { width: '50%' }]}>{data.wires_in_parallel}</Text>
+                </View>
               </View>
             </View>
           </View>
