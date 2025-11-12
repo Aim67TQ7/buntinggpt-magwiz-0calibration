@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database } from "lucide-react";
+import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Navigation = () => {
@@ -22,6 +22,11 @@ export const Navigation = () => {
       path: "/ocw",
       label: "OCW Selector",
       icon: Zap,
+    },
+    {
+      path: "/ocw-comparison",
+      label: "Compare OCWs",
+      icon: GitCompare,
     },
   ];
 
