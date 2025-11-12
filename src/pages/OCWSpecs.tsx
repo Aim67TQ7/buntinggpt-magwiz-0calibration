@@ -2,12 +2,13 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LineChart, Download } from "lucide-react";
+import { ArrowLeft, LineChart, Download, Save } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadOCWSpecifications } from "@/components/OCWSpecificationsPDF";
+import { OCWSaveDialog } from "@/components/OCWSaveDialog";
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -85,6 +86,7 @@ export default function OCWSpecs() {
   const [isWindingOpen, setIsWindingOpen] = useState(true);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   useEffect(() => {
     const fetchOCWData = async () => {
       if (!unit?.Prefix || !unit?.Suffix) return;
@@ -186,6 +188,15 @@ export default function OCWSpecs() {
           <div className="flex items-center justify-between">
             <CardTitle>Performance Specifications</CardTitle>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSaveDialogOpen(true)}
+                disabled={!ocwData}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Configuration
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -451,5 +462,20 @@ export default function OCWSpecs() {
             Detailed specifications not available for this unit
           </CardContent>
         </Card>}
+      
+      <OCWSaveDialog
+        open={isSaveDialogOpen}
+        onOpenChange={setIsSaveDialogOpen}
+        ocwData={ocwData ? {
+          Prefix: unit.Prefix,
+          Suffix: unit.Suffix,
+          surface_gauss: unit.surface_gauss,
+          force_factor: unit.force_factor,
+          watts: unit.watts,
+          width: unit.width,
+          frame: unit.frame,
+          ...ocwData,
+        } : null}
+      />
     </div>;
 }
