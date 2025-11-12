@@ -173,12 +173,6 @@ const BOMManager = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/dashboard">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
           <h1 className="text-3xl font-bold">Cost Inputs</h1>
           {hasChanges && (
             <span className="text-sm text-orange-600 font-medium">

@@ -23,21 +23,6 @@ export const Navigation = () => {
       label: "OCW Selector",
       icon: Zap,
     },
-    {
-      path: "/configurator",
-      label: "OCW Design",
-      icon: Settings,
-    },
-    {
-      path: "/pcb-chat",
-      label: "PCB Assistant",
-      icon: MessageSquare,
-    },
-    {
-      path: "/bom-manager",
-      label: "BOM Manager",
-      icon: Database,
-    },
   ];
 
   return (
