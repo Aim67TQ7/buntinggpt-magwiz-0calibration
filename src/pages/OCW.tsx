@@ -388,11 +388,11 @@ const OCW = () => {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="minGauss" className="text-xs">Min Gauss (optional)</Label>
-                    <Input id="minGauss" type="number" value={minGauss} onChange={(e) => setMinGauss(e.target.value)} className="h-8" placeholder="3000" />
+                    <Input id="minGauss" type="number" value={minGauss} onChange={(e) => setMinGauss(e.target.value)} className="h-8" placeholder="" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="minForce" className="text-xs">Min Force (optional)</Label>
-                    <Input id="minForce" type="number" value={minForce} onChange={(e) => setMinForce(e.target.value)} className="h-8" placeholder="500000" />
+                    <Input id="minForce" type="number" value={minForce} onChange={(e) => setMinForce(e.target.value)} className="h-8" placeholder="" />
                   </div>
                 </div>
               </CardContent>
