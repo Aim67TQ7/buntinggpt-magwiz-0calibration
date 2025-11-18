@@ -38,9 +38,9 @@ export const OCWSaveDialog: React.FC<OCWSaveDialogProps> = ({
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('saved_ocw_configurations')
-        .insert({
+    const { error } = await supabase
+      .from('saved_ocw_configurations' as any)
+      .insert({
           name: name.trim(),
           notes: notes.trim() || null,
           prefix: ocwData.Prefix,
