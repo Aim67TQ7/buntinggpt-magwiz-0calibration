@@ -221,15 +221,18 @@ const OCW = () => {
       setSavingConfig(configId);
       
       try {
-        // Fetch full data from OCW_magwiz table
-        const { data: magwizData, error: magwizError } = await supabase
-          .from('OCW_magwiz')
-          .select('*')
-          .eq('prefix', unit.Prefix)
-          .eq('suffix', unit.Suffix)
-          .single();
-        
-        if (magwizError) throw magwizError;
+      // Fetch full data from OCW_magwiz table
+      const { data: magwizData, error: magwizError } = await supabase
+        .from('OCW_magwiz')
+        .select('*')
+        .eq('prefix', unit.Prefix)
+        .eq('suffix', unit.Suffix)
+        .maybeSingle();
+      
+      if (magwizError) throw magwizError;
+      if (!magwizData) {
+        throw new Error('Configuration data not found');
+      }
         
         // Save to saved_ocw_configurations
         const { error: saveError } = await supabase
