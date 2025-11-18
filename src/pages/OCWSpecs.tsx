@@ -226,11 +226,9 @@ export default function OCWSpecs() {
                 size="sm"
                 onClick={() => navigate('/magnetic-decay', { 
                   state: { 
-                    modelParams: {
-                      gauss: unit.surface_gauss,
-                      force: unit.force_factor,
-                      model: `${unit.Prefix} OCW ${unit.Suffix}`
-                    }
+                    gauss: unit.surface_gauss,
+                    force: unit.force_factor,
+                    model: `${unit.Prefix} OCW ${unit.Suffix}`
                   } 
                 })}
               >
