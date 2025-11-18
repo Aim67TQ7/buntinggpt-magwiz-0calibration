@@ -96,7 +96,7 @@ const OCWComparison = () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase
-        .from('saved_ocw_configurations')
+        .from('saved_ocw_configurations' as any)
         .delete()
         .eq('id', deleteId);
 
