@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface OCWData {
   filename: string;
@@ -138,6 +139,8 @@ const OCW = () => {
   const [minForce, setMinForce] = useState<string>("");
   const [beltTroughingAngle, setBeltTroughingAngle] = useState<number>(0);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [savedConfigIds, setSavedConfigIds] = useState<Set<string>>(new Set());
+  const [savingConfig, setSavingConfig] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showHelpDialog, setShowHelpDialog] = useState(false);
@@ -191,6 +194,162 @@ const OCW = () => {
       }
     }
   }, [selectedPrefix, suffixes, ocwData]);
+
+  // Fetch saved configurations status
+  useEffect(() => {
+    const fetchSavedConfigs = async () => {
+      if (recommendations.length === 0) return;
+      
+      const { data } = await supabase
+        .from('saved_ocw_configurations')
+        .select('prefix, suffix')
+        .in('prefix', recommendations.map(r => r.Prefix));
+      
+      if (data) {
+        const saved = new Set(data.map(d => `${d.prefix}-${d.suffix}`));
+        setSavedConfigIds(saved);
+      }
+    };
+    
+    fetchSavedConfigs();
+  }, [recommendations]);
+
+  const handleToggleSaveConfig = async (unit: OCWRecommendation, isChecked: boolean) => {
+    const configId = `${unit.Prefix}-${unit.Suffix}`;
+    
+    if (isChecked) {
+      setSavingConfig(configId);
+      
+      try {
+        // Fetch full data from OCW_magwiz table
+        const { data: magwizData, error: magwizError } = await supabase
+          .from('OCW_magwiz')
+          .select('*')
+          .eq('prefix', unit.Prefix)
+          .eq('suffix', unit.Suffix)
+          .single();
+        
+        if (magwizError) throw magwizError;
+        
+        // Save to saved_ocw_configurations
+        const { error: saveError } = await supabase
+          .from('saved_ocw_configurations')
+          .insert({
+            name: `${unit.Prefix} OCW ${unit.Suffix}`,
+            prefix: unit.Prefix,
+            suffix: unit.Suffix,
+            surface_gauss: unit.surface_gauss,
+            force_factor: unit.force_factor,
+            watts: unit.watts,
+            width: unit.width,
+            frame: unit.frame,
+            // Map OCW_magwiz fields to saved_ocw_configurations fields
+            radial_depth: magwizData?.radial_depth,
+            coil_height: magwizData?.coil_height,
+            number_of_sections: magwizData?.number_of_sections,
+            diameter: magwizData?.diameter,
+            mean_length_of_turn: magwizData?.mean_length_of_turn,
+            surface_area: magwizData?.surface_area,
+            wires_in_parallel: magwizData?.wires_in_parallel,
+            core_mass: magwizData?.core_mass,
+            winding_mass: magwizData?.winding_mass,
+            backbar_mass: magwizData?.backbar_mass,
+            core_backbar_mass: magwizData?.core_backbar_mass,
+            side_pole_mass: magwizData?.side_pole_mass,
+            conservator_mass: magwizData?.conservator_mass,
+            coolant_mass: magwizData?.coolant_mass,
+            total_mass: magwizData?.total_mass,
+            voltage_a: magwizData?.voltage_A,
+            voltage_b: magwizData?.voltage_B,
+            voltage_c: magwizData?.voltage_C,
+            resistance_a: magwizData?.resistance_A,
+            resistance_b: magwizData?.resistance_B,
+            resistance_c: magwizData?.resistance_C,
+            watts_a: magwizData?.watts_A,
+            watts_b: magwizData?.watts_B,
+            watts_c: magwizData?.watts_C,
+            cold_current_a: magwizData?.cold_current_A,
+            cold_current_b: magwizData?.cold_current_B,
+            cold_current_c: magwizData?.cold_current_C,
+            hot_current_a: magwizData?.hot_current_A,
+            hot_current_b: magwizData?.hot_current_B,
+            hot_current_c: magwizData?.hot_current_C,
+            cold_ampere_turns_a: magwizData?.cold_ampere_turns_A?.toString(),
+            cold_ampere_turns_b: magwizData?.cold_ampere_turns_B?.toString(),
+            cold_ampere_turns_c: magwizData?.cold_ampere_turns_C?.toString(),
+            hot_ampere_turns_a: magwizData?.hot_ampere_turns_A,
+            hot_ampere_turns_b: magwizData?.hot_ampere_turns_B,
+            hot_ampere_turns_c: magwizData?.hot_ampere_turns_C,
+            temperature_rise_a: magwizData?.temperature_rise_A,
+            temperature_rise_b: magwizData?.temperature_rise_B,
+            temperature_rise_c: magwizData?.temperature_rise_C,
+            maximum_rise_a: magwizData?.maximum_rise_A,
+            maximum_rise_b: magwizData?.maximum_rise_B,
+            maximum_rise_c: magwizData?.maximum_rise_C,
+            expected_rise_a: magwizData?.expected_rise_A,
+            expected_rise_b: magwizData?.expected_rise_B,
+            expected_rise_c: magwizData?.expected_rise_C,
+            ambient_temperature_a: magwizData?.ambient_temperature_A?.toString(),
+            ambient_temperature_b: magwizData?.ambient_temperature_B?.toString(),
+            ambient_temperature_c: magwizData?.ambient_temperature_C?.toString(),
+            core_dimension: magwizData?.core_dimension,
+            winding_dimension: magwizData?.winding_dimension,
+            backbar_dimension: magwizData?.backbar_dimension,
+            core_backbar_dimension: magwizData?.core_backbar_dimension,
+            side_pole_dimension: magwizData?.side_pole_dimension,
+            sealing_plate_dimension: magwizData?.sealing_plate_dimension,
+            sealing_plate_mass: magwizData?.sealing_plate_mass?.toString(),
+            core_insulator_dimension: magwizData?.core_insulator_dimension,
+            core_insulator_mass: magwizData?.core_insulator_mass?.toString(),
+            conservator_dimension: magwizData?.conservator_dimension,
+            number_of_turns: magwizData?.number_of_turns,
+          });
+        
+        if (saveError) throw saveError;
+        
+        setSavedConfigIds(prev => new Set(prev).add(configId));
+        
+        toast({
+          title: "Configuration Saved",
+          description: `${unit.Prefix} OCW ${unit.Suffix} added to Compare OCW page`,
+        });
+      } catch (error: any) {
+        toast({
+          title: "Save Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setSavingConfig(null);
+      }
+    } else {
+      try {
+        const { error } = await supabase
+          .from('saved_ocw_configurations')
+          .delete()
+          .eq('prefix', unit.Prefix)
+          .eq('suffix', unit.Suffix)
+          .eq('name', `${unit.Prefix} OCW ${unit.Suffix}`);
+        
+        if (error) throw error;
+        
+        const newSet = new Set(savedConfigIds);
+        newSet.delete(configId);
+        setSavedConfigIds(newSet);
+        
+        toast({
+          title: "Configuration Removed",
+          description: `${unit.Prefix} OCW ${unit.Suffix} removed from Compare OCW page`,
+        });
+      } catch (error: any) {
+        toast({
+          title: "Remove Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   const fetchOCWData = async () => {
     try {
@@ -534,10 +693,29 @@ const OCW = () => {
                 }
                 return sorted;
               })().map((unit, index) => (
-                <div key={index} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors ${selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''}`}>
-                  <div className="space-y-0.5">
+                <div key={index} className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors ${
+                  selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''
+                } ${savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800' : ''}`}>
+                  
+                  {/* Checkbox on left */}
+                  <div className="flex items-center">
+                    <Checkbox
+                      id={`save-${unit.Prefix}-${unit.Suffix}`}
+                      checked={savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`)}
+                      onCheckedChange={(checked) => handleToggleSaveConfig(unit, checked as boolean)}
+                      disabled={savingConfig === `${unit.Prefix}-${unit.Suffix}`}
+                      aria-label={`Add ${unit.Prefix} OCW ${unit.Suffix} to comparison`}
+                      className="h-5 w-5"
+                    />
+                  </div>
+                  
+                  {/* Existing content */}
+                  <div className="flex-1 space-y-0.5">
                     <div className="font-semibold text-sm">
                       {unit.Prefix} OCW {unit.Suffix}
+                      {savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Saved</Badge>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-5 gap-x-3">
                       <span>Gauss: {unit.surface_gauss}</span>
@@ -547,6 +725,8 @@ const OCW = () => {
                       <span>Frame: {unit.frame}</span>
                     </div>
                   </div>
+                  
+                  {/* Existing buttons */}
                   <div className="flex gap-2">
                     <Button onClick={() => navigate('/ocw-specs', { state: { unit }})} variant="outline" size="sm">
                       View
