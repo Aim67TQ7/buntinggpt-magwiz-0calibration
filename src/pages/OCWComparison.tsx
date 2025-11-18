@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,16 +48,47 @@ interface SavedConfiguration {
 
 const OCWComparison = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [configurations, setConfigurations] = useState<SavedConfiguration[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [isLiveComparison, setIsLiveComparison] = useState(false);
 
   useEffect(() => {
-    fetchConfigurations();
-  }, []);
+    const liveRecs = location.state?.liveRecommendations;
+    if (liveRecs && liveRecs.length > 0) {
+      // Convert live recommendations to SavedConfiguration format
+      const convertedConfigs: SavedConfiguration[] = liveRecs.map((rec: any, index: number) => ({
+        id: `live-${index}`,
+        created_at: new Date().toISOString(),
+        name: `${rec.Prefix} OCW ${rec.Suffix}`,
+        notes: null,
+        prefix: rec.Prefix,
+        suffix: rec.Suffix,
+        surface_gauss: rec.surface_gauss || 0,
+        force_factor: rec.force_factor || 0,
+        watts: rec.watts || 0,
+        width: rec.width || 0,
+        frame: rec.frame || '',
+        total_mass: 0,
+        voltage_a: 0,
+        resistance_a: 0,
+        watts_a: 0,
+        cold_current_a: 0,
+        hot_ampere_turns_a: 0,
+      }));
+      setConfigurations(convertedConfigs);
+      setSelectedIds(new Set(convertedConfigs.map(c => c.id)));
+      setShowComparison(true);
+      setIsLiveComparison(true);
+      setIsLoading(false);
+    } else {
+      fetchConfigurations();
+    }
+  }, [location.state]);
 
   const fetchConfigurations = async () => {
     try {
@@ -143,14 +174,21 @@ const OCWComparison = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">OCW Configuration Comparison</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">OCW Configuration Comparison</h1>
+            {isLiveComparison && (
+              <Badge variant="secondary">Live Comparison</Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Select up to 5 configurations to compare side-by-side
+            {isLiveComparison 
+              ? "Comparing recommended OCW units" 
+              : "Select up to 5 configurations to compare side-by-side"}
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate('/ocw')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Selector
+          {isLiveComparison ? 'Back to Calculator' : 'Back to Selector'}
         </Button>
       </div>
 

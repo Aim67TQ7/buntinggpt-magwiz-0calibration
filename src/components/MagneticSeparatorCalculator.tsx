@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, Plus, Trash2 } from "lucide-react";
+import { Calculator, Plus, Trash2, GitCompare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +72,7 @@ export function MagneticSeparatorCalculator() {
   
   const [recommendations, setRecommendations] = useState<OCWRecommendation[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [selectedForComparison, setSelectedForComparison] = useState<Set<number>>(new Set());
 
   const handleAddStandard = () => {
     const newMetals = STANDARD_TRAMP_METALS.map((metal, index) => ({
@@ -193,6 +195,33 @@ export function MagneticSeparatorCalculator() {
 
   const handleViewOCW = (unit: OCWRecommendation) => {
     navigate(`/ocw?prefix=${unit.Prefix}&suffix=${unit.Suffix}&expand=true`);
+  };
+
+  const handleToggleComparison = (index: number) => {
+    const newSelection = new Set(selectedForComparison);
+    if (newSelection.has(index)) {
+      newSelection.delete(index);
+    } else {
+      if (newSelection.size >= 5) {
+        toast({
+          title: "Maximum reached",
+          description: "You can compare up to 5 units at a time",
+          variant: "destructive",
+        });
+        return;
+      }
+      newSelection.add(index);
+    }
+    setSelectedForComparison(newSelection);
+  };
+
+  const handleCompareSelected = () => {
+    const selectedUnits = recommendations.filter((_, index) => 
+      selectedForComparison.has(index)
+    );
+    navigate('/ocw-comparison', { 
+      state: { liveRecommendations: selectedUnits } 
+    });
   };
 
   return (
@@ -412,16 +441,33 @@ export function MagneticSeparatorCalculator() {
       {recommendations.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Recommended OCW Units</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recommended OCW Units</CardTitle>
+              {selectedForComparison.size >= 2 && (
+                <Button 
+                  onClick={handleCompareSelected}
+                  size="sm"
+                  variant="default"
+                >
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  Compare Selected ({selectedForComparison.size})
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
               {recommendations.map((unit, index) => (
                 <div 
                   key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
+                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="space-y-0.5">
+                  <Checkbox
+                    checked={selectedForComparison.has(index)}
+                    onCheckedChange={() => handleToggleComparison(index)}
+                    aria-label={`Select ${unit.Prefix} OCW ${unit.Suffix} for comparison`}
+                  />
+                  <div className="flex-1 space-y-0.5">
                     <div className="font-semibold text-sm">
                       {unit.Prefix} OCW {unit.Suffix}
                     </div>
