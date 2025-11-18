@@ -62,12 +62,12 @@ const OCWComparison = () => {
   const fetchConfigurations = async () => {
     try {
       const { data, error } = await supabase
-        .from('saved_ocw_configurations')
+        .from('saved_ocw_configurations' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConfigurations(data || []);
+      setConfigurations((data || []) as unknown as SavedConfiguration[]);
     } catch (error) {
       console.error('Error fetching configurations:', error);
       toast.error('Failed to load saved configurations');
