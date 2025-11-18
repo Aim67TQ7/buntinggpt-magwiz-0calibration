@@ -460,13 +460,19 @@ export function MagneticSeparatorCalculator() {
               {recommendations.map((unit, index) => (
                 <div 
                   key={index}
-                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"
+                  className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors ${
+                    selectedForComparison.has(index) ? 'bg-accent border-primary' : ''
+                  }`}
                 >
-                  <Checkbox
-                    checked={selectedForComparison.has(index)}
-                    onCheckedChange={() => handleToggleComparison(index)}
-                    aria-label={`Select ${unit.Prefix} OCW ${unit.Suffix} for comparison`}
-                  />
+                  <div className="flex items-center">
+                    <Checkbox
+                      id={`compare-${index}`}
+                      checked={selectedForComparison.has(index)}
+                      onCheckedChange={() => handleToggleComparison(index)}
+                      aria-label={`Select ${unit.Prefix} OCW ${unit.Suffix} for comparison`}
+                      className="h-5 w-5"
+                    />
+                  </div>
                   <div className="flex-1 space-y-0.5">
                     <div className="font-semibold text-sm">
                       {unit.Prefix} OCW {unit.Suffix}
