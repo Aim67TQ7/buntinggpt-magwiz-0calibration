@@ -12,8 +12,7 @@ interface PasscodeProtectionProps {
 const CORRECT_PASSCODE = "4155";
 
 export const PasscodeProtection = ({ children }: PasscodeProtectionProps) => {
-  // Temporarily disabled - always authenticated
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passcode, setPasscode] = useState('');
   const { toast } = useToast();
 
