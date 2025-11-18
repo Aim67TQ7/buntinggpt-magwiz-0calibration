@@ -36,6 +36,11 @@ export const OCWSaveDialog: React.FC<OCWSaveDialogProps> = ({
       return;
     }
 
+    if (!ocwData) {
+      toast.error('No OCW data available to save');
+      return;
+    }
+
     setIsSaving(true);
     try {
     const { error } = await supabase
@@ -156,9 +161,11 @@ export const OCWSaveDialog: React.FC<OCWSaveDialogProps> = ({
               rows={3}
             />
           </div>
-          <div className="text-sm text-muted-foreground">
-            Model: <span className="font-semibold">{ocwData.Prefix} OCW {ocwData.Suffix}</span>
-          </div>
+          {ocwData && (
+            <div className="text-sm text-muted-foreground">
+              Model: <span className="font-semibold">{ocwData.Prefix} OCW {ocwData.Suffix}</span>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button

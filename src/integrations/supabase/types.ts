@@ -1375,6 +1375,228 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_ocw_configurations: {
+        Row: {
+          ambient_temperature_a: string | null
+          ambient_temperature_b: string | null
+          ambient_temperature_c: string | null
+          backbar_dimension: string | null
+          backbar_mass: number | null
+          coil_height: number | null
+          cold_ampere_turns_a: string | null
+          cold_ampere_turns_b: string | null
+          cold_ampere_turns_c: string | null
+          cold_current_a: number | null
+          cold_current_b: number | null
+          cold_current_c: number | null
+          conservator_dimension: string | null
+          conservator_mass: number | null
+          coolant_mass: number | null
+          core_backbar_dimension: string | null
+          core_backbar_mass: number | null
+          core_dimension: string | null
+          core_insulator_dimension: string | null
+          core_insulator_mass: string | null
+          core_mass: number | null
+          created_at: string
+          diameter: number | null
+          expected_rise_a: number | null
+          expected_rise_b: number | null
+          expected_rise_c: number | null
+          force_factor: number | null
+          frame: string | null
+          hot_ampere_turns_a: number | null
+          hot_ampere_turns_b: number | null
+          hot_ampere_turns_c: number | null
+          hot_current_a: number | null
+          hot_current_b: number | null
+          hot_current_c: number | null
+          id: string
+          maximum_rise_a: number | null
+          maximum_rise_b: number | null
+          maximum_rise_c: number | null
+          mean_length_of_turn: number | null
+          name: string
+          notes: string | null
+          number_of_sections: number | null
+          number_of_turns: string | null
+          prefix: number
+          radial_depth: number | null
+          resistance_a: number | null
+          resistance_b: number | null
+          resistance_c: number | null
+          sealing_plate_dimension: string | null
+          sealing_plate_mass: string | null
+          side_pole_dimension: string | null
+          side_pole_mass: number | null
+          suffix: number
+          surface_area: number | null
+          surface_gauss: number | null
+          temperature_rise_a: number | null
+          temperature_rise_b: number | null
+          temperature_rise_c: number | null
+          total_mass: number | null
+          updated_at: string
+          voltage_a: number | null
+          voltage_b: number | null
+          voltage_c: number | null
+          watts: number | null
+          watts_a: number | null
+          watts_b: number | null
+          watts_c: number | null
+          width: number | null
+          winding_dimension: string | null
+          winding_mass: number | null
+          wires_in_parallel: number | null
+        }
+        Insert: {
+          ambient_temperature_a?: string | null
+          ambient_temperature_b?: string | null
+          ambient_temperature_c?: string | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_a?: string | null
+          cold_ampere_turns_b?: string | null
+          cold_ampere_turns_c?: string | null
+          cold_current_a?: number | null
+          cold_current_b?: number | null
+          cold_current_c?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: string | null
+          core_mass?: number | null
+          created_at?: string
+          diameter?: number | null
+          expected_rise_a?: number | null
+          expected_rise_b?: number | null
+          expected_rise_c?: number | null
+          force_factor?: number | null
+          frame?: string | null
+          hot_ampere_turns_a?: number | null
+          hot_ampere_turns_b?: number | null
+          hot_ampere_turns_c?: number | null
+          hot_current_a?: number | null
+          hot_current_b?: number | null
+          hot_current_c?: number | null
+          id?: string
+          maximum_rise_a?: number | null
+          maximum_rise_b?: number | null
+          maximum_rise_c?: number | null
+          mean_length_of_turn?: number | null
+          name: string
+          notes?: string | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          prefix: number
+          radial_depth?: number | null
+          resistance_a?: number | null
+          resistance_b?: number | null
+          resistance_c?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: string | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          suffix: number
+          surface_area?: number | null
+          surface_gauss?: number | null
+          temperature_rise_a?: number | null
+          temperature_rise_b?: number | null
+          temperature_rise_c?: number | null
+          total_mass?: number | null
+          updated_at?: string
+          voltage_a?: number | null
+          voltage_b?: number | null
+          voltage_c?: number | null
+          watts?: number | null
+          watts_a?: number | null
+          watts_b?: number | null
+          watts_c?: number | null
+          width?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Update: {
+          ambient_temperature_a?: string | null
+          ambient_temperature_b?: string | null
+          ambient_temperature_c?: string | null
+          backbar_dimension?: string | null
+          backbar_mass?: number | null
+          coil_height?: number | null
+          cold_ampere_turns_a?: string | null
+          cold_ampere_turns_b?: string | null
+          cold_ampere_turns_c?: string | null
+          cold_current_a?: number | null
+          cold_current_b?: number | null
+          cold_current_c?: number | null
+          conservator_dimension?: string | null
+          conservator_mass?: number | null
+          coolant_mass?: number | null
+          core_backbar_dimension?: string | null
+          core_backbar_mass?: number | null
+          core_dimension?: string | null
+          core_insulator_dimension?: string | null
+          core_insulator_mass?: string | null
+          core_mass?: number | null
+          created_at?: string
+          diameter?: number | null
+          expected_rise_a?: number | null
+          expected_rise_b?: number | null
+          expected_rise_c?: number | null
+          force_factor?: number | null
+          frame?: string | null
+          hot_ampere_turns_a?: number | null
+          hot_ampere_turns_b?: number | null
+          hot_ampere_turns_c?: number | null
+          hot_current_a?: number | null
+          hot_current_b?: number | null
+          hot_current_c?: number | null
+          id?: string
+          maximum_rise_a?: number | null
+          maximum_rise_b?: number | null
+          maximum_rise_c?: number | null
+          mean_length_of_turn?: number | null
+          name?: string
+          notes?: string | null
+          number_of_sections?: number | null
+          number_of_turns?: string | null
+          prefix?: number
+          radial_depth?: number | null
+          resistance_a?: number | null
+          resistance_b?: number | null
+          resistance_c?: number | null
+          sealing_plate_dimension?: string | null
+          sealing_plate_mass?: string | null
+          side_pole_dimension?: string | null
+          side_pole_mass?: number | null
+          suffix?: number
+          surface_area?: number | null
+          surface_gauss?: number | null
+          temperature_rise_a?: number | null
+          temperature_rise_b?: number | null
+          temperature_rise_c?: number | null
+          total_mass?: number | null
+          updated_at?: string
+          voltage_a?: number | null
+          voltage_b?: number | null
+          voltage_c?: number | null
+          watts?: number | null
+          watts_a?: number | null
+          watts_b?: number | null
+          watts_c?: number | null
+          width?: number | null
+          winding_dimension?: string | null
+          winding_mass?: number | null
+          wires_in_parallel?: number | null
+        }
+        Relationships: []
+      }
       test_results: {
         Row: {
           attachment: string | null
