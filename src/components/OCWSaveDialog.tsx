@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,13 @@ export const OCWSaveDialog: React.FC<OCWSaveDialogProps> = ({
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Auto-populate name when dialog opens
+  useEffect(() => {
+    if (open && ocwData && ocwData.Prefix && ocwData.Suffix) {
+      setName(`${ocwData.Prefix} OCW ${ocwData.Suffix}`);
+    }
+  }, [open, ocwData]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -144,11 +151,14 @@ export const OCWSaveDialog: React.FC<OCWSaveDialogProps> = ({
             <Label htmlFor="name">Configuration Name *</Label>
             <Input
               id="name"
-              placeholder="e.g., Project Alpha - Primary Magnet"
+              placeholder="You can customize this name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSaving}
             />
+            <p className="text-xs text-muted-foreground">
+              Defaults to OCW model name, but you can customize it
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
