@@ -32,7 +32,8 @@ const App = () => (
           <OCWListProvider>
             <PasscodeProtection>
               <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<PCBChat />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/bom-manager" element={<BOMManager />} />
               <Route path="/quote/:quoteId" element={<QuoteDetails />} />
               <Route path="/ocw" element={<OCW />} />
@@ -40,7 +41,6 @@ const App = () => (
               <Route path="/ocw-comparison" element={<OCWComparison />} />
               <Route path="/winding-sheet" element={<WindingSheet />} />
               <Route path="/configurator" element={<Configurator />} />
-              <Route path="/pcb-chat" element={<PCBChat />} />
               <Route path="/calculator" element={<Index />} />
               <Route path="/magnetic-decay" element={<MagneticDecay />} />
               <Route path="/field-simulator" element={<MagneticFieldSimulator />} />

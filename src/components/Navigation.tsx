@@ -14,7 +14,7 @@ export const Navigation = () => {
 
   const navItems = [
     {
-      path: "/",
+      path: "/dashboard",
       label: "OCW History",
       icon: BarChart3,
     },
