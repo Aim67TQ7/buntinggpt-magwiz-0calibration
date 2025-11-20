@@ -7,8 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 
 interface Quote {
   id: number;
@@ -225,15 +224,7 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Calculator
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">Quote History</h1>
-        </div>
+        <h1 className="text-2xl font-bold">Quote History</h1>
       </div>
 
       <div className="flex gap-6 h-[calc(100vh-200px)]">
