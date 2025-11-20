@@ -152,7 +152,7 @@ export default function OCWModelComparison() {
 
   const comparisonData = useMemo(() => {
     const data: ComparisonDataPoint[] = [];
-    for (let g = 100; g <= 800; g += 25) {
+    for (let g = 0; g <= 800; g += 25) {
       const S = severity(beltSpeed, g, burdenDepth);
       const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
       
