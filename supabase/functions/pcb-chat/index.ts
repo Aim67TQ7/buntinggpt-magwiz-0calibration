@@ -8,14 +8,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PCB_KNOWLEDGE = `PCB.md: Magnetic Cross Belt Separators (CBS)
+const PCB_KNOWLEDGE = `
+=== PART 1: Magnetic Cross Belt Separators (CBS) ===
+
 I. Overview and Applications
 The Magnetic Cross Belt (CBS) is a heavy-duty magnetic separator used across various recycling and material handling industries to capture and remove ferrous tramp metal from a conveyed product stream.
+
 Nomenclature and Types
 • CBS stands for Cross Belt Systems.
 • The highest volume of cross belts built and sold utilize Ceramic 8 strontium ferrite permanent magnets.
 • Some applications use Neodymium (Neo) permanent magnets for a higher intensity field.
 • Occasionally, competitors or specialized systems utilize electro cross belts.
+
 Primary Industries Utilizing Cross Belts
 Magnetic cross belts are utilized across numerous applications where large-scale ferrous metal separation is required:
 • Plastic Recycling: The number one application, utilized across almost every type of plastic recycling process.
@@ -23,12 +27,15 @@ Magnetic cross belts are utilized across numerous applications where large-scale
 • Tire Recycling: A huge user, often requiring multiple cross belts to pull out tire wire during various stages of shredding.
 • Aggregates, Concrete, Wood Chip, and Municipal Recycling: Used for pulling out materials like nails, screws, and large pieces of ferrous waste.
 • Electronic Separation: Requires higher intensity fields, sometimes leading to the use of rare earth (Neo) cross belts.
+
 II. Sizing and Magnetic Reach Out
 Cross belts are dimensioned based on the width of the main conveying belt below them, the depth of the material burden, and the required magnetic strength (reach out).
+
 Physical Dimensions
 • Length (Coverage): The plate magnet inside the cross belt should be approximately eight inches or more longer than the width of the lower conveying belt to ensure full coverage of the material stream.
 • Width Range: Cross belts accommodate lower conveyor widths ranging from about one foot wide up to seven or eight feet wide.
 • Common Lengths: Common cross belt magnetic lengths include 36 and 48 inches.
+
 Magnetic Sizing (Reach Out)
 The required magnetic strength is directly proportional to the width of the magnetic assembly used: The wider the magnetic assembly inside the frame, the more reach out it has.
 Magnet Assembly Width | Typical Reach Out (Ceramic 8) | Application Requirement Example
@@ -69,6 +76,106 @@ The sources distinguish permanent magnetic systems (like CBS) from systems relyi
 • Electromagnet Risks: Permanent magnet systems (like Bunting's proprietary pneumatic rotary switches, which were alternatives to electrical switches) are favored because they involve no heat. Competitor electrical switches (electromagnets) have been known to pose a fire hazard in oily press room environments.
 • Variable Magnetism: Competitor systems (such as Redrich disc separators) rely on electromagnets because they allow the Gauss intensity to be changed for purifying materials like sand and Zurich (stainless steel).
 • Emax/Eries: A competitor known as "Eries" is mentioned, characterized by spectacular marketing and creativity on verbiage.
+
+=== PART 2: Electromagnetic Overband Magnets (OCW, ACW, ElectroMax) ===
+
+I. Overview
+In quarrying, few equipment choices impact productivity as directly as the overband magnet. Whether feeding a jaw crusher, screening fines, or loading aggregate to stockpile, even one piece of stray rebar or steel bolt can result in thousands in repairs and unplanned downtime. Tramp metal protection is essential, and selecting the correct type of electromagnetic overband magnet is critical.
+
+What is an Electromagnetic Overband Magnet?
+Electromagnetic overband magnets (Electro overband magnets) use a charged coil to generate a strong magnetic field onto a conveyor, lifting ferrous metals from the material stream and discharging them via a self-cleaning belt. They are ideal for high-capacity, high-burden applications where deep field penetration and maximum tramp metal recovery are required.
+
+Bunting offers three primary electromagnetic overband systems:
+• OCW (Oil Cooled): Deep magnetic field and sustained duty cycle
+• ACW (Air Cooled): Strong performance without oil-related maintenance
+• ElectroMax (Air Cooled): Compact and lightweight with high-intensity field strength
+
+II. Air-Cooled vs Oil-Cooled: What's the Difference?
+
+1. Cooling Method
+• Oil-cooled (OCW) systems use circulating oil to cool the internal coil. This allows for a wider range of working ambient temperatures, making them ideal for the deepest burden depths and widest belts.
+• Air-cooled (ACW, ElectroMax) systems rely on airflow to manage temperature. These designs eliminate oil maintenance and are typically lighter and easier to install.
+
+2. Application Suitability
+• Mobile crushing or space-limited applications → ElectroMax: Compact and 25% lighter than conventional models, with a high-intensity air-cooled field
+• Mid-range conveyor lines with moderate burden → ACW: Reliable air-cooling suitable for belt widths up to 2,000 mm
+• High-burden, deep suspension, large tramp metal → OCW: Provides a deep magnetic field and handles continuous duty with high power output
+
+III. When to Choose Air-Cooled (ACW / ElectroMax)
+
+Advantages:
+• No oil system, which simplifies maintenance
+• Lighter weight, ideal for mobile or retrofit systems
+• Delivers strong magnetic power with reduced environmental risk
+
+Use Air-Cooled If:
+• Suspension height is moderate, typically under 500 to 600 mm
+• Installation is on an existing structure with space or weight constraints
+• Tramp volumes are moderate and you prefer minimal system upkeep
+
+IV. When to Choose Oil-Cooled (OCW)
+
+Advantages:
+• Maximum field strength at greater depths
+• Designed for wide belts over 2,000 mm and heavy tramp metal
+• Suitable for high-temperature environments
+
+Use Oil-Cooled If:
+• A deep magnetic field is needed to extract tramp through high burden
+• Suspension height is 600 to 800 mm
+• Operation runs 24/7 under heavy load or in harsh conditions
+
+V. When to Choose ElectroMax
+
+Advantages:
+• High-intensity magnetic field in a compact, lightweight frame
+• Air-cooled design with no oil system, reducing complexity and maintenance
+• Ideal for mobile equipment or retrofit projects with limited structural capacity
+• Exceptional power-to-weight ratio, removing even stubborn tramp metal efficiently
+
+Use ElectroMax If:
+• The installation is on mobile crushers, screens, or modular conveyors
+• You require strong magnetic separation but can't accommodate a heavy oil-cooled system
+• Suspension height is limited, and deep field strength is still needed
+• Your site demands quick installation and minimal ongoing maintenance
+• You're replacing or upgrading a permanent magnet and need higher performance in the same footprint
+
+VI. Practical Selection Factors
+
+To ensure optimal system performance, evaluate:
+• Suspension height: the distance from magnet face to belt
+• Burden depth: the material height on the belt
+• Tramp metal characteristics: including size, frequency, and shape
+• Belt width and conveyor speed
+• Installation constraints: such as space, weight, or structural load
+• Maintenance capabilities and service access at your site
+• Ambient temperature, particularly in extreme climates
+• Altitude
+
+VII. Key Differences: Electromagnetic vs Permanent Magnet Systems
+
+Electromagnetic Overband Magnets (OCW/ACW/ElectroMax):
+• Require electrical power to generate magnetic field
+• Magnetic strength can be controlled and adjusted
+• Self-cleaning belt discharge system
+• Require cooling systems (oil or air)
+• Best for: quarrying, aggregates, mining, crusher protection
+• Typical depths: 500-800mm suspension heights
+
+Permanent Magnet Cross Belt Separators (CBS):
+• No electrical power required - permanent magnetic field
+• Magnetic strength is fixed based on magnet type
+• Self-cleaning belt discharge system
+• No cooling system needed
+• Best for: recycling (plastics, metals, tires, electronics)
+• Typical depths: 8-16 inches reach out
+
+VIII. Final Recommendations
+
+Your overband magnet choice should reflect actual site conditions rather than default specs. Air-cooled electromagnetic models like the ACW and ElectroMax offer strong tramp removal performance with simple installation and maintenance. For deep burden removal, wide conveyors, and large tramp fragments, the OCW oil-cooled system provides the magnetic depth and power needed for uninterrupted protection.
+
+Bunting can help configure the ideal solution for your operation based on material flow, conveyor specs, and the tramp metal profile.
+
 NotebookLM can be inaccurate; please double check its responses.`;
 
 serve(async (req) => {
@@ -96,10 +203,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert assistant on Magnetic Cross Belt Separators (CBS). Use the following knowledge base to answer questions accurately and helpfully. If you don't know something or it's not in the knowledge base, say so honestly.
+            content: `You are an expert assistant on magnetic separation equipment from Bunting. Use the following knowledge base to answer questions accurately and helpfully. If you don't know something or it's not in the knowledge base, say so honestly.
 
 KNOWLEDGE BASE:
 ${PCB_KNOWLEDGE}
+
+You can answer questions about:
+1. Magnetic Cross Belt Separators (CBS) - permanent magnet systems for recycling applications
+2. Electromagnetic Overband Magnets (OCW, ACW, ElectroMax) - powered systems for quarrying and mining
 
 Always provide detailed, technical answers when appropriate. Use the specific measurements, specifications, and examples from the knowledge base when relevant.`
           },
