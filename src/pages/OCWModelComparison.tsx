@@ -11,29 +11,27 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { RotateCcw, Info, Download, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Constants for calculations
+// Constants for force-based calculations
 const CONSTANTS = {
   v0: 2.0,      // reference belt speed (m/s)
   g0: 200,      // reference air gap (mm)
   d0: 100,      // reference burden depth (mm)
   k: 0.5,       // burden → gap conversion factor
-  G0: 3000,     // base gauss requirement
-  W0: 10,       // base power requirement (kW)
   a: 0.4,       // speed exponent
   b: 1.7,       // distance exponent
   c: 0.5        // burden exponent
 };
 
 const TRAMP_SIZE_MAP = {
-  small: { value: 1.0, label: "Small", description: "Bolts, nails, small plate" },
-  medium: { value: 1.5, label: "Medium", description: "Tooling fragments, small rebar" },
-  large: { value: 2.0, label: "Large", description: "Full rebar, bucket teeth" },
-  veryLarge: { value: 2.5, label: "Very Large", description: "Very large or frequent tramp" }
+  small: { baseForce: 800, label: "Small", description: "Bolts, nails, small plate" },
+  medium: { baseForce: 2500, label: "Medium", description: "Small rebar, tooling fragments" },
+  large: { baseForce: 8000, label: "Large", description: "Full rebar, bucket teeth" },
+  veryLarge: { baseForce: 15000, label: "Very Large", description: "Big tools, clusters" }
 } as const;
 
 type TrampSize = keyof typeof TRAMP_SIZE_MAP;
 
-const SAFETY_FACTOR = 1.15; // 15% margin recommended
+const SAFETY_FACTOR = 1.5; // 50% margin recommended
 
 interface OCWModel {
   model: string;
@@ -48,43 +46,51 @@ interface OCWModel {
 
 interface ComparisonDataPoint {
   gap: number;
-  requiredForceFactor: number;
-  requiredWatts: number;
-  modelForceFactor: number | null;
+  requiredForce: number;
+  severity: number;
+  modelForce: number | null;
   modelWatts: number | null;
   sufficient: boolean | null;
   margin: number | null;
 }
 
-function computeOCWRequirements(v: number, g: number, d: number, T: number) {
+/**
+ * Calculate severity factor S(v, g, d)
+ */
+function severity(v: number, g: number, d: number): number {
   const h = g + CONSTANTS.k * d;
   const h0 = CONSTANTS.g0 + CONSTANTS.k * CONSTANTS.d0;
   
-  const S = Math.pow(v / CONSTANTS.v0, CONSTANTS.a) *
-            Math.pow(h / h0, CONSTANTS.b) *
-            Math.pow(d / CONSTANTS.d0, CONSTANTS.c) *
-            T;
-  
-  return {
-    severity: S,
-    requiredGauss: CONSTANTS.G0 * S,
-    requiredWatts: CONSTANTS.W0 * S * S,
-    forceFactor: S
-  };
+  return (
+    Math.pow(v / CONSTANTS.v0, CONSTANTS.a) *
+    Math.pow(h / h0, CONSTANTS.b) *
+    Math.pow(d / CONSTANTS.d0, CONSTANTS.c)
+  );
 }
 
-function calculateModelForceFactorAtGap(baseForceFactor: number, surfaceGauss: number, gap: number): number {
-  // Force factor scales with magnetic field decay
-  // G(x) = G₀ × (0.866)^(x/25), so FF(x) = FF₀ × (G(x)/G₀)
+/**
+ * Calculate required pull force for given conditions and tramp size
+ */
+function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): number {
+  const S = severity(v, g, d);
+  const F0 = TRAMP_SIZE_MAP[trampSize].baseForce;
+  return F0 * S; // Newtons
+}
+
+/**
+ * Calculate model's available force at a given gap
+ * Uses magnetic field decay: F(x) = F₀ × (0.866)^(x/25)
+ */
+function calculateModelForceAtGap(baseForce: number, gap: number): number {
   const decayRatio = Math.pow(0.866, gap / 25);
-  return baseForceFactor * decayRatio;
+  return baseForce * decayRatio;
 }
 
-function validateModel(requiredForceFactor: number, modelForceFactor: number): {
+function validateModel(requiredForce: number, modelForce: number): {
   status: 'excellent' | 'adequate' | 'marginal' | 'insufficient',
   message: string
 } {
-  const ratio = modelForceFactor / requiredForceFactor;
+  const ratio = modelForce / requiredForce;
   
   if (ratio >= SAFETY_FACTOR * 1.2) {
     return { status: 'excellent', message: 'Exceeds requirements with excellent margin' };
@@ -119,34 +125,34 @@ export default function OCWModelComparison() {
     fetchModels();
   }, []);
 
-  const currentResults = useMemo(
-    () => computeOCWRequirements(beltSpeed, airGap, burdenDepth, TRAMP_SIZE_MAP[trampSize].value),
-    [beltSpeed, airGap, burdenDepth, trampSize]
-  );
+  const currentResults = useMemo(() => {
+    const S = severity(beltSpeed, airGap, burdenDepth);
+    const reqForce = requiredForce(beltSpeed, airGap, burdenDepth, trampSize);
+    return {
+      severity: S,
+      requiredForce: reqForce
+    };
+  }, [beltSpeed, airGap, burdenDepth, trampSize]);
 
   const comparisonData = useMemo(() => {
     const data: ComparisonDataPoint[] = [];
     for (let g = 100; g <= 800; g += 25) {
-      const req = computeOCWRequirements(
-        beltSpeed, 
-        g, 
-        burdenDepth, 
-        TRAMP_SIZE_MAP[trampSize].value
-      );
+      const S = severity(beltSpeed, g, burdenDepth);
+      const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
       
-      const modelForceFactor = selectedModel 
-        ? calculateModelForceFactorAtGap(selectedModel.force_factor, selectedModel.surface_gauss, g)
+      const modelForce = selectedModel 
+        ? calculateModelForceAtGap(selectedModel.force_factor, g)
         : null;
       
       data.push({
         gap: g,
-        requiredForceFactor: Math.round(req.forceFactor * 100) / 100,
-        requiredWatts: Math.round(req.requiredWatts * 10) / 10,
-        modelForceFactor: modelForceFactor ? Math.round(modelForceFactor) : null,
+        severity: Math.round(S * 100) / 100,
+        requiredForce: Math.round(reqForce),
+        modelForce: modelForce ? Math.round(modelForce) : null,
         modelWatts: selectedModel?.watts || null,
-        sufficient: modelForceFactor ? modelForceFactor >= req.forceFactor : null,
-        margin: modelForceFactor 
-          ? ((modelForceFactor - req.forceFactor) / req.forceFactor * 100)
+        sufficient: modelForce ? modelForce >= reqForce : null,
+        margin: modelForce 
+          ? ((modelForce - reqForce) / reqForce * 100)
           : null
       });
     }
@@ -156,12 +162,12 @@ export default function OCWModelComparison() {
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
     
-    const modelForceFactor = calculateModelForceFactorAtGap(selectedModel.force_factor, selectedModel.surface_gauss, airGap);
-    const validation = validateModel(currentResults.forceFactor, modelForceFactor);
-    const margin = ((modelForceFactor - currentResults.forceFactor) / currentResults.forceFactor * 100);
+    const modelForce = calculateModelForceAtGap(selectedModel.force_factor, airGap);
+    const validation = validateModel(currentResults.requiredForce, modelForce);
+    const margin = ((modelForce - currentResults.requiredForce) / currentResults.requiredForce * 100);
     
     return {
-      modelForceFactor: Math.round(modelForceFactor),
+      modelForce: Math.round(modelForce),
       margin,
       validation
     };
@@ -176,13 +182,13 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Required Force Factor', 'Model Force Factor', 'Margin %', 'Required Watts', 'Model Watts', 'Status'];
+    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Margin %', 'Model Watts', 'Status'];
     const rows = comparisonData.map(row => [
       row.gap,
-      row.requiredForceFactor,
-      row.modelForceFactor || '',
+      row.severity,
+      row.requiredForce,
+      row.modelForce || '',
       row.margin?.toFixed(1) || '',
-      row.requiredWatts,
       row.modelWatts || '',
       row.sufficient ? 'OK' : 'INSUFFICIENT'
     ]);
@@ -286,7 +292,7 @@ export default function OCWModelComparison() {
                       className="flex flex-col h-auto py-2"
                     >
                       <span className="font-semibold">{data.label}</span>
-                      <span className="text-xs opacity-70">{data.value}x</span>
+                      <span className="text-xs opacity-70">{data.baseForce}N</span>
                     </Button>
                   ))}
                 </div>
@@ -304,12 +310,8 @@ export default function OCWModelComparison() {
                     <span className="font-medium">{currentResults.severity.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Force Factor:</span>
-                    <span className="font-medium">{currentResults.forceFactor.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Watts:</span>
-                    <span className="font-medium">{(currentResults.requiredWatts).toFixed(1)} kW</span>
+                    <span className="text-muted-foreground">Required Force:</span>
+                    <span className="font-medium">{currentResults.requiredForce.toLocaleString()} N</span>
                   </div>
                 </div>
               </div>
@@ -320,12 +322,12 @@ export default function OCWModelComparison() {
                   <h4 className="font-semibold text-sm">Model at Current Gap:</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Delivers:</span>
-                      <span className="font-medium">{currentGapComparison.modelForceFactor.toLocaleString()} FF</span>
+                      <span className="text-muted-foreground">Available Force:</span>
+                      <span className="font-medium">{currentGapComparison.modelForce.toLocaleString()} N</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Margin:</span>
-                      <span className={`font-medium ${currentGapComparison.margin > 15 ? 'text-green-600' : currentGapComparison.margin > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <span className={`font-medium ${currentGapComparison.margin > 50 ? 'text-green-600' : currentGapComparison.margin > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {currentGapComparison.margin > 0 ? '+' : ''}{currentGapComparison.margin.toFixed(1)}%
                       </span>
                     </div>
@@ -398,7 +400,7 @@ export default function OCWModelComparison() {
                         label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
                       />
                       <YAxis 
-                        label={{ value: 'Force Factor', angle: -90, position: 'insideLeft' }}
+                        label={{ value: 'Pull Force (N)', angle: -90, position: 'insideLeft' }}
                       />
                       <Tooltip />
                       <Legend />
@@ -406,10 +408,10 @@ export default function OCWModelComparison() {
                       {/* Requirements Line */}
                       <Line 
                         type="monotone"
-                        dataKey="requiredForceFactor"
+                        dataKey="requiredForce"
                         stroke="hsl(var(--destructive))"
                         strokeWidth={2}
-                        name="Required"
+                        name="Required Force"
                         dot={false}
                       />
                       
@@ -417,10 +419,10 @@ export default function OCWModelComparison() {
                       {selectedModel && (
                         <Line 
                           type="monotone"
-                          dataKey="modelForceFactor"
+                          dataKey="modelForce"
                           stroke="hsl(var(--primary))"
                           strokeWidth={2}
-                          name={selectedModel.model}
+                          name={`${selectedModel.model} Available`}
                           dot={false}
                           strokeDasharray="5 5"
                         />
@@ -496,11 +498,11 @@ export default function OCWModelComparison() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Gap (mm)</TableHead>
-                        <TableHead className="text-right">Required FF</TableHead>
-                        <TableHead className="text-right">Model FF</TableHead>
+                        <TableHead className="text-right">Severity</TableHead>
+                        <TableHead className="text-right">Required Force (N)</TableHead>
+                        <TableHead className="text-right">Model Force (N)</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
-                        <TableHead className="text-right">Required Watts</TableHead>
                         <TableHead className="text-right">Model Watts</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -511,8 +513,9 @@ export default function OCWModelComparison() {
                           className={row.gap === airGap ? 'bg-muted/50 font-medium' : ''}
                         >
                           <TableCell>{row.gap}</TableCell>
-                          <TableCell className="text-right">{row.requiredForceFactor.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{row.modelForceFactor?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.severity}</TableCell>
+                          <TableCell className="text-right">{row.requiredForce.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{row.modelForce?.toLocaleString() || '-'}</TableCell>
                           <TableCell className="text-center">
                             {row.sufficient !== null && (
                               <Badge variant={row.sufficient ? 'default' : 'destructive'}>
@@ -523,7 +526,7 @@ export default function OCWModelComparison() {
                           <TableCell className="text-right">
                             {row.margin !== null && (
                               <span className={
-                                row.margin > 15 ? 'text-green-600 font-medium' : 
+                                row.margin > 50 ? 'text-green-600 font-medium' : 
                                 row.margin > 0 ? 'text-yellow-600' : 
                                 'text-red-600 font-medium'
                               }>
@@ -531,7 +534,6 @@ export default function OCWModelComparison() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">{row.requiredWatts}</TableCell>
                           <TableCell className="text-right">{row.modelWatts?.toLocaleString() || '-'}</TableCell>
                         </TableRow>
                       ))}
