@@ -785,6 +785,7 @@ export default function OCWModelComparison() {
                       
                       {/* Current gap reference line */}
                       <ReferenceLine 
+                        yAxisId="left"
                         x={airGap} 
                         stroke="hsl(var(--muted-foreground))" 
                         strokeDasharray="3 3"
