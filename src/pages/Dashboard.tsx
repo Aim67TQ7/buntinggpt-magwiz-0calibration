@@ -59,6 +59,7 @@ const Dashboard = () => {
   const [loadingQuoteItems, setLoadingQuoteItems] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sortBy, setSortBy] = useState<'date' | 'ocw'>('date');
+  const [filterYear, setFilterYear] = useState<string>('all');
 
   // Define the exact order for BOM items
   const BOM_ITEM_ORDER = [
@@ -116,22 +117,41 @@ const Dashboard = () => {
     }
   };
 
+  const getAvailableYears = () => {
+    const years = new Set<number>();
+    quotes.forEach(quote => {
+      const date = new Date(quote.date_generated * 1000);
+      years.add(date.getFullYear());
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  };
+
   const getSortedQuotes = () => {
-    const sorted = [...quotes];
+    let filtered = [...quotes];
     
+    // Filter by year
+    if (filterYear !== 'all') {
+      const year = parseInt(filterYear);
+      filtered = filtered.filter(quote => {
+        const date = new Date(quote.date_generated * 1000);
+        return date.getFullYear() === year;
+      });
+    }
+    
+    // Sort
     if (sortBy === 'date') {
       // Sort by date descending (newest first)
-      sorted.sort((a, b) => b.date_generated - a.date_generated);
+      filtered.sort((a, b) => b.date_generated - a.date_generated);
     } else if (sortBy === 'ocw') {
       // Sort by OCW unit (product name alphabetically)
-      sorted.sort((a, b) => {
+      filtered.sort((a, b) => {
         const productA = getProductName(a.product_id);
         const productB = getProductName(b.product_id);
         return productA.localeCompare(productB);
       });
     }
     
-    return sorted;
+    return filtered;
   };
 
   const fetchQuoteItems = async (quoteId: number) => {
@@ -258,6 +278,26 @@ const Dashboard = () => {
                     <SelectContent>
                       <SelectItem value="date">Date</SelectItem>
                       <SelectItem value="ocw">OCW Unit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Year Filter */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="text-xs text-muted-foreground">Filter by year:</span>
+                  </div>
+                  <Select value={filterYear} onValueChange={setFilterYear}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Years</SelectItem>
+                      {getAvailableYears().map(year => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
