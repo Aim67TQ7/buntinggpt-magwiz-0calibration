@@ -51,6 +51,7 @@ interface ComparisonDataPoint {
   severity: number;
   modelForce: number | null;
   modelWatts: number | null;
+  modelAmpereTurns: number | null;
   sufficient: boolean | null;
   margin: number | null;
 }
@@ -85,6 +86,15 @@ function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): n
 function calculateModelForceAtGap(baseForce: number, gap: number): number {
   const decayRatio = Math.pow(0.866, gap / 25);
   return baseForce * decayRatio;
+}
+
+/**
+ * Calculate model's ampere turns at a given gap
+ * Uses magnetic field decay: AT(x) = AT₀ × (0.866)^(x/25)
+ */
+function calculateAmpereTurnsAtGap(baseAT: number, gap: number): number {
+  const decayRatio = Math.pow(0.866, gap / 25);
+  return baseAT * decayRatio;
 }
 
 function validateModel(requiredForce: number, modelForce: number): {
@@ -194,12 +204,17 @@ export default function OCWModelComparison() {
         ? calculateModelForceAtGap(selectedModel.force_factor, g)
         : null;
       
+      const modelAT = detailedOCWData?.hot_ampere_turns_B 
+        ? calculateAmpereTurnsAtGap(detailedOCWData.hot_ampere_turns_B, g)
+        : null;
+      
       data.push({
         gap: g,
         severity: Math.round(S * 100) / 100,
         requiredForce: Math.round(reqForce),
         modelForce: modelForce ? Math.round(modelForce) : null,
         modelWatts: selectedModel?.watts || null,
+        modelAmpereTurns: modelAT ? Math.round(modelAT) : null,
         sufficient: modelForce ? modelForce >= reqForce : null,
         margin: modelForce 
           ? ((modelForce - reqForce) / reqForce * 100)
@@ -207,7 +222,7 @@ export default function OCWModelComparison() {
       });
     }
     return data;
-  }, [beltSpeed, burdenDepth, trampSize, selectedModel]);
+  }, [beltSpeed, burdenDepth, trampSize, selectedModel, detailedOCWData]);
 
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
@@ -233,12 +248,13 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Margin %', 'Model Watts', 'Status'];
+    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Ampere Turns', 'Margin %', 'Model Watts', 'Status'];
     const rows = comparisonData.map(row => [
       row.gap,
       row.severity,
       row.requiredForce,
       row.modelForce || '',
+      row.modelAmpereTurns || '',
       row.margin?.toFixed(1) || '',
       row.modelWatts || '',
       row.sufficient ? 'OK' : 'INSUFFICIENT'
@@ -718,13 +734,20 @@ export default function OCWModelComparison() {
                         label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
                       />
                       <YAxis 
+                        yAxisId="left"
                         label={{ value: 'Pull Force (N)', angle: -90, position: 'insideLeft' }}
+                      />
+                      <YAxis 
+                        yAxisId="right"
+                        orientation="right"
+                        label={{ value: 'Ampere Turns (AT)', angle: 90, position: 'insideRight' }}
                       />
                       <Tooltip />
                       <Legend />
                       
                       {/* Requirements Line */}
                       <Line 
+                        yAxisId="left"
                         type="monotone"
                         dataKey="requiredForce"
                         stroke="hsl(var(--destructive))"
@@ -736,6 +759,7 @@ export default function OCWModelComparison() {
                       {/* Model Capability Line */}
                       {selectedModel && (
                         <Line 
+                          yAxisId="left"
                           type="monotone"
                           dataKey="modelForce"
                           stroke="hsl(var(--primary))"
@@ -743,6 +767,19 @@ export default function OCWModelComparison() {
                           name={`${selectedModel.model} Available`}
                           dot={false}
                           strokeDasharray="5 5"
+                        />
+                      )}
+                      
+                      {/* Ampere Turns Line */}
+                      {selectedModel && detailedOCWData && (
+                        <Line 
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="modelAmpereTurns"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          name="Ampere Turns"
+                          dot={false}
                         />
                       )}
                       
@@ -829,6 +866,7 @@ export default function OCWModelComparison() {
                         <TableHead className="text-right">Severity</TableHead>
                         <TableHead className="text-right">Required Force (N)</TableHead>
                         <TableHead className="text-right">Model Force (N)</TableHead>
+                        <TableHead className="text-right">Ampere Turns</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
                         <TableHead className="text-right">Model Watts</TableHead>
@@ -844,6 +882,7 @@ export default function OCWModelComparison() {
                           <TableCell className="text-right">{row.severity}</TableCell>
                           <TableCell className="text-right">{row.requiredForce.toLocaleString()}</TableCell>
                           <TableCell className="text-right">{row.modelForce?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.modelAmpereTurns?.toLocaleString() || '-'}</TableCell>
                           <TableCell className="text-center">
                             {row.sufficient !== null && (
                               <Badge variant={row.sufficient ? 'default' : 'destructive'}>
