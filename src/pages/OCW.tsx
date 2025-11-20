@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface OCWData {
   filename: string;
@@ -699,18 +698,6 @@ const OCW = () => {
                 <div key={index} className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors ${
                   selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''
                 } ${savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800' : ''}`}>
-                  
-                  {/* Checkbox on left */}
-                  <div className="flex items-center">
-                    <Checkbox
-                      id={`save-${unit.Prefix}-${unit.Suffix}`}
-                      checked={savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`)}
-                      onCheckedChange={(checked) => handleToggleSaveConfig(unit, checked as boolean)}
-                      disabled={savingConfig === `${unit.Prefix}-${unit.Suffix}`}
-                      aria-label={`Add ${unit.Prefix} OCW ${unit.Suffix} to comparison`}
-                      className="h-5 w-5"
-                    />
-                  </div>
                   
                   {/* Existing content */}
                   <div className="flex-1 space-y-0.5">

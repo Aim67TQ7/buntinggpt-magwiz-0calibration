@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart, TrendingUp } from "lucide-react";
+import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart, TrendingUp, History } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Navigation = () => {
@@ -28,6 +28,11 @@ export const Navigation = () => {
       label: "Model Comparison",
       icon: TrendingUp,
     },
+    {
+      path: "/updates",
+      label: "Updates",
+      icon: History,
+    },
   ];
 
   return (
@@ -37,7 +42,10 @@ export const Navigation = () => {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center space-x-2">
               <Home className="h-6 w-6" />
-              <span className="font-bold text-lg">MagWiz 3.1</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg">MagWiz 3</span>
+                <span className="text-xs text-muted-foreground">3.9.1</span>
+              </div>
             </Link>
           </div>
           

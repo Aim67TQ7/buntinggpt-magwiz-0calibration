@@ -17,6 +17,7 @@ import OCWModelComparison from "./pages/OCWModelComparison";
 import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
 import PCBChat from "./pages/PCBChat";
+import Updates from "./pages/Updates";
 import BOMManager from "./pages/BOMManager";
 import MagneticDecay from "./pages/MagneticDecay";
 import MagneticFieldSimulator from "./pages/MagneticFieldSimulator";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/calculator" element={<Index />} />
               <Route path="/magnetic-decay" element={<MagneticDecay />} />
               <Route path="/field-simulator" element={<MagneticFieldSimulator />} />
+              <Route path="/updates" element={<Updates />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>
