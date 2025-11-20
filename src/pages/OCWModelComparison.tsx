@@ -115,20 +115,24 @@ function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): n
 
 /**
  * Calculate model's available force at a given gap
- * Uses temperature-specific magnetic field decay
+ * Uses standard magnetic field decay with distance (gap)
+ * Base force is already temperature-adjusted from database
  */
 function calculateModelForceAtGap(baseForce: number, gap: number, tempConfig: TempConfig): number {
-  const decayRatio = Math.pow(tempConfig.gaussForceCorrelation, gap / 25);
+  // Standard magnetic field decay: 0.866^(gap/25)
+  // This is independent of temperature - temperature affects base force only
+  const decayRatio = Math.pow(0.866, gap / 25);
   return baseForce * decayRatio;
 }
 
 /**
  * Calculate model's ampere turns at a given gap
- * Uses temperature-specific magnetic field decay
+ * Ampere turns (NI) is a property of the coil and doesn't decay with gap
+ * Only the magnetic field decays with distance, not the ampere turns themselves
  */
 function calculateAmpereTurnsAtGap(baseAT: number, gap: number, tempConfig: TempConfig): number {
-  const decayRatio = Math.pow(tempConfig.ampereTurnsCorrelation, gap / 25);
-  return baseAT * decayRatio;
+  // Ampere turns don't decay with gap - they're constant for a given coil
+  return baseAT;
 }
 
 function validateModel(requiredForce: number, modelForce: number): {
