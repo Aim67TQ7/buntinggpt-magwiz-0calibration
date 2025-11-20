@@ -114,6 +114,8 @@ export default function OCWModelComparison() {
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
   const [showTable, setShowTable] = useState(false);
   const [showSpecsDialog, setShowSpecsDialog] = useState(false);
+  const [detailedOCWData, setDetailedOCWData] = useState<any>(null);
+  const [loadingSpecs, setLoadingSpecs] = useState(false);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -127,6 +129,36 @@ export default function OCWModelComparison() {
     };
     fetchModels();
   }, []);
+
+  // Fetch detailed OCW data when model is selected
+  useEffect(() => {
+    const fetchDetailedData = async () => {
+      if (!selectedModel) {
+        setDetailedOCWData(null);
+        return;
+      }
+      
+      try {
+        setLoadingSpecs(true);
+        const { data, error } = await supabase
+          .from('BMR_magwiz')
+          .select('*')
+          .eq('prefix', selectedModel.Prefix)
+          .eq('suffix', selectedModel.Suffix)
+          .single();
+        
+        if (error) throw error;
+        setDetailedOCWData(data);
+      } catch (error) {
+        console.error('Error fetching detailed OCW data:', error);
+        setDetailedOCWData(null);
+      } finally {
+        setLoadingSpecs(false);
+      }
+    };
+    
+    fetchDetailedData();
+  }, [selectedModel]);
 
   const filteredModels = useMemo(() => {
     const minWidth = beltWidth * 0.8;  // -20%
@@ -438,103 +470,223 @@ export default function OCWModelComparison() {
                             View Specifications
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
                           <DialogHeader>
-                            <DialogTitle>OCW Model Specifications - {selectedModel.model}</DialogTitle>
+                            <DialogTitle>OCW Specifications - {selectedModel.Prefix} OCW {selectedModel.Suffix}</DialogTitle>
                           </DialogHeader>
-                          <div className="space-y-6">
-                            {/* Basic Specifications */}
-                            <div>
-                              <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Basic Specifications</h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Model:</span>
-                                    <span className="font-medium">{selectedModel.model}</span>
+                          
+                          {loadingSpecs ? (
+                            <div className="py-8 text-center text-muted-foreground">
+                              Loading detailed specifications...
+                            </div>
+                          ) : detailedOCWData ? (
+                            <div className="space-y-6">
+                              {/* Performance Specifications */}
+                              <div>
+                                <h3 className="text-lg font-semibold mb-4 pb-2 border-b">Performance Specifications</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Surface Gauss</div>
+                                    <div className="text-2xl font-bold">{selectedModel.surface_gauss}</div>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Prefix:</span>
-                                    <span className="font-medium">{selectedModel.Prefix}</span>
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Force Factor</div>
+                                    <div className="text-2xl font-bold">{selectedModel.force_factor?.toLocaleString()}</div>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Suffix:</span>
-                                    <span className="font-medium">{selectedModel.Suffix}</span>
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Watts</div>
+                                    <div className="text-2xl font-bold">{selectedModel.watts}</div>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Frame:</span>
-                                    <span className="font-medium">{selectedModel.frame}</span>
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Width (mm)</div>
+                                    <div className="text-2xl font-bold">{selectedModel.width}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Frame</div>
+                                    <div className="text-2xl font-bold">{selectedModel.frame}</div>
                                   </div>
                                 </div>
-                                <div className="space-y-2">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Surface Gauss:</span>
-                                    <span className="font-medium">{selectedModel.surface_gauss.toLocaleString()} G</span>
+                              </div>
+
+                              {/* Component Breakdown */}
+                              <div>
+                                <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Component Breakdown</h3>
+                                <div className="rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Component</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead>Material</TableHead>
+                                        <TableHead>Dimension</TableHead>
+                                        <TableHead className="text-right">Mass (kg)</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {[
+                                        { name: "Core", amount: 1, material: "Mild Steel", dimension: detailedOCWData.core_dimension, mass: detailedOCWData.core_mass },
+                                        { name: "Winding", amount: 1, material: "Aluminium Nomex", dimension: detailedOCWData.winding_dimension, mass: detailedOCWData.winding_mass },
+                                        { name: "Backbar", amount: 1, material: "Mild Steel", dimension: detailedOCWData.backbar_dimension, mass: detailedOCWData.backbar_mass },
+                                        { name: "Core Backbar", amount: 1, material: "Mild Steel", dimension: detailedOCWData.core_backbar_dimension, mass: detailedOCWData.core_backbar_mass },
+                                        { name: "Side Pole", amount: 4, material: "Mild Steel", dimension: detailedOCWData.side_pole_dimension, mass: detailedOCWData.side_pole_mass },
+                                        { name: "Sealing Plate", amount: 1, material: "Manganese Steel", dimension: detailedOCWData.sealing_plate_dimension, mass: detailedOCWData.sealing_plate_mass ? parseFloat(detailedOCWData.sealing_plate_mass) : undefined },
+                                        { name: "Core Insulator", amount: 1, material: "Elephantide", dimension: detailedOCWData.core_insulator_dimension, mass: detailedOCWData.core_insulator_mass ? parseFloat(detailedOCWData.core_insulator_mass) : undefined },
+                                        { name: "Conservator", amount: 1, material: "Mild Steel", dimension: detailedOCWData.conservator_dimension, mass: detailedOCWData.conservator_mass },
+                                        { name: "Coolant", amount: 7563, material: "Oil", dimension: "-", mass: detailedOCWData.coolant_mass }
+                                      ].filter(item => item.mass !== undefined && item.mass !== null).map((item, index) => (
+                                        <TableRow key={index}>
+                                          <TableCell className="font-medium">{item.name}</TableCell>
+                                          <TableCell>{item.amount}</TableCell>
+                                          <TableCell>{item.material}</TableCell>
+                                          <TableCell className="font-mono text-xs">{item.dimension || '-'}</TableCell>
+                                          <TableCell className="text-right">{typeof item.mass === 'number' ? item.mass.toFixed(2) : '-'}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                      <TableRow className="font-bold bg-muted/50">
+                                        <TableCell colSpan={4}>Total Mass</TableCell>
+                                        <TableCell className="text-right">{detailedOCWData.total_mass?.toFixed(2)}</TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+
+                              {/* Winding Information and Temperature Side by Side */}
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Winding Information */}
+                                <div>
+                                  <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Winding Information</h3>
+                                  <div className="rounded-md border">
+                                    <Table>
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Number of Sections</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.number_of_sections}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Radial Depth (mm)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.radial_depth}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Coil Height (mm)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.coil_height?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Diameter (mm)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.diameter?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Mean Length of Turn (mm)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.mean_length_of_turn?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Number of Turns</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.number_of_turns}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Surface Area (m²)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.surface_area?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Wires in Parallel</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.wires_in_parallel}</TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Force Factor:</span>
-                                    <span className="font-medium">{selectedModel.force_factor.toLocaleString()} N</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Power:</span>
-                                    <span className="font-medium">{selectedModel.watts.toLocaleString()} W</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Width:</span>
-                                    <span className="font-medium">{selectedModel.width} mm</span>
+                                </div>
+
+                                {/* Temperature & Electrical Properties */}
+                                <div>
+                                  <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Temperature & Electrical Properties</h3>
+                                  <div className="rounded-md border">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Property</TableHead>
+                                          <TableHead className="text-right">A20</TableHead>
+                                          <TableHead className="text-right">A30</TableHead>
+                                          <TableHead className="text-right">A40</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Voltage (V)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.voltage_A}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.voltage_B}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.voltage_C}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Resistance (Ω)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.resistance_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.resistance_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.resistance_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Watts (W)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.watts_A}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.watts_B}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.watts_C}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Cold Current (A)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_current_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_current_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_current_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Hot Current (A)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_current_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_current_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_current_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Cold AT</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_ampere_turns_A}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_ampere_turns_B}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.cold_ampere_turns_C}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Hot AT</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_ampere_turns_A}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_ampere_turns_B}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.hot_ampere_turns_C}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Ambient (°C)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.ambient_temperature_A}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.ambient_temperature_B}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.ambient_temperature_C}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Rise (°C)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.temperature_rise_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.temperature_rise_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.temperature_rise_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Maximum (°C)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.maximum_rise_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.maximum_rise_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.maximum_rise_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Expected (°C)</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.expected_rise_A?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.expected_rise_B?.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">{detailedOCWData.expected_rise_C?.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
                                   </div>
                                 </div>
                               </div>
                             </div>
-
-                            {/* Performance at Current Conditions */}
-                            {currentGapComparison && (
-                              <div>
-                                <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Performance at Current Conditions</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Air Gap:</span>
-                                      <span className="font-medium">{airGap} mm</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Belt Speed:</span>
-                                      <span className="font-medium">{beltSpeed.toFixed(2)} m/s</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Burden Depth:</span>
-                                      <span className="font-medium">{burdenDepth} mm</span>
-                                    </div>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Available Force:</span>
-                                      <span className="font-medium">{currentGapComparison.modelForce.toLocaleString()} N</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Required Force:</span>
-                                      <span className="font-medium">{currentResults.requiredForce.toLocaleString()} N</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Margin:</span>
-                                      <span className={`font-medium ${currentGapComparison.margin > 50 ? 'text-green-600' : currentGapComparison.margin > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                                        {currentGapComparison.margin > 0 ? '+' : ''}{currentGapComparison.margin.toFixed(1)}%
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="mt-4">
-                                  <Badge variant={
-                                    currentGapComparison.validation.status === 'excellent' ? 'default' :
-                                    currentGapComparison.validation.status === 'adequate' ? 'default' :
-                                    currentGapComparison.validation.status === 'marginal' ? 'secondary' :
-                                    'destructive'
-                                  } className="text-sm py-1 px-3">
-                                    {currentGapComparison.validation.status.toUpperCase()}: {currentGapComparison.validation.message}
-                                  </Badge>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          ) : (
+                            <div className="py-8 text-center text-muted-foreground">
+                              Detailed specifications not available for this model
+                            </div>
+                          )}
                         </DialogContent>
                       </Dialog>
                     )}
