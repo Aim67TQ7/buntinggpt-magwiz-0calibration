@@ -107,6 +107,7 @@ export default function OCWModelComparison() {
   const [beltSpeed, setBeltSpeed] = useState(2.0);
   const [airGap, setAirGap] = useState(200);
   const [burdenDepth, setBurdenDepth] = useState(100);
+  const [beltWidth, setBeltWidth] = useState(1200);
   const [trampSize, setTrampSize] = useState<TrampSize>('small');
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
@@ -124,6 +125,21 @@ export default function OCWModelComparison() {
     };
     fetchModels();
   }, []);
+
+  const filteredModels = useMemo(() => {
+    const minWidth = beltWidth * 0.8;  // -20%
+    const maxWidth = beltWidth * 1.3;  // +30%
+    
+    return ocwModels.filter(model => 
+      model.width >= minWidth && model.width <= maxWidth
+    );
+  }, [ocwModels, beltWidth]);
+
+  useEffect(() => {
+    if (selectedModel && !filteredModels.find(m => m.model === selectedModel.model)) {
+      setSelectedModel(null);
+    }
+  }, [filteredModels, selectedModel]);
 
   const currentResults = useMemo(() => {
     const S = severity(beltSpeed, airGap, burdenDepth);
@@ -177,6 +193,7 @@ export default function OCWModelComparison() {
     setBeltSpeed(2.0);
     setAirGap(200);
     setBurdenDepth(100);
+    setBeltWidth(1200);
     setTrampSize('small');
     setSelectedModel(null);
   };
@@ -201,7 +218,7 @@ export default function OCWModelComparison() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-${Date.now()}.csv`;
+    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-belt${beltWidth}mm-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -277,6 +294,25 @@ export default function OCWModelComparison() {
                   step={10}
                   className="w-full"
                 />
+              </div>
+
+              {/* Belt Width */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Belt Width</label>
+                  <Badge variant="secondary">{beltWidth} mm</Badge>
+                </div>
+                <Slider
+                  value={[beltWidth]}
+                  onValueChange={(val) => setBeltWidth(val[0])}
+                  min={150}
+                  max={3000}
+                  step={50}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Showing models from {Math.round(beltWidth * 0.8)}mm to {Math.round(beltWidth * 1.3)}mm
+                </p>
               </div>
 
               {/* Tramp Size */}
@@ -361,11 +397,16 @@ export default function OCWModelComparison() {
               <CardContent className="space-y-4">
                 {/* Model Selection */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Select OCW Model to Compare:</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Select OCW Model to Compare:</label>
+                    <Badge variant="outline">
+                      {filteredModels.length} model{filteredModels.length !== 1 ? 's' : ''} available
+                    </Badge>
+                  </div>
                   <Select
                     value={selectedModel?.model || ""}
                     onValueChange={(value) => {
-                      const model = ocwModels.find(m => m.model === value);
+                      const model = filteredModels.find(m => m.model === value);
                       setSelectedModel(model || null);
                     }}
                   >
@@ -373,17 +414,30 @@ export default function OCWModelComparison() {
                       <SelectValue placeholder="Select a model to compare..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {ocwModels.map((model) => (
-                        <SelectItem key={model.model} value={model.model}>
-                          {model.model} - {model.surface_gauss.toLocaleString()}G @ {model.watts.toLocaleString()}W
+                      {filteredModels.length > 0 ? (
+                        filteredModels.map((model) => (
+                          <SelectItem key={model.model} value={model.model}>
+                            {model.model} - {model.surface_gauss.toLocaleString()}G @ {model.watts.toLocaleString()}W (Width: {model.width}mm)
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          No models match the selected belt width
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   
                   {selectedModel && (
                     <div className="text-xs text-muted-foreground flex gap-4">
                       <span>Width: {selectedModel.width}mm</span>
+                      <span className={
+                        selectedModel.width >= beltWidth * 0.95 && selectedModel.width <= beltWidth * 1.05 
+                          ? 'text-green-600 font-medium' 
+                          : ''
+                      }>
+                        {((selectedModel.width / beltWidth - 1) * 100).toFixed(1)}% of belt width
+                      </span>
                       <span>Frame: {selectedModel.frame}</span>
                       <span>Force Factor: {selectedModel.force_factor.toLocaleString()}</span>
                     </div>
@@ -442,7 +496,17 @@ export default function OCWModelComparison() {
             </Card>
 
             {/* Alert Messages */}
-            {!selectedModel && (
+            {!selectedModel && filteredModels.length === 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>No models available:</strong> Adjust the belt width slider to see compatible OCW models. 
+                  Current range: {Math.round(beltWidth * 0.8)}mm - {Math.round(beltWidth * 1.3)}mm
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!selectedModel && filteredModels.length > 0 && (
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
