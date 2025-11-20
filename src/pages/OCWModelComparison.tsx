@@ -34,6 +34,40 @@ type TrampSize = keyof typeof TRAMP_SIZE_MAP;
 
 const SAFETY_FACTOR = 1.5; // 50% margin recommended
 
+// Temperature-specific correlation factors for decay calculations
+const TEMP_CONFIGS = {
+  20: {
+    label: '20°C Ambient',
+    ampereTurnsCorrelation: 0.615238,  // OCW Unit <-> Gauss (ampere-turns)
+    forceFactorCorrelation: 0.771332,   // OCW Unit <-> Force Factor
+    gaussForceCorrelation: 0.944644,    // Gauss <-> Force Factor
+    dbField: 'hot_ampere_turns_A' as const,
+    voltageField: 'voltage_A' as const,
+    wattsField: 'watts_A' as const
+  },
+  30: {
+    label: '30°C Ambient',
+    ampereTurnsCorrelation: 0.627028,
+    forceFactorCorrelation: 0.769676,
+    gaussForceCorrelation: 0.954985,
+    dbField: 'hot_ampere_turns_B' as const,
+    voltageField: 'voltage_B' as const,
+    wattsField: 'watts_B' as const
+  },
+  40: {
+    label: '40°C Ambient',
+    ampereTurnsCorrelation: 0.629352,
+    forceFactorCorrelation: 0.770255,
+    gaussForceCorrelation: 0.959471,
+    dbField: 'hot_ampere_turns_C' as const,
+    voltageField: 'voltage_C' as const,
+    wattsField: 'watts_C' as const
+  }
+} as const;
+
+type AmbientTemp = keyof typeof TEMP_CONFIGS;
+type TempConfig = typeof TEMP_CONFIGS[AmbientTemp];
+
 interface OCWModel {
   model: string;
   Prefix: number;
@@ -81,19 +115,19 @@ function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): n
 
 /**
  * Calculate model's available force at a given gap
- * Uses magnetic field decay: F(x) = F₀ × (0.866)^(x/25)
+ * Uses temperature-specific magnetic field decay
  */
-function calculateModelForceAtGap(baseForce: number, gap: number): number {
-  const decayRatio = Math.pow(0.866, gap / 25);
+function calculateModelForceAtGap(baseForce: number, gap: number, tempConfig: TempConfig): number {
+  const decayRatio = Math.pow(tempConfig.gaussForceCorrelation, gap / 25);
   return baseForce * decayRatio;
 }
 
 /**
  * Calculate model's ampere turns at a given gap
- * Uses magnetic field decay: AT(x) = AT₀ × (0.866)^(x/25)
+ * Uses temperature-specific magnetic field decay
  */
-function calculateAmpereTurnsAtGap(baseAT: number, gap: number): number {
-  const decayRatio = Math.pow(0.866, gap / 25);
+function calculateAmpereTurnsAtGap(baseAT: number, gap: number, tempConfig: TempConfig): number {
+  const decayRatio = Math.pow(tempConfig.ampereTurnsCorrelation, gap / 25);
   return baseAT * decayRatio;
 }
 
@@ -120,6 +154,7 @@ export default function OCWModelComparison() {
   const [burdenDepth, setBurdenDepth] = useState(100);
   const [beltWidth, setBeltWidth] = useState(1200);
   const [trampSize, setTrampSize] = useState<TrampSize>('small');
+  const [ambientTemp, setAmbientTemp] = useState<AmbientTemp>(20);
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
   const [showTable, setShowTable] = useState(false);
@@ -195,17 +230,20 @@ export default function OCWModelComparison() {
   }, [beltSpeed, airGap, burdenDepth, trampSize]);
 
   const comparisonData = useMemo(() => {
+    const tempConfig = TEMP_CONFIGS[ambientTemp];
     const data: ComparisonDataPoint[] = [];
+    
     for (let g = 0; g <= 800; g += 25) {
       const S = severity(beltSpeed, g, burdenDepth);
       const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
       
       const modelForce = selectedModel 
-        ? calculateModelForceAtGap(selectedModel.force_factor, g)
+        ? calculateModelForceAtGap(selectedModel.force_factor, g, tempConfig)
         : null;
       
-      const modelAT = detailedOCWData?.hot_ampere_turns_B 
-        ? calculateAmpereTurnsAtGap(detailedOCWData.hot_ampere_turns_B, g)
+      const baseAT = detailedOCWData?.[tempConfig.dbField];
+      const modelAT = baseAT 
+        ? calculateAmpereTurnsAtGap(baseAT, g, tempConfig)
         : null;
       
       data.push({
@@ -222,12 +260,13 @@ export default function OCWModelComparison() {
       });
     }
     return data;
-  }, [beltSpeed, burdenDepth, trampSize, selectedModel, detailedOCWData]);
+  }, [beltSpeed, burdenDepth, trampSize, selectedModel, detailedOCWData, ambientTemp]);
 
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
     
-    const modelForce = calculateModelForceAtGap(selectedModel.force_factor, airGap);
+    const tempConfig = TEMP_CONFIGS[ambientTemp];
+    const modelForce = calculateModelForceAtGap(selectedModel.force_factor, airGap, tempConfig);
     const validation = validateModel(currentResults.requiredForce, modelForce);
     const margin = ((modelForce - currentResults.requiredForce) / currentResults.requiredForce * 100);
     
@@ -236,7 +275,7 @@ export default function OCWModelComparison() {
       margin,
       validation
     };
-  }, [selectedModel, airGap, currentResults]);
+  }, [selectedModel, airGap, currentResults, ambientTemp]);
 
   const handleReset = () => {
     setBeltSpeed(2.0);
@@ -244,11 +283,12 @@ export default function OCWModelComparison() {
     setBurdenDepth(100);
     setBeltWidth(1200);
     setTrampSize('small');
+    setAmbientTemp(20);
     setSelectedModel(null);
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Ampere Turns', 'Margin %', 'Model Watts', 'Status'];
+    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Ampere Turns', 'Margin %', 'Model Watts', 'Status', 'Ambient Temp'];
     const rows = comparisonData.map(row => [
       row.gap,
       row.severity,
@@ -257,7 +297,8 @@ export default function OCWModelComparison() {
       row.modelAmpereTurns || '',
       row.margin?.toFixed(1) || '',
       row.modelWatts || '',
-      row.sufficient ? 'OK' : 'INSUFFICIENT'
+      row.sufficient ? 'OK' : 'INSUFFICIENT',
+      `${ambientTemp}°C`
     ]);
     
     const csv = [headers, ...rows]
@@ -268,7 +309,7 @@ export default function OCWModelComparison() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-belt${beltWidth}mm-${Date.now()}.csv`;
+    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-${ambientTemp}C-belt${beltWidth}mm-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -288,6 +329,39 @@ export default function OCWModelComparison() {
             Reset
           </Button>
         </div>
+
+        {/* Temperature Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ambient Temperature</CardTitle>
+            <CardDescription>Select operating temperature for decay calculations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button
+                variant={ambientTemp === 20 ? "default" : "outline"}
+                onClick={() => setAmbientTemp(20)}
+                className="flex-1"
+              >
+                20°C
+              </Button>
+              <Button
+                variant={ambientTemp === 30 ? "default" : "outline"}
+                onClick={() => setAmbientTemp(30)}
+                className="flex-1"
+              >
+                30°C
+              </Button>
+              <Button
+                variant={ambientTemp === 40 ? "default" : "outline"}
+                onClick={() => setAmbientTemp(40)}
+                className="flex-1"
+              >
+                40°C
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Control Panel */}
@@ -438,7 +512,7 @@ export default function OCWModelComparison() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Performance Comparison</CardTitle>
+                    <CardTitle>Performance Comparison - {TEMP_CONFIGS[ambientTemp].label}</CardTitle>
                     <CardDescription>Requirements vs Model Capability</CardDescription>
                   </div>
                 </div>
