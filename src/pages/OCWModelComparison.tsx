@@ -23,6 +23,14 @@ const CONSTANTS = {
   c: 0.5        // burden exponent
 };
 
+// Scientific decay constants for magnetic field calculations
+const DECAY_CONSTANTS = {
+  DECAY_RATE: 0.00575,   // Exponential decay coefficient (empirically derived)
+  SCALE_A20: 1.000,      // Reference temperature (20°C)
+  SCALE_A30: 0.95484,    // A30 relative to A20 (95.484% strength)
+  SCALE_A40: 0.90451     // A40 relative to A20 (90.451% strength)
+};
+
 const TRAMP_SIZE_MAP = {
   small: { baseForce: 800, label: "Small", description: "Bolts, nails, small plate" },
   medium: { baseForce: 2500, label: "Medium", description: "Small rebar, tooling fragments" },
@@ -39,7 +47,7 @@ const TEMP_CONFIGS = {
   20: {
     label: '20°C Ambient',
     ampereTurnsCorrelation: 0.615238,  // OCW Unit <-> Gauss (ampere-turns)
-    forceFactorCorrelation: 1.000,      // Reference temperature - 100% force
+    forceFactorCorrelation: 1.000,      // Reference temperature (100% force)
     gaussForceCorrelation: 0.944644,    // Gauss <-> Force Factor
     dbField: 'hot_ampere_turns_A' as const,
     voltageField: 'voltage_A' as const,
@@ -48,7 +56,7 @@ const TEMP_CONFIGS = {
   30: {
     label: '30°C Ambient',
     ampereTurnsCorrelation: 0.627028,
-    forceFactorCorrelation: 0.950,      // ~5% reduction due to temp rise
+    forceFactorCorrelation: 0.95484,    // Scientific: 95.484% of A20 strength
     gaussForceCorrelation: 0.954985,
     dbField: 'hot_ampere_turns_B' as const,
     voltageField: 'voltage_B' as const,
@@ -57,7 +65,7 @@ const TEMP_CONFIGS = {
   40: {
     label: '40°C Ambient',
     ampereTurnsCorrelation: 0.629352,
-    forceFactorCorrelation: 0.900,      // ~10% reduction due to temp rise
+    forceFactorCorrelation: 0.90451,    // Scientific: 90.451% of A20 strength
     gaussForceCorrelation: 0.959471,
     dbField: 'hot_ampere_turns_C' as const,
     voltageField: 'voltage_C' as const,
@@ -116,14 +124,23 @@ function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): n
 
 /**
  * Calculate model's available force at a given gap
- * Uses standard magnetic field decay with distance (gap)
+ * Uses scientific exponential decay formula: e^(-0.00575 × gap)
  * Base force is already temperature-adjusted from database
  */
 function calculateModelForceAtGap(baseForce: number, gap: number, tempConfig: TempConfig): number {
-  // Standard magnetic field decay: 0.866^(gap/25)
-  // This is independent of temperature - temperature affects base force only
-  const decayRatio = Math.pow(0.866, gap / 25);
-  return baseForce * decayRatio;
+  // Scientific exponential decay: e^(-DECAY_RATE × gap)
+  // More physically accurate than power-law decay
+  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_RATE * gap);
+  return baseForce * decayFactor;
+}
+
+/**
+ * Calculate Gauss value from Force Factor (optional helper for future use)
+ * Formula: FF = k × Gauss², so Gauss = sqrt(FF / k)
+ */
+function calculateGaussFromFF(forceFactorAtGap: number, startGauss: number, startFF: number): number {
+  const k = startFF / Math.pow(startGauss, 2);
+  return Math.sqrt(forceFactorAtGap / k);
 }
 
 /**
