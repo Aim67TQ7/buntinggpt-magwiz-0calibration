@@ -366,39 +366,6 @@ export default function OCWModelComparison() {
           </Button>
         </div>
 
-        {/* Temperature Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ambient Temperature</CardTitle>
-            <CardDescription>Select operating temperature for decay calculations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Button
-                variant={ambientTemp === 20 ? "default" : "outline"}
-                onClick={() => setAmbientTemp(20)}
-                className="flex-1"
-              >
-                20°C
-              </Button>
-              <Button
-                variant={ambientTemp === 30 ? "default" : "outline"}
-                onClick={() => setAmbientTemp(30)}
-                className="flex-1"
-              >
-                30°C
-              </Button>
-              <Button
-                variant={ambientTemp === 40 ? "default" : "outline"}
-                onClick={() => setAmbientTemp(40)}
-                className="flex-1"
-              >
-                40°C
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Control Panel */}
           <Card>
