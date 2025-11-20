@@ -25,10 +25,18 @@ const CONSTANTS = {
 
 // Scientific decay constants for magnetic field calculations
 const DECAY_CONSTANTS = {
-  DECAY_RATE: 0.00575,   // Exponential decay coefficient (empirically derived)
-  SCALE_A20: 1.000,      // Reference temperature (20°C)
-  SCALE_A30: 0.95484,    // A30 relative to A20 (95.484% strength)
-  SCALE_A40: 0.90451     // A40 relative to A20 (90.451% strength)
+  DECAY_GAUSS: 0.00575,   // Gauss decay coefficient (linear)
+  DECAY_FF: 0.01150,      // FF decay coefficient (2x Gauss - squared relationship)
+  SCALE_A20: 1.000,       // Reference temperature (20°C)
+  SCALE_A30: 0.95484,     // A30 Gauss relative to A20 (95.484% strength)
+  SCALE_A40: 0.90451      // A40 Gauss relative to A20 (90.451% strength)
+};
+
+// Force Factor temperature ratios (FF drops more heavily than Gauss)
+const FF_TEMP_RATIOS = {
+  20: 1.000,    // Reference (100%)
+  30: 0.9117,   // ~91.2% (heavier drop than Gauss)
+  40: 0.8181    // ~81.8% (much heavier drop)
 };
 
 const TRAMP_SIZE_MAP = {
@@ -47,7 +55,8 @@ const TEMP_CONFIGS = {
   20: {
     label: '20°C Ambient',
     ampereTurnsCorrelation: 0.615238,  // OCW Unit <-> Gauss (ampere-turns)
-    forceFactorCorrelation: 1.000,      // Reference temperature (100% force)
+    forceFactorCorrelation: 1.000,      // Gauss scaling (reference)
+    ffTemperatureRatio: 1.000,          // FF scaling (reference)
     gaussForceCorrelation: 0.944644,    // Gauss <-> Force Factor
     dbField: 'hot_ampere_turns_A' as const,
     voltageField: 'voltage_A' as const,
@@ -56,7 +65,8 @@ const TEMP_CONFIGS = {
   30: {
     label: '30°C Ambient',
     ampereTurnsCorrelation: 0.627028,
-    forceFactorCorrelation: 0.95484,    // Scientific: 95.484% of A20 strength
+    forceFactorCorrelation: 0.95484,    // Gauss scaling (95.48%)
+    ffTemperatureRatio: 0.9117,         // FF scaling (91.17% - heavier drop)
     gaussForceCorrelation: 0.954985,
     dbField: 'hot_ampere_turns_B' as const,
     voltageField: 'voltage_B' as const,
@@ -65,7 +75,8 @@ const TEMP_CONFIGS = {
   40: {
     label: '40°C Ambient',
     ampereTurnsCorrelation: 0.629352,
-    forceFactorCorrelation: 0.90451,    // Scientific: 90.451% of A20 strength
+    forceFactorCorrelation: 0.90451,    // Gauss scaling (90.45%)
+    ffTemperatureRatio: 0.8181,         // FF scaling (81.81% - much heavier drop)
     gaussForceCorrelation: 0.959471,
     dbField: 'hot_ampere_turns_C' as const,
     voltageField: 'voltage_C' as const,
@@ -123,15 +134,22 @@ function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): n
 }
 
 /**
- * Calculate model's available force at a given gap
- * Uses scientific exponential decay formula: e^(-0.00575 × gap)
- * Base force is already temperature-adjusted from database
+ * Calculate Gauss value at a given gap using linear decay
+ * Formula: startGauss × e^(-DECAY_GAUSS × gap) × temperatureRatio
  */
-function calculateModelForceAtGap(baseForce: number, gap: number, tempConfig: TempConfig): number {
-  // Scientific exponential decay: e^(-DECAY_RATE × gap)
-  // More physically accurate than power-law decay
-  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_RATE * gap);
-  return baseForce * decayFactor;
+function calculateGaussAtGap(startGauss: number, gap: number, tempConfig: TempConfig): number {
+  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_GAUSS * gap);
+  return startGauss * decayFactor * tempConfig.forceFactorCorrelation;
+}
+
+/**
+ * Calculate Force Factor at a given gap using steeper decay
+ * Formula: startFF × e^(-DECAY_FF × gap) × ffTemperatureRatio
+ * FF decays twice as fast as Gauss (squared relationship)
+ */
+function calculateFFAtGap(startFF: number, gap: number, tempConfig: TempConfig): number {
+  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_FF * gap);
+  return startFF * decayFactor * tempConfig.ffTemperatureRatio;
 }
 
 /**
@@ -258,26 +276,26 @@ export default function OCWModelComparison() {
       const S = severity(beltSpeed, g, burdenDepth);
       const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
       
-      // Calculate force at all three temperatures
+      // Calculate force at all three temperatures using FF-specific decay
       const modelForce20C = selectedModel 
-        ? calculateModelForceAtGap(
-            selectedModel.force_factor * TEMP_CONFIGS[20].forceFactorCorrelation, 
+        ? calculateFFAtGap(
+            selectedModel.force_factor, 
             g, 
             TEMP_CONFIGS[20]
           )
         : null;
       
       const modelForce30C = selectedModel 
-        ? calculateModelForceAtGap(
-            selectedModel.force_factor * TEMP_CONFIGS[30].forceFactorCorrelation, 
+        ? calculateFFAtGap(
+            selectedModel.force_factor, 
             g, 
             TEMP_CONFIGS[30]
           )
         : null;
       
       const modelForce40C = selectedModel 
-        ? calculateModelForceAtGap(
-            selectedModel.force_factor * TEMP_CONFIGS[40].forceFactorCorrelation, 
+        ? calculateFFAtGap(
+            selectedModel.force_factor, 
             g, 
             TEMP_CONFIGS[40]
           )
@@ -286,8 +304,8 @@ export default function OCWModelComparison() {
       // Use current temperature for sufficient check
       const tempConfig = TEMP_CONFIGS[ambientTemp];
       const currentTempForce = selectedModel 
-        ? calculateModelForceAtGap(
-            selectedModel.force_factor * tempConfig.forceFactorCorrelation, 
+        ? calculateFFAtGap(
+            selectedModel.force_factor, 
             g, 
             tempConfig
           )
@@ -314,8 +332,8 @@ export default function OCWModelComparison() {
     if (!selectedModel) return null;
     
     const tempConfig = TEMP_CONFIGS[ambientTemp];
-    const modelForce = calculateModelForceAtGap(
-      selectedModel.force_factor * tempConfig.forceFactorCorrelation, 
+    const modelForce = calculateFFAtGap(
+      selectedModel.force_factor, 
       airGap, 
       tempConfig
     );
