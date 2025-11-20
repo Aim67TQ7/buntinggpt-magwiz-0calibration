@@ -13,6 +13,7 @@ import OCW from "./pages/OCW";
 import OCWSpecs from "./pages/OCWSpecs";
 import OCWComparison from "./pages/OCWComparison";
 import OCWAnalyzer from "./pages/OCWAnalyzer";
+import OCWModelComparison from "./pages/OCWModelComparison";
 import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
 import PCBChat from "./pages/PCBChat";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/ocw-specs" element={<OCWSpecs />} />
               <Route path="/ocw-comparison" element={<OCWComparison />} />
               <Route path="/ocw-analyzer" element={<OCWAnalyzer />} />
+              <Route path="/ocw-model-comparison" element={<OCWModelComparison />} />
               <Route path="/winding-sheet" element={<WindingSheet />} />
               <Route path="/configurator" element={<Configurator />} />
               <Route path="/calculator" element={<Index />} />

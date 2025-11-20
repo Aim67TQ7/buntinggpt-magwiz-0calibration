@@ -1,0 +1,546 @@
+import { useState, useMemo, useEffect } from "react";
+import { Navigation } from "@/components/Navigation";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { RotateCcw, Info, Download, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+// Constants for calculations
+const CONSTANTS = {
+  v0: 2.0,      // reference belt speed (m/s)
+  g0: 200,      // reference air gap (mm)
+  d0: 100,      // reference burden depth (mm)
+  k: 0.5,       // burden → gap conversion factor
+  G0: 3000,     // base gauss requirement
+  W0: 10,       // base power requirement (kW)
+  a: 0.4,       // speed exponent
+  b: 1.7,       // distance exponent
+  c: 0.5        // burden exponent
+};
+
+const TRAMP_SIZE_MAP = {
+  small: { value: 1.0, label: "Small", description: "Bolts, nails, small plate" },
+  medium: { value: 1.5, label: "Medium", description: "Tooling fragments, small rebar" },
+  large: { value: 2.0, label: "Large", description: "Full rebar, bucket teeth" },
+  veryLarge: { value: 2.5, label: "Very Large", description: "Very large or frequent tramp" }
+} as const;
+
+type TrampSize = keyof typeof TRAMP_SIZE_MAP;
+
+const SAFETY_FACTOR = 1.15; // 15% margin recommended
+
+interface OCWModel {
+  model: string;
+  Prefix: number;
+  Suffix: number;
+  surface_gauss: number;
+  watts: number;
+  force_factor: number;
+  width: number;
+  frame: string;
+}
+
+interface ComparisonDataPoint {
+  gap: number;
+  requiredGauss: number;
+  requiredWatts: number;
+  modelGauss: number | null;
+  modelWatts: number | null;
+  sufficient: boolean | null;
+  margin: number | null;
+}
+
+function computeOCWRequirements(v: number, g: number, d: number, T: number) {
+  const h = g + CONSTANTS.k * d;
+  const h0 = CONSTANTS.g0 + CONSTANTS.k * CONSTANTS.d0;
+  
+  const S = Math.pow(v / CONSTANTS.v0, CONSTANTS.a) *
+            Math.pow(h / h0, CONSTANTS.b) *
+            Math.pow(d / CONSTANTS.d0, CONSTANTS.c) *
+            T;
+  
+  return {
+    severity: S,
+    requiredGauss: CONSTANTS.G0 * S,
+    requiredWatts: CONSTANTS.W0 * S * S,
+    forceFactor: S
+  };
+}
+
+function calculateModelGaussAtGap(surfaceGauss: number, gap: number): number {
+  // Magnetic field decay: G(x) = G₀ × (0.866)^(x/25)
+  return surfaceGauss * Math.pow(0.866, gap / 25);
+}
+
+function validateModel(requiredGauss: number, modelGauss: number): {
+  status: 'excellent' | 'adequate' | 'marginal' | 'insufficient',
+  message: string
+} {
+  const ratio = modelGauss / requiredGauss;
+  
+  if (ratio >= SAFETY_FACTOR * 1.2) {
+    return { status: 'excellent', message: 'Exceeds requirements with excellent margin' };
+  } else if (ratio >= SAFETY_FACTOR) {
+    return { status: 'adequate', message: 'Meets requirements with adequate safety factor' };
+  } else if (ratio >= 1.0) {
+    return { status: 'marginal', message: 'Barely meets requirements - consider larger model' };
+  } else {
+    return { status: 'insufficient', message: 'Insufficient for requirements' };
+  }
+}
+
+export default function OCWModelComparison() {
+  const [beltSpeed, setBeltSpeed] = useState(2.0);
+  const [airGap, setAirGap] = useState(200);
+  const [burdenDepth, setBurdenDepth] = useState(100);
+  const [trampSize, setTrampSize] = useState<TrampSize>('small');
+  const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
+  const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
+  const [showTable, setShowTable] = useState(false);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      const { data, error } = await supabase
+        .from('BMR_Top')
+        .select('*')
+        .order('Prefix', { ascending: true })
+        .order('Suffix', { ascending: true });
+      
+      if (data) setOcwModels(data);
+    };
+    fetchModels();
+  }, []);
+
+  const currentResults = useMemo(
+    () => computeOCWRequirements(beltSpeed, airGap, burdenDepth, TRAMP_SIZE_MAP[trampSize].value),
+    [beltSpeed, airGap, burdenDepth, trampSize]
+  );
+
+  const comparisonData = useMemo(() => {
+    const data: ComparisonDataPoint[] = [];
+    for (let g = 100; g <= 800; g += 25) {
+      const req = computeOCWRequirements(
+        beltSpeed, 
+        g, 
+        burdenDepth, 
+        TRAMP_SIZE_MAP[trampSize].value
+      );
+      
+      const modelGauss = selectedModel 
+        ? calculateModelGaussAtGap(selectedModel.surface_gauss, g)
+        : null;
+      
+      data.push({
+        gap: g,
+        requiredGauss: Math.round(req.requiredGauss),
+        requiredWatts: Math.round(req.requiredWatts * 10) / 10,
+        modelGauss: modelGauss ? Math.round(modelGauss) : null,
+        modelWatts: selectedModel?.watts || null,
+        sufficient: modelGauss ? modelGauss >= req.requiredGauss : null,
+        margin: modelGauss 
+          ? ((modelGauss - req.requiredGauss) / req.requiredGauss * 100)
+          : null
+      });
+    }
+    return data;
+  }, [beltSpeed, burdenDepth, trampSize, selectedModel]);
+
+  const currentGapComparison = useMemo(() => {
+    if (!selectedModel) return null;
+    
+    const modelGauss = calculateModelGaussAtGap(selectedModel.surface_gauss, airGap);
+    const validation = validateModel(currentResults.requiredGauss, modelGauss);
+    const margin = ((modelGauss - currentResults.requiredGauss) / currentResults.requiredGauss * 100);
+    
+    return {
+      modelGauss: Math.round(modelGauss),
+      margin,
+      validation
+    };
+  }, [selectedModel, airGap, currentResults]);
+
+  const handleReset = () => {
+    setBeltSpeed(2.0);
+    setAirGap(200);
+    setBurdenDepth(100);
+    setTrampSize('small');
+    setSelectedModel(null);
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Gap (mm)', 'Required Gauss', 'Model Gauss', 'Margin %', 'Required Watts', 'Model Watts', 'Status'];
+    const rows = comparisonData.map(row => [
+      row.gap,
+      row.requiredGauss,
+      row.modelGauss || '',
+      row.margin?.toFixed(1) || '',
+      row.requiredWatts,
+      row.modelWatts || '',
+      row.sufficient ? 'OK' : 'INSUFFICIENT'
+    ]);
+    
+    const csv = [headers, ...rows]
+      .map(row => row.join(','))
+      .join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">OCW Model Comparison</h1>
+            <p className="text-muted-foreground mt-2">
+              Compare operating requirements against actual OCW model capabilities
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Control Panel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Operating Parameters</CardTitle>
+              <CardDescription>Adjust conditions to see requirements</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Belt Speed */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Belt Speed</label>
+                  <Badge variant="secondary">{beltSpeed.toFixed(2)} m/s</Badge>
+                </div>
+                <Slider
+                  value={[beltSpeed]}
+                  onValueChange={(val) => setBeltSpeed(val[0])}
+                  min={0.5}
+                  max={5.0}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Air Gap */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Air Gap</label>
+                  <Badge variant="secondary">{airGap} mm</Badge>
+                </div>
+                <Slider
+                  value={[airGap]}
+                  onValueChange={(val) => setAirGap(val[0])}
+                  min={100}
+                  max={800}
+                  step={25}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Burden Depth */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Burden Depth</label>
+                  <Badge variant="secondary">{burdenDepth} mm</Badge>
+                </div>
+                <Slider
+                  value={[burdenDepth]}
+                  onValueChange={(val) => setBurdenDepth(val[0])}
+                  min={0}
+                  max={300}
+                  step={10}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Tramp Size */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Tramp Size / Severity</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(TRAMP_SIZE_MAP).map(([key, data]) => (
+                    <Button
+                      key={key}
+                      variant={trampSize === key ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTrampSize(key as TrampSize)}
+                      className="flex flex-col h-auto py-2"
+                    >
+                      <span className="font-semibold">{data.label}</span>
+                      <span className="text-xs opacity-70">{data.value}x</span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {TRAMP_SIZE_MAP[trampSize].description}
+                </p>
+              </div>
+
+              {/* Current Requirements */}
+              <div className="pt-4 border-t space-y-2">
+                <h4 className="font-semibold text-sm">Required at Current Gap:</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Severity Index:</span>
+                    <span className="font-medium">{currentResults.severity.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gauss:</span>
+                    <span className="font-medium">{Math.round(currentResults.requiredGauss).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Watts:</span>
+                    <span className="font-medium">{(currentResults.requiredWatts).toFixed(1)} kW</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Model Comparison at Current Gap */}
+              {currentGapComparison && (
+                <div className="pt-4 border-t space-y-2">
+                  <h4 className="font-semibold text-sm">Model at Current Gap:</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivers:</span>
+                      <span className="font-medium">{currentGapComparison.modelGauss.toLocaleString()} G</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Margin:</span>
+                      <span className={`font-medium ${currentGapComparison.margin > 15 ? 'text-green-600' : currentGapComparison.margin > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {currentGapComparison.margin > 0 ? '+' : ''}{currentGapComparison.margin.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="pt-2">
+                      <Badge variant={
+                        currentGapComparison.validation.status === 'excellent' ? 'default' :
+                        currentGapComparison.validation.status === 'adequate' ? 'default' :
+                        currentGapComparison.validation.status === 'marginal' ? 'secondary' :
+                        'destructive'
+                      }>
+                        {currentGapComparison.validation.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Graph Panel */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Performance Comparison</CardTitle>
+                    <CardDescription>Requirements vs Model Capability</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Model Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select OCW Model to Compare:</label>
+                  <Select
+                    value={selectedModel?.model || ""}
+                    onValueChange={(value) => {
+                      const model = ocwModels.find(m => m.model === value);
+                      setSelectedModel(model || null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a model to compare..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ocwModels.map((model) => (
+                        <SelectItem key={model.model} value={model.model}>
+                          {model.model} - {model.surface_gauss.toLocaleString()}G @ {model.watts.toLocaleString()}W
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedModel && (
+                    <div className="text-xs text-muted-foreground flex gap-4">
+                      <span>Width: {selectedModel.width}mm</span>
+                      <span>Frame: {selectedModel.frame}</span>
+                      <span>Force Factor: {selectedModel.force_factor.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chart */}
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={comparisonData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="gap" 
+                        label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
+                      />
+                      <YAxis 
+                        label={{ value: 'Magnetic Field (Gauss)', angle: -90, position: 'insideLeft' }}
+                      />
+                      <Tooltip />
+                      <Legend />
+                      
+                      {/* Requirements Line */}
+                      <Line 
+                        type="monotone"
+                        dataKey="requiredGauss"
+                        stroke="hsl(var(--destructive))"
+                        strokeWidth={2}
+                        name="Required"
+                        dot={false}
+                      />
+                      
+                      {/* Model Capability Line */}
+                      {selectedModel && (
+                        <Line 
+                          type="monotone"
+                          dataKey="modelGauss"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          name={selectedModel.model}
+                          dot={false}
+                          strokeDasharray="5 5"
+                        />
+                      )}
+                      
+                      {/* Current gap reference line */}
+                      <ReferenceLine 
+                        x={airGap} 
+                        stroke="hsl(var(--muted-foreground))" 
+                        strokeDasharray="3 3"
+                        label="Current"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Alert Messages */}
+            {!selectedModel && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Tip:</strong> Select a model above to see if it meets your requirements across all gap distances.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {selectedModel && currentGapComparison && currentGapComparison.validation.status === 'insufficient' && (
+              <Alert variant="destructive">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Warning:</strong> {currentGapComparison.validation.message}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </div>
+
+        {/* Data Table */}
+        {selectedModel && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Detailed Comparison Table</CardTitle>
+                  <CardDescription>Gap-by-gap performance analysis</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={exportToCSV}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowTable(!showTable)}
+                  >
+                    {showTable ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    {showTable ? 'Hide' : 'Show'} Table
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            {showTable && (
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Gap (mm)</TableHead>
+                        <TableHead className="text-right">Required Gauss</TableHead>
+                        <TableHead className="text-right">Model Gauss</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Margin</TableHead>
+                        <TableHead className="text-right">Required Watts</TableHead>
+                        <TableHead className="text-right">Model Watts</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {comparisonData.map((row) => (
+                        <TableRow 
+                          key={row.gap}
+                          className={row.gap === airGap ? 'bg-muted/50 font-medium' : ''}
+                        >
+                          <TableCell>{row.gap}</TableCell>
+                          <TableCell className="text-right">{row.requiredGauss.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{row.modelGauss?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-center">
+                            {row.sufficient !== null && (
+                              <Badge variant={row.sufficient ? 'default' : 'destructive'}>
+                                {row.sufficient ? '✓' : '✗'}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {row.margin !== null && (
+                              <span className={
+                                row.margin > 15 ? 'text-green-600 font-medium' : 
+                                row.margin > 0 ? 'text-yellow-600' : 
+                                'text-red-600 font-medium'
+                              }>
+                                {row.margin > 0 ? '+' : ''}{row.margin.toFixed(1)}%
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{row.requiredWatts}</TableCell>
+                          <TableCell className="text-right">{row.modelWatts?.toLocaleString() || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}

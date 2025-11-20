@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart } from "lucide-react";
+import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Navigation = () => {
@@ -32,6 +32,11 @@ export const Navigation = () => {
       path: "/ocw-analyzer",
       label: "Performance Analyzer",
       icon: LineChart,
+    },
+    {
+      path: "/ocw-model-comparison",
+      label: "Model Comparison",
+      icon: TrendingUp,
     },
   ];
 
