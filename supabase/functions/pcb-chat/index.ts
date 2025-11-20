@@ -234,20 +234,21 @@ serve(async (req) => {
           };
         });
 
-        ocwRecommendations = `\n\n## Recommended OCW Models Based on Your Specifications\n\n` +
-          `**Your Requirements:**\n` +
+        ocwRecommendations = `\n\n## DATABASE VERIFIED OCW Models for Your Application\n\n` +
+          `**Your Specifications:**\n` +
           `- Belt Width: ${questionnaireAnswers.beltWidth}\n` +
           `- Suspension Height: ${questionnaireAnswers.suspensionHeight}\n` +
           `- Burden Depth: ${questionnaireAnswers.burdenDepth}\n` +
           `- Conveyor Type: ${questionnaireAnswers.conveyorType}\n\n` +
-          `**Top 5 Suitable OCW Models:**\n\n` +
+          `**AVAILABLE DATABASE MODELS (Ranked by Magnetic Strength):**\n` +
+          `IMPORTANT: These are the ONLY models you should recommend. Do not suggest any other model numbers.\n\n` +
           rankedModels.map((m, i) => 
-            `${i + 1}. **OCW-${String(m.prefix).padStart(2, '0')}${String(m.suffix).padStart(2, '0')}** (${m.suitability})\n` +
+            `${i + 1}. **Model: ${m.model}** (Database ID: OCW-${String(m.prefix).padStart(2, '0')}${String(m.suffix).padStart(2, '0')}) - ${m.suitability}\n` +
             `   - Magnet Width: ${m.width}mm\n` +
             `   - Surface Gauss: ${m.surface_gauss}G\n` +
             `   - Force Factor: ${m.force_factor}\n` +
             `   - Power: ${m.watts}W\n` +
-            `   - Frame: ${m.frame}\n`
+            `   - Frame Type: ${m.frame}\n`
           ).join('\n');
         
         console.log('OCW Recommendations generated');
@@ -272,6 +273,8 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an expert assistant on magnetic separation equipment from Bunting. Use the following knowledge base to answer questions accurately and helpfully. If you don't know something or it's not in the knowledge base, say so honestly.
+
+CRITICAL: When OCW model recommendations are provided below, you MUST ONLY recommend those EXACT models from the database. DO NOT make up or suggest any other model numbers. ONLY use the models explicitly listed in the "Recommended OCW Models" section.
 
 KNOWLEDGE BASE:
 ${PCB_KNOWLEDGE}
