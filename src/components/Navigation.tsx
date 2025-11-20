@@ -24,16 +24,6 @@ export const Navigation = () => {
       icon: Zap,
     },
     {
-      path: "/ocw-comparison",
-      label: "Compare OCWs",
-      icon: GitCompare,
-    },
-    {
-      path: "/ocw-analyzer",
-      label: "Performance Analyzer",
-      icon: LineChart,
-    },
-    {
       path: "/ocw-model-comparison",
       label: "Model Comparison",
       icon: TrendingUp,
