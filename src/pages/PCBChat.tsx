@@ -28,8 +28,20 @@ const PCBChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleQuestionnaireComplete = (answers: QuestionnaireAnswers, recommendation: string) => {
-    const summaryMessage = `Based on your requirements:
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<QuestionnaireAnswers | null>(null);
+
+  const handleQuestionnaireComplete = async (answers: QuestionnaireAnswers, recommendation: string) => {
+    setQuestionnaireAnswers(answers);
+    setShowQuestionnaire(false);
+    setIsLoading(true);
+
+    try {
+      // Call the edge function with questionnaire answers to get OCW recommendations
+      const { data, error } = await supabase.functions.invoke("pcb-chat", {
+        body: { 
+          messages: [{
+            role: "user",
+            content: `I need help selecting an electromagnetic overband magnet. Here are my application requirements:
 - Conveyor Type: ${answers.conveyorType}
 - Suspension Height: ${answers.suspensionHeight}
 - Burden Depth: ${answers.burdenDepth}
@@ -38,17 +50,38 @@ const PCBChat = () => {
 - Tramp Metal Size: ${answers.trampMetal}
 - Environment: ${answers.environment}
 
-Recommended Model: **${recommendation}**
+Based on these requirements, the general recommendation is: **${recommendation}**
 
-How can I help you further with your magnetic separator selection?`;
+Can you provide specific OCW model recommendations with technical specifications?`
+          }],
+          questionnaireAnswers: answers
+        },
+      });
 
-    setMessages([
-      {
-        role: "assistant",
-        content: summaryMessage,
-      },
-    ]);
-    setShowQuestionnaire(false);
+      if (error) throw error;
+
+      if (data?.choices?.[0]?.message?.content) {
+        setMessages([
+          {
+            role: "user",
+            content: `I completed the questionnaire with these requirements:\n- Conveyor Type: ${answers.conveyorType}\n- Suspension Height: ${answers.suspensionHeight}\n- Burden Depth: ${answers.burdenDepth}\n- Belt Width: ${answers.beltWidth}\n- Space/Weight Constraints: ${answers.constraints}\n- Tramp Metal Size: ${answers.trampMetal}\n- Environment: ${answers.environment}\n\nRecommended Type: ${recommendation}`
+          },
+          { 
+            role: "assistant", 
+            content: data.choices[0].message.content 
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get OCW recommendations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +98,10 @@ How can I help you further with your magnetic separator selection?`;
 
     try {
       const { data, error } = await supabase.functions.invoke("pcb-chat", {
-        body: { messages: newMessages },
+        body: { 
+          messages: newMessages,
+          questionnaireAnswers: questionnaireAnswers
+        },
       });
 
       if (error) throw error;

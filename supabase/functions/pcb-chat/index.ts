@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
 
@@ -184,7 +185,74 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, questionnaireAnswers } = await req.json();
+    
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    // Fetch OCW models if questionnaire answers are provided
+    let ocwRecommendations = '';
+    if (questionnaireAnswers) {
+      const beltWidth = parseInt(questionnaireAnswers.beltWidth) || 1200;
+      
+      // Query BMR_Top and BMR_magwiz for suitable OCW models
+      const { data: topModels, error: topError } = await supabaseClient
+        .from('BMR_Top')
+        .select('*')
+        .gte('width', beltWidth * 0.9)
+        .order('surface_gauss', { ascending: false })
+        .limit(20);
+
+      if (!topError && topModels && topModels.length > 0) {
+        const modelFilenames = topModels
+          .map(m => `OCW-${String(m.Prefix).padStart(2, '0')}${String(m.Suffix).padStart(2, '0')}.csv`)
+          .slice(0, 10);
+
+        const { data: detailedSpecs } = await supabaseClient
+          .from('BMR_magwiz')
+          .select('*')
+          .in('filename', modelFilenames);
+
+        const rankedModels = topModels.slice(0, 5).map((model, index) => {
+          const specs = detailedSpecs?.find(
+            s => s.filename === `OCW-${String(model.Prefix).padStart(2, '0')}${String(model.Suffix).padStart(2, '0')}.csv`
+          );
+
+          return {
+            model: model.model,
+            prefix: model.Prefix,
+            suffix: model.Suffix,
+            width: model.width,
+            surface_gauss: model.surface_gauss,
+            force_factor: model.force_factor,
+            watts: model.watts,
+            frame: model.frame,
+            belt_width: specs?.belt_width,
+            suitability: index === 0 ? 'Best Match' : index === 1 ? 'Strong Match' : 'Good Match'
+          };
+        });
+
+        ocwRecommendations = `\n\n## Recommended OCW Models Based on Your Specifications\n\n` +
+          `**Your Requirements:**\n` +
+          `- Belt Width: ${questionnaireAnswers.beltWidth}\n` +
+          `- Suspension Height: ${questionnaireAnswers.suspensionHeight}\n` +
+          `- Burden Depth: ${questionnaireAnswers.burdenDepth}\n` +
+          `- Conveyor Type: ${questionnaireAnswers.conveyorType}\n\n` +
+          `**Top 5 Suitable OCW Models:**\n\n` +
+          rankedModels.map((m, i) => 
+            `${i + 1}. **OCW-${String(m.prefix).padStart(2, '0')}${String(m.suffix).padStart(2, '0')}** (${m.suitability})\n` +
+            `   - Magnet Width: ${m.width}mm\n` +
+            `   - Surface Gauss: ${m.surface_gauss}G\n` +
+            `   - Force Factor: ${m.force_factor}\n` +
+            `   - Power: ${m.watts}W\n` +
+            `   - Frame: ${m.frame}\n`
+          ).join('\n');
+        
+        console.log('OCW Recommendations generated');
+      }
+    }
     
     if (!GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is not configured');
@@ -208,11 +276,13 @@ serve(async (req) => {
 KNOWLEDGE BASE:
 ${PCB_KNOWLEDGE}
 
+${ocwRecommendations}
+
 You can answer questions about:
 1. Magnetic Cross Belt Separators (CBS) - permanent magnet systems for recycling applications
 2. Electromagnetic Overband Magnets (OCW, ACW, ElectroMax) - powered systems for quarrying and mining
 
-Always provide detailed, technical answers when appropriate. Use the specific measurements, specifications, and examples from the knowledge base when relevant.`
+Always provide detailed, technical answers when appropriate. Use the specific measurements, specifications, and examples from the knowledge base when relevant. When OCW model recommendations are provided above based on the user's questionnaire answers, present them clearly and explain why each model is suitable for their specific application requirements.`
           },
           ...messages
         ],
