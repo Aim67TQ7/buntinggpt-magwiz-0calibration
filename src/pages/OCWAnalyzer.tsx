@@ -20,6 +20,15 @@ const CONSTANTS = {
   c: 0.5        // burden exponent
 };
 
+const TRAMP_SIZE_MAP = {
+  small: { value: 1.0, label: "Small", description: "Bolts, nails, small plate" },
+  medium: { value: 1.5, label: "Medium", description: "Tooling fragments, small rebar" },
+  large: { value: 2.0, label: "Large", description: "Full rebar, bucket teeth" },
+  veryLarge: { value: 2.5, label: "Very Large", description: "Very large or frequent tramp" }
+} as const;
+
+type TrampSize = keyof typeof TRAMP_SIZE_MAP;
+
 interface OCWRequirements {
   severity: number;
   requiredGauss: number;
@@ -27,13 +36,14 @@ interface OCWRequirements {
   forceFactor: number;
 }
 
-function computeOCWRequirements(v: number, g: number, d: number): OCWRequirements {
+function computeOCWRequirements(v: number, g: number, d: number, T: number): OCWRequirements {
   const h = g + CONSTANTS.k * d;
   const h0 = CONSTANTS.g0 + CONSTANTS.k * CONSTANTS.d0;
   
   const S = Math.pow(v / CONSTANTS.v0, CONSTANTS.a) *
             Math.pow(h / h0, CONSTANTS.b) *
-            Math.pow(d / CONSTANTS.d0, CONSTANTS.c);
+            Math.pow(d / CONSTANTS.d0, CONSTANTS.c) *
+            T;
   
   return {
     severity: S,
@@ -43,10 +53,10 @@ function computeOCWRequirements(v: number, g: number, d: number): OCWRequirement
   };
 }
 
-function generateGraphData(v: number, d: number) {
+function generateGraphData(v: number, d: number, T: number) {
   const data = [];
   for (let g = 100; g <= 800; g += 20) {
-    const result = computeOCWRequirements(v, g, d);
+    const result = computeOCWRequirements(v, g, d, T);
     data.push({
       gap: g,
       gauss: Math.round(result.requiredGauss),
@@ -61,22 +71,24 @@ export default function OCWAnalyzer() {
   const [beltSpeed, setBeltSpeed] = useState(2.0);
   const [airGap, setAirGap] = useState(200);
   const [burdenDepth, setBurdenDepth] = useState(100);
+  const [trampSize, setTrampSize] = useState<TrampSize>('small');
   const [graphMetric, setGraphMetric] = useState<'gauss' | 'watts' | 'forceFactor'>('gauss');
 
   const currentResults = useMemo(
-    () => computeOCWRequirements(beltSpeed, airGap, burdenDepth),
-    [beltSpeed, airGap, burdenDepth]
+    () => computeOCWRequirements(beltSpeed, airGap, burdenDepth, TRAMP_SIZE_MAP[trampSize].value),
+    [beltSpeed, airGap, burdenDepth, trampSize]
   );
 
   const graphData = useMemo(
-    () => generateGraphData(beltSpeed, burdenDepth),
-    [beltSpeed, burdenDepth]
+    () => generateGraphData(beltSpeed, burdenDepth, TRAMP_SIZE_MAP[trampSize].value),
+    [beltSpeed, burdenDepth, trampSize]
   );
 
   const handleReset = () => {
     setBeltSpeed(2.0);
     setAirGap(200);
     setBurdenDepth(100);
+    setTrampSize('small');
   };
 
   const getSeverityColor = (severity: number) => {
@@ -172,6 +184,28 @@ export default function OCWAnalyzer() {
               />
               <p className="text-xs text-muted-foreground">
                 Material depth on belt adds effective distance
+              </p>
+            </div>
+
+            {/* Tramp Size */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Tramp Size / Severity</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(TRAMP_SIZE_MAP).map(([key, data]) => (
+                  <Button
+                    key={key}
+                    variant={trampSize === key ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTrampSize(key as TrampSize)}
+                    className="flex flex-col h-auto py-2"
+                  >
+                    <span className="font-semibold">{data.label}</span>
+                    <span className="text-xs opacity-70">{data.value}x</span>
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {TRAMP_SIZE_MAP[trampSize].description}
               </p>
             </div>
 
@@ -290,9 +324,10 @@ export default function OCWAnalyzer() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>How to use:</strong> Adjust the sliders to see how belt speed, air gap, and burden depth affect magnet requirements. 
-          The vertical line on the graph shows your current gap setting. Steeper curves indicate greater sensitivity to gap changes, 
-          while higher lines represent more demanding applications.
+          <strong>How to use:</strong> Adjust the sliders to see how belt speed, air gap, 
+          burden depth, and tramp size affect magnet requirements. Larger tramp sizes increase 
+          the severity multiplier and require more powerful magnets. The vertical line on the 
+          graph shows your current gap setting.
         </AlertDescription>
       </Alert>
     </div>
