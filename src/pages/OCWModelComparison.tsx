@@ -39,7 +39,7 @@ const TEMP_CONFIGS = {
   20: {
     label: '20°C Ambient',
     ampereTurnsCorrelation: 0.615238,  // OCW Unit <-> Gauss (ampere-turns)
-    forceFactorCorrelation: 0.771332,   // OCW Unit <-> Force Factor
+    forceFactorCorrelation: 1.000,      // Reference temperature - 100% force
     gaussForceCorrelation: 0.944644,    // Gauss <-> Force Factor
     dbField: 'hot_ampere_turns_A' as const,
     voltageField: 'voltage_A' as const,
@@ -48,7 +48,7 @@ const TEMP_CONFIGS = {
   30: {
     label: '30°C Ambient',
     ampereTurnsCorrelation: 0.627028,
-    forceFactorCorrelation: 0.769676,
+    forceFactorCorrelation: 0.950,      // ~5% reduction due to temp rise
     gaussForceCorrelation: 0.954985,
     dbField: 'hot_ampere_turns_B' as const,
     voltageField: 'voltage_B' as const,
@@ -57,7 +57,7 @@ const TEMP_CONFIGS = {
   40: {
     label: '40°C Ambient',
     ampereTurnsCorrelation: 0.629352,
-    forceFactorCorrelation: 0.770255,
+    forceFactorCorrelation: 0.900,      // ~10% reduction due to temp rise
     gaussForceCorrelation: 0.959471,
     dbField: 'hot_ampere_turns_C' as const,
     voltageField: 'voltage_C' as const,
