@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { RotateCcw, Info, Download, Eye, EyeOff } from "lucide-react";
+import { RotateCcw, Info, Download, Eye, EyeOff, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Constants for force-based calculations
@@ -112,6 +113,7 @@ export default function OCWModelComparison() {
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
   const [showTable, setShowTable] = useState(false);
+  const [showSpecsDialog, setShowSpecsDialog] = useState(false);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -402,30 +404,141 @@ export default function OCWModelComparison() {
                       {filteredModels.length} model{filteredModels.length !== 1 ? 's' : ''} available
                     </Badge>
                   </div>
-                  <Select
-                    value={selectedModel?.model || ""}
-                    onValueChange={(value) => {
-                      const model = filteredModels.find(m => m.model === value);
-                      setSelectedModel(model || null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a model to compare..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredModels.length > 0 ? (
-                        filteredModels.map((model) => (
-                          <SelectItem key={model.model} value={model.model}>
-                            {model.model} - {model.surface_gauss.toLocaleString()}G @ {model.watts.toLocaleString()}W (Width: {model.width}mm)
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedModel?.model || ""}
+                      onValueChange={(value) => {
+                        const model = filteredModels.find(m => m.model === value);
+                        setSelectedModel(model || null);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a model to compare..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredModels.length > 0 ? (
+                          filteredModels.map((model) => (
+                            <SelectItem key={model.model} value={model.model}>
+                              {model.model} - {model.surface_gauss.toLocaleString()}G @ {model.watts.toLocaleString()}W (Width: {model.width}mm)
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No models match the selected belt width
                           </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          No models match the selected belt width
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    
+                    {selectedModel && (
+                      <Dialog open={showSpecsDialog} onOpenChange={setShowSpecsDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="default" className="shrink-0">
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Specifications
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>OCW Model Specifications - {selectedModel.model}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-6">
+                            {/* Basic Specifications */}
+                            <div>
+                              <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Basic Specifications</h3>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Model:</span>
+                                    <span className="font-medium">{selectedModel.model}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Prefix:</span>
+                                    <span className="font-medium">{selectedModel.Prefix}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Suffix:</span>
+                                    <span className="font-medium">{selectedModel.Suffix}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Frame:</span>
+                                    <span className="font-medium">{selectedModel.frame}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Surface Gauss:</span>
+                                    <span className="font-medium">{selectedModel.surface_gauss.toLocaleString()} G</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Force Factor:</span>
+                                    <span className="font-medium">{selectedModel.force_factor.toLocaleString()} N</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Power:</span>
+                                    <span className="font-medium">{selectedModel.watts.toLocaleString()} W</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Width:</span>
+                                    <span className="font-medium">{selectedModel.width} mm</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Performance at Current Conditions */}
+                            {currentGapComparison && (
+                              <div>
+                                <h3 className="text-lg font-semibold mb-3 pb-2 border-b">Performance at Current Conditions</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Air Gap:</span>
+                                      <span className="font-medium">{airGap} mm</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Belt Speed:</span>
+                                      <span className="font-medium">{beltSpeed.toFixed(2)} m/s</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Burden Depth:</span>
+                                      <span className="font-medium">{burdenDepth} mm</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Available Force:</span>
+                                      <span className="font-medium">{currentGapComparison.modelForce.toLocaleString()} N</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Required Force:</span>
+                                      <span className="font-medium">{currentResults.requiredForce.toLocaleString()} N</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Margin:</span>
+                                      <span className={`font-medium ${currentGapComparison.margin > 50 ? 'text-green-600' : currentGapComparison.margin > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                        {currentGapComparison.margin > 0 ? '+' : ''}{currentGapComparison.margin.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="mt-4">
+                                  <Badge variant={
+                                    currentGapComparison.validation.status === 'excellent' ? 'default' :
+                                    currentGapComparison.validation.status === 'adequate' ? 'default' :
+                                    currentGapComparison.validation.status === 'marginal' ? 'secondary' :
+                                    'destructive'
+                                  } className="text-sm py-1 px-3">
+                                    {currentGapComparison.validation.status.toUpperCase()}: {currentGapComparison.validation.message}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
                   
                   {selectedModel && (
                     <div className="text-xs text-muted-foreground flex gap-4">
