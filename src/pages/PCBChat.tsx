@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MagnetQuestionnaire, QuestionnaireAnswers } from "@/components/MagnetQuestionnaire";
 
 interface Message {
   role: "user" | "assistant";
@@ -12,12 +13,8 @@ interface Message {
 }
 
 const PCBChat = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Hello! I'm your expert assistant for Magnetic Cross Belt Separators (CBS). Ask me anything about sizing, installation, magnet types, or applications.",
-    },
-  ]);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,6 +27,29 @@ const PCBChat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleQuestionnaireComplete = (answers: QuestionnaireAnswers, recommendation: string) => {
+    const summaryMessage = `Based on your requirements:
+- Conveyor Type: ${answers.conveyorType}
+- Suspension Height: ${answers.suspensionHeight}
+- Burden Depth: ${answers.burdenDepth}
+- Belt Width: ${answers.beltWidth}
+- Space/Weight Constraints: ${answers.constraints}
+- Tramp Metal Size: ${answers.trampMetal}
+- Environment: ${answers.environment}
+
+Recommended Model: **${recommendation}**
+
+How can I help you further with your magnetic separator selection?`;
+
+    setMessages([
+      {
+        role: "assistant",
+        content: summaryMessage,
+      },
+    ]);
+    setShowQuestionnaire(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +91,10 @@ const PCBChat = () => {
       setIsLoading(false);
     }
   };
+
+  if (showQuestionnaire) {
+    return <MagnetQuestionnaire onComplete={handleQuestionnaireComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
