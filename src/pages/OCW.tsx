@@ -737,24 +737,6 @@ const OCW = () => {
                     <Button onClick={() => navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }})} variant="outline" size="sm">
                       Decay Chart
                     </Button>
-                    <Button onClick={() => {
-                      const modelMatch = `${unit.Prefix} OCW ${unit.Suffix}`;
-                      navigate('/field-simulator', {
-                        state: {
-                          model: modelMatch,
-                          beltWidth: unit.belt_width,
-                          magnetDimension: `${unit.Prefix}x${unit.Suffix}x${unit.width}`,
-                          density: unit.density,
-                          waterContent: unit.waterContent,
-                          airGap,
-                          burdenDepth,
-                          beltTroughingAngle
-                        }
-                      });
-                    }} variant="default" size="sm">
-                      <Waves className="w-3 h-3 mr-1" />
-                      Simulator
-                    </Button>
                   </div>
                 </div>
               ))}
