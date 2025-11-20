@@ -272,7 +272,7 @@ const Dashboard = () => {
                           onClick={() => handleQuoteSelection(quote)}
                         >
                           <TableCell className="p-2">
-                            <div className="text-xs font-mono whitespace-nowrap">
+                            <div className={`text-xs font-mono whitespace-nowrap ${quote.quote_number.startsWith('Q') ? 'text-green-600 dark:text-green-400' : ''}`}>
                               {quote.quote_number} {getProductName(quote.product_id)} {formatDate(quote.date_generated)}
                             </div>
                           </TableCell>
