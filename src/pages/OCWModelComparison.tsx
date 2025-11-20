@@ -83,9 +83,10 @@ interface ComparisonDataPoint {
   gap: number;
   requiredForce: number;
   severity: number;
-  modelForce: number | null;
+  modelForce20C: number | null;
+  modelForce30C: number | null;
+  modelForce40C: number | null;
   modelWatts: number | null;
-  modelAmpereTurns: number | null;
   sufficient: boolean | null;
   margin: number | null;
 }
@@ -234,43 +235,73 @@ export default function OCWModelComparison() {
   }, [beltSpeed, airGap, burdenDepth, trampSize]);
 
   const comparisonData = useMemo(() => {
-    const tempConfig = TEMP_CONFIGS[ambientTemp];
     const data: ComparisonDataPoint[] = [];
     
     for (let g = 0; g <= 800; g += 25) {
       const S = severity(beltSpeed, g, burdenDepth);
       const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
       
-      const modelForce = selectedModel 
-        ? calculateModelForceAtGap(selectedModel.force_factor, g, tempConfig)
+      // Calculate force at all three temperatures
+      const modelForce20C = selectedModel 
+        ? calculateModelForceAtGap(
+            selectedModel.force_factor * TEMP_CONFIGS[20].forceFactorCorrelation, 
+            g, 
+            TEMP_CONFIGS[20]
+          )
         : null;
       
-      const baseAT = detailedOCWData?.[tempConfig.dbField];
-      const modelAT = baseAT 
-        ? calculateAmpereTurnsAtGap(baseAT, g, tempConfig)
+      const modelForce30C = selectedModel 
+        ? calculateModelForceAtGap(
+            selectedModel.force_factor * TEMP_CONFIGS[30].forceFactorCorrelation, 
+            g, 
+            TEMP_CONFIGS[30]
+          )
+        : null;
+      
+      const modelForce40C = selectedModel 
+        ? calculateModelForceAtGap(
+            selectedModel.force_factor * TEMP_CONFIGS[40].forceFactorCorrelation, 
+            g, 
+            TEMP_CONFIGS[40]
+          )
+        : null;
+      
+      // Use current temperature for sufficient check
+      const tempConfig = TEMP_CONFIGS[ambientTemp];
+      const currentTempForce = selectedModel 
+        ? calculateModelForceAtGap(
+            selectedModel.force_factor * tempConfig.forceFactorCorrelation, 
+            g, 
+            tempConfig
+          )
         : null;
       
       data.push({
         gap: g,
         severity: Math.round(S * 100) / 100,
         requiredForce: Math.round(reqForce),
-        modelForce: modelForce ? Math.round(modelForce) : null,
+        modelForce20C: modelForce20C ? Math.round(modelForce20C) : null,
+        modelForce30C: modelForce30C ? Math.round(modelForce30C) : null,
+        modelForce40C: modelForce40C ? Math.round(modelForce40C) : null,
         modelWatts: selectedModel?.watts || null,
-        modelAmpereTurns: modelAT ? Math.round(modelAT) : null,
-        sufficient: modelForce ? modelForce >= reqForce : null,
-        margin: modelForce 
-          ? ((modelForce - reqForce) / reqForce * 100)
+        sufficient: currentTempForce ? currentTempForce >= reqForce : null,
+        margin: currentTempForce 
+          ? ((currentTempForce - reqForce) / reqForce * 100)
           : null
       });
     }
     return data;
-  }, [beltSpeed, burdenDepth, trampSize, selectedModel, detailedOCWData, ambientTemp]);
+  }, [beltSpeed, burdenDepth, trampSize, selectedModel, ambientTemp]);
 
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
     
     const tempConfig = TEMP_CONFIGS[ambientTemp];
-    const modelForce = calculateModelForceAtGap(selectedModel.force_factor, airGap, tempConfig);
+    const modelForce = calculateModelForceAtGap(
+      selectedModel.force_factor * tempConfig.forceFactorCorrelation, 
+      airGap, 
+      tempConfig
+    );
     const validation = validateModel(currentResults.requiredForce, modelForce);
     const margin = ((modelForce - currentResults.requiredForce) / currentResults.requiredForce * 100);
     
@@ -292,13 +323,14 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Model Force (N)', 'Ampere Turns', 'Margin %', 'Model Watts', 'Status', 'Ambient Temp'];
+    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Force @ 20C (N)', 'Force @ 30C (N)', 'Force @ 40C (N)', 'Margin %', 'Model Watts', 'Status', 'Ambient Temp'];
     const rows = comparisonData.map(row => [
       row.gap,
       row.severity,
       row.requiredForce,
-      row.modelForce || '',
-      row.modelAmpereTurns || '',
+      row.modelForce20C || '',
+      row.modelForce30C || '',
+      row.modelForce40C || '',
       row.margin?.toFixed(1) || '',
       row.modelWatts || '',
       row.sufficient ? 'OK' : 'INSUFFICIENT',
@@ -812,20 +844,13 @@ export default function OCWModelComparison() {
                         label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
                       />
                       <YAxis 
-                        yAxisId="left"
                         label={{ value: 'Pull Force (N)', angle: -90, position: 'insideLeft' }}
-                      />
-                      <YAxis 
-                        yAxisId="right"
-                        orientation="right"
-                        label={{ value: 'Ampere Turns (AT)', angle: 90, position: 'insideRight' }}
                       />
                       <Tooltip />
                       <Legend />
                       
                       {/* Requirements Line */}
                       <Line 
-                        yAxisId="left"
                         type="monotone"
                         dataKey="requiredForce"
                         stroke="hsl(var(--destructive))"
@@ -834,36 +859,47 @@ export default function OCWModelComparison() {
                         dot={false}
                       />
                       
-                      {/* Model Capability Line */}
+                      {/* Force @ 20°C */}
                       {selectedModel && (
                         <Line 
-                          yAxisId="left"
                           type="monotone"
-                          dataKey="modelForce"
-                          stroke="hsl(var(--primary))"
+                          dataKey="modelForce20C"
+                          stroke="#3b82f6"
                           strokeWidth={2}
-                          name={`${selectedModel.model} Available`}
+                          name={`${selectedModel.model} @ 20°C`}
                           dot={false}
                           strokeDasharray="5 5"
                         />
                       )}
                       
-                      {/* Ampere Turns Line */}
-                      {selectedModel && detailedOCWData && (
+                      {/* Force @ 30°C */}
+                      {selectedModel && (
                         <Line 
-                          yAxisId="right"
                           type="monotone"
-                          dataKey="modelAmpereTurns"
-                          stroke="#10b981"
+                          dataKey="modelForce30C"
+                          stroke="#f59e0b"
                           strokeWidth={2}
-                          name="Ampere Turns"
+                          name={`${selectedModel.model} @ 30°C`}
                           dot={false}
+                          strokeDasharray="5 5"
+                        />
+                      )}
+                      
+                      {/* Force @ 40°C */}
+                      {selectedModel && (
+                        <Line 
+                          type="monotone"
+                          dataKey="modelForce40C"
+                          stroke="#ef4444"
+                          strokeWidth={2}
+                          name={`${selectedModel.model} @ 40°C`}
+                          dot={false}
+                          strokeDasharray="5 5"
                         />
                       )}
                       
                       {/* Current gap reference line */}
                       <ReferenceLine 
-                        yAxisId="left"
                         x={airGap} 
                         stroke="hsl(var(--muted-foreground))" 
                         strokeDasharray="3 3"
@@ -944,8 +980,9 @@ export default function OCWModelComparison() {
                         <TableHead>Gap (mm)</TableHead>
                         <TableHead className="text-right">Severity</TableHead>
                         <TableHead className="text-right">Required Force (N)</TableHead>
-                        <TableHead className="text-right">Model Force (N)</TableHead>
-                        <TableHead className="text-right">Ampere Turns</TableHead>
+                        <TableHead className="text-right">Force @ 20°C (N)</TableHead>
+                        <TableHead className="text-right">Force @ 30°C (N)</TableHead>
+                        <TableHead className="text-right">Force @ 40°C (N)</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
                         <TableHead className="text-right">Model Watts</TableHead>
@@ -960,8 +997,9 @@ export default function OCWModelComparison() {
                           <TableCell>{row.gap}</TableCell>
                           <TableCell className="text-right">{row.severity}</TableCell>
                           <TableCell className="text-right">{row.requiredForce.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{row.modelForce?.toLocaleString() || '-'}</TableCell>
-                          <TableCell className="text-right">{row.modelAmpereTurns?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.modelForce20C?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.modelForce30C?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.modelForce40C?.toLocaleString() || '-'}</TableCell>
                           <TableCell className="text-center">
                             {row.sufficient !== null && (
                               <Badge variant={row.sufficient ? 'default' : 'destructive'}>
