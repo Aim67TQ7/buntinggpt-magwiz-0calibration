@@ -48,9 +48,9 @@ interface OCWModel {
 
 interface ComparisonDataPoint {
   gap: number;
-  requiredGauss: number;
+  requiredForceFactor: number;
   requiredWatts: number;
-  modelGauss: number | null;
+  modelForceFactor: number | null;
   modelWatts: number | null;
   sufficient: boolean | null;
   margin: number | null;
@@ -73,16 +73,18 @@ function computeOCWRequirements(v: number, g: number, d: number, T: number) {
   };
 }
 
-function calculateModelGaussAtGap(surfaceGauss: number, gap: number): number {
-  // Magnetic field decay: G(x) = G₀ × (0.866)^(x/25)
-  return surfaceGauss * Math.pow(0.866, gap / 25);
+function calculateModelForceFactorAtGap(baseForceFactor: number, surfaceGauss: number, gap: number): number {
+  // Force factor scales with magnetic field decay
+  // G(x) = G₀ × (0.866)^(x/25), so FF(x) = FF₀ × (G(x)/G₀)
+  const decayRatio = Math.pow(0.866, gap / 25);
+  return baseForceFactor * decayRatio;
 }
 
-function validateModel(requiredGauss: number, modelGauss: number): {
+function validateModel(requiredForceFactor: number, modelForceFactor: number): {
   status: 'excellent' | 'adequate' | 'marginal' | 'insufficient',
   message: string
 } {
-  const ratio = modelGauss / requiredGauss;
+  const ratio = modelForceFactor / requiredForceFactor;
   
   if (ratio >= SAFETY_FACTOR * 1.2) {
     return { status: 'excellent', message: 'Exceeds requirements with excellent margin' };
@@ -132,19 +134,19 @@ export default function OCWModelComparison() {
         TRAMP_SIZE_MAP[trampSize].value
       );
       
-      const modelGauss = selectedModel 
-        ? calculateModelGaussAtGap(selectedModel.surface_gauss, g)
+      const modelForceFactor = selectedModel 
+        ? calculateModelForceFactorAtGap(selectedModel.force_factor, selectedModel.surface_gauss, g)
         : null;
       
       data.push({
         gap: g,
-        requiredGauss: Math.round(req.requiredGauss),
+        requiredForceFactor: Math.round(req.forceFactor * 100) / 100,
         requiredWatts: Math.round(req.requiredWatts * 10) / 10,
-        modelGauss: modelGauss ? Math.round(modelGauss) : null,
+        modelForceFactor: modelForceFactor ? Math.round(modelForceFactor) : null,
         modelWatts: selectedModel?.watts || null,
-        sufficient: modelGauss ? modelGauss >= req.requiredGauss : null,
-        margin: modelGauss 
-          ? ((modelGauss - req.requiredGauss) / req.requiredGauss * 100)
+        sufficient: modelForceFactor ? modelForceFactor >= req.forceFactor : null,
+        margin: modelForceFactor 
+          ? ((modelForceFactor - req.forceFactor) / req.forceFactor * 100)
           : null
       });
     }
@@ -154,12 +156,12 @@ export default function OCWModelComparison() {
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
     
-    const modelGauss = calculateModelGaussAtGap(selectedModel.surface_gauss, airGap);
-    const validation = validateModel(currentResults.requiredGauss, modelGauss);
-    const margin = ((modelGauss - currentResults.requiredGauss) / currentResults.requiredGauss * 100);
+    const modelForceFactor = calculateModelForceFactorAtGap(selectedModel.force_factor, selectedModel.surface_gauss, airGap);
+    const validation = validateModel(currentResults.forceFactor, modelForceFactor);
+    const margin = ((modelForceFactor - currentResults.forceFactor) / currentResults.forceFactor * 100);
     
     return {
-      modelGauss: Math.round(modelGauss),
+      modelForceFactor: Math.round(modelForceFactor),
       margin,
       validation
     };
@@ -174,11 +176,11 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Required Gauss', 'Model Gauss', 'Margin %', 'Required Watts', 'Model Watts', 'Status'];
+    const headers = ['Gap (mm)', 'Required Force Factor', 'Model Force Factor', 'Margin %', 'Required Watts', 'Model Watts', 'Status'];
     const rows = comparisonData.map(row => [
       row.gap,
-      row.requiredGauss,
-      row.modelGauss || '',
+      row.requiredForceFactor,
+      row.modelForceFactor || '',
       row.margin?.toFixed(1) || '',
       row.requiredWatts,
       row.modelWatts || '',
@@ -302,8 +304,8 @@ export default function OCWModelComparison() {
                     <span className="font-medium">{currentResults.severity.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Gauss:</span>
-                    <span className="font-medium">{Math.round(currentResults.requiredGauss).toLocaleString()}</span>
+                    <span className="text-muted-foreground">Force Factor:</span>
+                    <span className="font-medium">{currentResults.forceFactor.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Watts:</span>
@@ -319,7 +321,7 @@ export default function OCWModelComparison() {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Delivers:</span>
-                      <span className="font-medium">{currentGapComparison.modelGauss.toLocaleString()} G</span>
+                      <span className="font-medium">{currentGapComparison.modelForceFactor.toLocaleString()} FF</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Margin:</span>
@@ -396,7 +398,7 @@ export default function OCWModelComparison() {
                         label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
                       />
                       <YAxis 
-                        label={{ value: 'Magnetic Field (Gauss)', angle: -90, position: 'insideLeft' }}
+                        label={{ value: 'Force Factor', angle: -90, position: 'insideLeft' }}
                       />
                       <Tooltip />
                       <Legend />
@@ -404,7 +406,7 @@ export default function OCWModelComparison() {
                       {/* Requirements Line */}
                       <Line 
                         type="monotone"
-                        dataKey="requiredGauss"
+                        dataKey="requiredForceFactor"
                         stroke="hsl(var(--destructive))"
                         strokeWidth={2}
                         name="Required"
@@ -415,7 +417,7 @@ export default function OCWModelComparison() {
                       {selectedModel && (
                         <Line 
                           type="monotone"
-                          dataKey="modelGauss"
+                          dataKey="modelForceFactor"
                           stroke="hsl(var(--primary))"
                           strokeWidth={2}
                           name={selectedModel.model}
@@ -494,8 +496,8 @@ export default function OCWModelComparison() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Gap (mm)</TableHead>
-                        <TableHead className="text-right">Required Gauss</TableHead>
-                        <TableHead className="text-right">Model Gauss</TableHead>
+                        <TableHead className="text-right">Required FF</TableHead>
+                        <TableHead className="text-right">Model FF</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
                         <TableHead className="text-right">Required Watts</TableHead>
@@ -509,8 +511,8 @@ export default function OCWModelComparison() {
                           className={row.gap === airGap ? 'bg-muted/50 font-medium' : ''}
                         >
                           <TableCell>{row.gap}</TableCell>
-                          <TableCell className="text-right">{row.requiredGauss.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{row.modelGauss?.toLocaleString() || '-'}</TableCell>
+                          <TableCell className="text-right">{row.requiredForceFactor.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{row.modelForceFactor?.toLocaleString() || '-'}</TableCell>
                           <TableCell className="text-center">
                             {row.sufficient !== null && (
                               <Badge variant={row.sufficient ? 'default' : 'destructive'}>
