@@ -6,6 +6,18 @@ import { Link } from "react-router-dom";
 
 const updates = [
   {
+    version: "3.10.0",
+    date: "2025-12-05",
+    type: "minor",
+    changes: [
+      "Revised tramp metal evaluation method using physics-based calculations",
+      "Added W × L × H dimension inputs for tramp geometry",
+      "Implemented confidence percentage indicator for pickup likelihood",
+      "Added detailed breakdown of orientation, burden, and safety factors",
+      "Integrated tramp pickup check into OCW Selector page",
+    ]
+  },
+  {
     version: "3.9.1",
     date: "2025-11-20",
     type: "patch",

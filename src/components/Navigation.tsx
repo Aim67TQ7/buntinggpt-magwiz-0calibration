@@ -44,7 +44,7 @@ export const Navigation = () => {
               <Home className="h-6 w-6" />
               <div className="flex flex-col">
                 <span className="font-bold text-lg">MagWiz 3</span>
-                <span className="text-xs text-muted-foreground">3.9.1</span>
+                <span className="text-xs text-muted-foreground">3.10.0</span>
               </div>
             </Link>
           </div>
