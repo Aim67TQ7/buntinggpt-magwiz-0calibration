@@ -1334,6 +1334,7 @@ export type Database = {
           part: string
           part_desc: string
           prod_qty: number
+          req_by: string | null
           start_date: string | null
           updated_at: string
         }
@@ -1352,6 +1353,7 @@ export type Database = {
           part: string
           part_desc: string
           prod_qty: number
+          req_by?: string | null
           start_date?: string | null
           updated_at?: string
         }
@@ -1370,6 +1372,7 @@ export type Database = {
           part?: string
           part_desc?: string
           prod_qty?: number
+          req_by?: string | null
           start_date?: string | null
           updated_at?: string
         }
