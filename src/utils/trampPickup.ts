@@ -62,7 +62,23 @@ export interface TrampPickupResult {
   margin_N: number;
   marginRatio: number;
   isLikelyPickup: boolean;
+  confidencePercent: number;
   notes: string[];
+}
+
+/**
+ * Convert margin ratio to confidence percentage (0-99%)
+ * Higher margin ratios = higher confidence in successful pickup
+ */
+export function marginRatioToConfidence(marginRatio: number): number {
+  if (marginRatio <= 0) return 0;
+  if (marginRatio < 0.5) return Math.round(marginRatio * 50); // 0-25%
+  if (marginRatio < 0.8) return Math.round(25 + (marginRatio - 0.5) * 50); // 25-40%
+  if (marginRatio < 1.0) return Math.round(40 + (marginRatio - 0.8) * 50); // 40-50%
+  if (marginRatio < 1.5) return Math.round(50 + (marginRatio - 1.0) * 50); // 50-75%
+  if (marginRatio < 2.0) return Math.round(75 + (marginRatio - 1.5) * 30); // 75-90%
+  if (marginRatio < 3.0) return Math.round(90 + (marginRatio - 2.0) * 8);  // 90-98%
+  return 99; // Cap at 99%
 }
 
 // -----------------------
@@ -172,6 +188,7 @@ export function evaluateTrampPickup(input: TrampPickupInput): TrampPickupResult 
   const margin_N = available - required;
   const marginRatio = required > 0 ? available / required : Infinity;
   const isLikelyPickup = marginRatio >= 1.0;
+  const confidencePercent = marginRatioToConfidence(marginRatio);
 
   const notes: string[] = [];
   notes.push(`Mass ≈ ${mass_kg.toFixed(3)} kg, effective area ≈ ${(A_eff * 1e4).toFixed(2)} cm².`);
@@ -196,6 +213,7 @@ export function evaluateTrampPickup(input: TrampPickupInput): TrampPickupResult 
     margin_N,
     marginRatio,
     isLikelyPickup,
+    confidencePercent,
     notes,
   };
 }
