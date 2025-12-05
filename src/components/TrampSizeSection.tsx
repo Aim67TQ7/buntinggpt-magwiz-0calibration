@@ -61,32 +61,32 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange 
   const [safetyFactor, setSafetyFactor] = useState<number>(3.0);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  const results = useMemo(() => {
-    if (!surfaceGauss || surfaceGauss <= 0) return [];
+  const getResultForItem = (item: TrampItem): { result: TrampPickupResult | null; error: string | null } => {
+    if (!surfaceGauss || surfaceGauss <= 0) {
+      return { result: null, error: "No surface Gauss value" };
+    }
     
-    return trampItems.map(item => {
-      const geometry: TrampGeometry = {
-        shape: item.shape,
-        length_mm: item.length,
-        width_mm: item.width,
-        thickness_mm: item.thickness,
-      };
-      
-      try {
-        const result = calculateMarginRatioFromGauss(
-          surfaceGauss,
-          airGap,
-          geometry,
-          item.orientation,
-          burden,
-          safetyFactor
-        );
-        return { item, result, error: null };
-      } catch (e: any) {
-        return { item, result: null, error: e.message };
-      }
-    });
-  }, [trampItems, surfaceGauss, airGap, burden, safetyFactor]);
+    const geometry: TrampGeometry = {
+      shape: item.shape,
+      length_mm: item.length,
+      width_mm: item.width,
+      thickness_mm: item.thickness,
+    };
+    
+    try {
+      const result = calculateMarginRatioFromGauss(
+        surfaceGauss,
+        airGap,
+        geometry,
+        item.orientation,
+        burden,
+        safetyFactor
+      );
+      return { result, error: null };
+    } catch (e: any) {
+      return { result: null, error: e.message };
+    }
+  };
 
   const addTrampItem = () => {
     const newItem: TrampItem = {
@@ -174,7 +174,9 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange 
 
         {/* Tramp Items */}
         <div className="space-y-3">
-          {results.map(({ item, result, error }) => (
+          {trampItems.map((item) => {
+            const { result, error } = getResultForItem(item);
+            return (
             <Collapsible 
               key={item.id} 
               open={expandedItems.has(item.id)}
@@ -345,7 +347,8 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange 
                 </CollapsibleContent>
               </div>
             </Collapsible>
-          ))}
+            );
+          })}
         </div>
 
         <Button variant="outline" size="sm" onClick={addTrampItem} className="w-full">
