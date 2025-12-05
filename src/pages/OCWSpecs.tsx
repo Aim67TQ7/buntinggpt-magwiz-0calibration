@@ -9,6 +9,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadOCWSpecifications } from "@/components/OCWSpecificationsPDF";
 import { OCWSaveDialog } from "@/components/OCWSaveDialog";
+import { TrampSizeSection } from "@/components/TrampSizeSection";
+import { BurdenSeverity } from "@/utils/trampPickup";
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -87,6 +89,8 @@ export default function OCWSpecs() {
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>('moderate');
+  const [airGap, setAirGap] = useState<number>(150);
   useEffect(() => {
     const fetchOCWData = async () => {
       if (!unit?.Prefix || !unit?.Suffix) return;
@@ -453,6 +457,14 @@ export default function OCWSpecs() {
             </Card>
           </Collapsible>
           </div>
+
+          {/* Tramp Metal Pickup Check */}
+          <TrampSizeSection
+            surfaceGauss={unit.surface_gauss || 0}
+            airGap={airGap}
+            burden={burdenSeverity}
+            onBurdenChange={setBurdenSeverity}
+          />
         </>}
 
       {!loading && !ocwData && <Card>
