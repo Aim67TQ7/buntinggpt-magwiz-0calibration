@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TrampSizeSection } from "@/components/TrampSizeSection";
+import { BurdenSeverity } from "@/utils/trampPickup";
 
 interface OCWData {
   filename: string;
@@ -138,6 +140,7 @@ const OCW = () => {
   const [minForce, setMinForce] = useState<string>("");
   const [beltTroughingAngle, setBeltTroughingAngle] = useState<number>(0);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>("moderate");
   const [savedConfigIds, setSavedConfigIds] = useState<Set<string>>(new Set());
   const [savingConfig, setSavingConfig] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'gauss' | 'width' | 'frame' | null>(null);
@@ -608,6 +611,14 @@ const OCW = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Tramp Metal Pickup Section */}
+      <TrampSizeSection 
+        surfaceGauss={minGauss ? parseFloat(minGauss) : (selectedOCW?.surface_gauss || 0)}
+        airGap={airGap}
+        burden={burdenSeverity}
+        onBurdenChange={setBurdenSeverity}
+      />
 
       {/* Recommendations List */}
       {hasActiveList && (
