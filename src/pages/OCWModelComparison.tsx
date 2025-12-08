@@ -9,8 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { RotateCcw, Info, Download, Eye, EyeOff, FileText } from "lucide-react";
+import { RotateCcw, Info, Download, Eye, EyeOff, FileText, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { 
+  TrampShape, 
+  TrampOrientation, 
+  BurdenSeverity, 
+  TrampGeometry,
+  calculateMarginRatioFromGauss 
+} from "@/utils/trampPickup";
 
 // Constants for force-based calculations
 const CONSTANTS = {
@@ -39,14 +47,26 @@ const FF_TEMP_RATIOS = {
   40: 0.8181    // ~81.8% (much heavier drop)
 };
 
-const TRAMP_SIZE_MAP = {
-  small: { baseForce: 800, label: "Small", description: "Bolts, nails, small plate" },
-  medium: { baseForce: 2500, label: "Medium", description: "Small rebar, tooling fragments" },
-  large: { baseForce: 8000, label: "Large", description: "Full rebar, bucket teeth" },
-  veryLarge: { baseForce: 15000, label: "Very Large", description: "Big tools, clusters" }
-} as const;
+// Tramp metal item for W×L×H input
+interface TrampItem {
+  id: string;
+  name: string;
+  width_mm: number;
+  length_mm: number;
+  thickness_mm: number;
+  orientation: TrampOrientation;
+}
 
-type TrampSize = keyof typeof TRAMP_SIZE_MAP;
+const DEFAULT_TRAMP: TrampItem = {
+  id: '1',
+  name: 'Tramp 1',
+  width_mm: 50,
+  length_mm: 100,
+  thickness_mm: 10,
+  orientation: 'flat'
+};
+
+const STEEL_DENSITY = 7850; // kg/m³
 
 const SAFETY_FACTOR = 1.5; // 50% margin recommended
 
@@ -125,12 +145,49 @@ function severity(v: number, g: number, d: number): number {
 }
 
 /**
- * Calculate required pull force for given conditions and tramp size
+ * Calculate required pull force for a tramp item using physics-based formula
+ * Required force = weight × orientationFactor × burdenFactor × safetyFactor
  */
-function requiredForce(v: number, g: number, d: number, trampSize: TrampSize): number {
-  const S = severity(v, g, d);
-  const F0 = TRAMP_SIZE_MAP[trampSize].baseForce;
-  return F0 * S; // Newtons
+function calculateTrampRequiredForce(
+  item: TrampItem, 
+  burden: BurdenSeverity, 
+  safetyFactor: number = 3.0
+): { mass_kg: number; weight_N: number; requiredForce_N: number } {
+  const volume_m3 = (item.width_mm / 1000) * (item.length_mm / 1000) * (item.thickness_mm / 1000);
+  const mass_kg = volume_m3 * STEEL_DENSITY;
+  const weight_N = mass_kg * 9.81;
+  
+  const oriFactor = item.orientation === 'flat' ? 1.0 
+    : item.orientation === 'edge' ? 4.0 
+    : item.orientation === 'corner' ? 6.0 
+    : 5.0; // unknown
+    
+  const burFactor = burden === 'none' ? 1.0
+    : burden === 'light' ? 1.5
+    : burden === 'moderate' ? 2.5
+    : burden === 'heavy' ? 4.0
+    : burden === 'severe' ? 6.0
+    : 3.0;
+    
+  return {
+    mass_kg,
+    weight_N,
+    requiredForce_N: weight_N * oriFactor * burFactor * safetyFactor
+  };
+}
+
+/**
+ * Get maximum required force from all tramp items (worst case)
+ */
+function getMaxRequiredForce(
+  items: TrampItem[], 
+  burden: BurdenSeverity, 
+  safetyFactor: number
+): number {
+  if (items.length === 0) return 0;
+  return Math.max(...items.map(item => 
+    calculateTrampRequiredForce(item, burden, safetyFactor).requiredForce_N
+  ));
 }
 
 /**
@@ -193,7 +250,9 @@ export default function OCWModelComparison() {
   const [airGap, setAirGap] = useState(200);
   const [burdenDepth, setBurdenDepth] = useState(100);
   const [beltWidth, setBeltWidth] = useState(1200);
-  const [trampSize, setTrampSize] = useState<TrampSize>('small');
+  const [trampItems, setTrampItems] = useState<TrampItem[]>([DEFAULT_TRAMP]);
+  const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>('moderate');
+  const [trampSafetyFactor, setTrampSafetyFactor] = useState(3.0);
   const [ambientTemp, setAmbientTemp] = useState<AmbientTemp>(20);
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
@@ -201,6 +260,31 @@ export default function OCWModelComparison() {
   const [showSpecsDialog, setShowSpecsDialog] = useState(false);
   const [detailedOCWData, setDetailedOCWData] = useState<any>(null);
   const [loadingSpecs, setLoadingSpecs] = useState(false);
+  
+  // Tramp item management functions
+  const addTrampItem = () => {
+    const newId = String(Date.now());
+    setTrampItems(prev => [...prev, {
+      id: newId,
+      name: `Tramp ${prev.length + 1}`,
+      width_mm: 50,
+      length_mm: 100,
+      thickness_mm: 10,
+      orientation: 'flat' as TrampOrientation
+    }]);
+  };
+  
+  const removeTrampItem = (id: string) => {
+    if (trampItems.length > 1) {
+      setTrampItems(prev => prev.filter(item => item.id !== id));
+    }
+  };
+  
+  const updateTrampItem = (id: string, updates: Partial<TrampItem>) => {
+    setTrampItems(prev => prev.map(item => 
+      item.id === id ? { ...item, ...updates } : item
+    ));
+  };
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -262,19 +346,19 @@ export default function OCWModelComparison() {
 
   const currentResults = useMemo(() => {
     const S = severity(beltSpeed, airGap, burdenDepth);
-    const reqForce = requiredForce(beltSpeed, airGap, burdenDepth, trampSize);
+    const reqForce = getMaxRequiredForce(trampItems, burdenSeverity, trampSafetyFactor);
     return {
       severity: S,
       requiredForce: reqForce
     };
-  }, [beltSpeed, airGap, burdenDepth, trampSize]);
+  }, [beltSpeed, airGap, burdenDepth, trampItems, burdenSeverity, trampSafetyFactor]);
 
   const comparisonData = useMemo(() => {
     const data: ComparisonDataPoint[] = [];
     
     for (let g = 0; g <= 800; g += 25) {
       const S = severity(beltSpeed, g, burdenDepth);
-      const reqForce = requiredForce(beltSpeed, g, burdenDepth, trampSize);
+      const reqForce = getMaxRequiredForce(trampItems, burdenSeverity, trampSafetyFactor);
       
       // Calculate force at all three temperatures using FF-specific decay
       const modelForce20C = selectedModel 
@@ -326,7 +410,7 @@ export default function OCWModelComparison() {
       });
     }
     return data;
-  }, [beltSpeed, burdenDepth, trampSize, selectedModel, ambientTemp]);
+  }, [beltSpeed, burdenDepth, trampItems, burdenSeverity, trampSafetyFactor, selectedModel, ambientTemp]);
 
   const currentGapComparison = useMemo(() => {
     if (!selectedModel) return null;
@@ -352,7 +436,9 @@ export default function OCWModelComparison() {
     setAirGap(200);
     setBurdenDepth(100);
     setBeltWidth(1200);
-    setTrampSize('small');
+    setTrampItems([DEFAULT_TRAMP]);
+    setBurdenSeverity('moderate');
+    setTrampSafetyFactor(3.0);
     setAmbientTemp(20);
     setSelectedModel(null);
   };
@@ -476,26 +562,128 @@ export default function OCWModelComparison() {
                 </p>
               </div>
 
-              {/* Tramp Size */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Tramp Size / Severity</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(TRAMP_SIZE_MAP).map(([key, data]) => (
-                    <Button
-                      key={key}
-                      variant={trampSize === key ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTrampSize(key as TrampSize)}
-                      className="flex flex-col h-auto py-2"
-                    >
-                      <span className="font-semibold">{data.label}</span>
-                      <span className="text-xs opacity-70">{data.baseForce}N</span>
-                    </Button>
-                  ))}
+              {/* Tramp Metal Configuration */}
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Tramp Metal Configuration</label>
+                  <Button variant="outline" size="sm" onClick={addTrampItem}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {TRAMP_SIZE_MAP[trampSize].description}
-                </p>
+                
+                {/* Burden Severity */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-16">Burden:</span>
+                  <Select value={burdenSeverity} onValueChange={(v) => setBurdenSeverity(v as BurdenSeverity)}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="moderate">Moderate</SelectItem>
+                      <SelectItem value="heavy">Heavy</SelectItem>
+                      <SelectItem value="severe">Severe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Safety Factor */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-16">Safety:</span>
+                  <Input
+                    type="number"
+                    value={trampSafetyFactor}
+                    onChange={(e) => setTrampSafetyFactor(parseFloat(e.target.value) || 1)}
+                    className="h-8 w-20 text-xs"
+                    min={1}
+                    max={10}
+                    step={0.5}
+                  />
+                </div>
+                
+                {/* Tramp Items */}
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {trampItems.map((item, index) => {
+                    const result = calculateTrampRequiredForce(item, burdenSeverity, trampSafetyFactor);
+                    return (
+                      <div key={item.id} className="bg-muted/50 rounded-md p-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">{item.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTrampItem(item.id)}
+                            disabled={trampItems.length === 1}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        
+                        {/* Dimensions W × L × H */}
+                        <div className="grid grid-cols-3 gap-1">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">W (mm)</span>
+                            <Input
+                              type="number"
+                              value={item.width_mm}
+                              onChange={(e) => updateTrampItem(item.id, { width_mm: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs"
+                              min={1}
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">L (mm)</span>
+                            <Input
+                              type="number"
+                              value={item.length_mm}
+                              onChange={(e) => updateTrampItem(item.id, { length_mm: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs"
+                              min={1}
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">H (mm)</span>
+                            <Input
+                              type="number"
+                              value={item.thickness_mm}
+                              onChange={(e) => updateTrampItem(item.id, { thickness_mm: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs"
+                              min={1}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Orientation */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground">Orient:</span>
+                          <Select 
+                            value={item.orientation} 
+                            onValueChange={(v) => updateTrampItem(item.id, { orientation: v as TrampOrientation })}
+                          >
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="flat">Flat (1.0×)</SelectItem>
+                              <SelectItem value="edge">Edge (4.0×)</SelectItem>
+                              <SelectItem value="corner">Corner (6.0×)</SelectItem>
+                              <SelectItem value="unknown">Unknown (5.0×)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Calculated Force */}
+                        <div className="flex justify-between items-center text-xs pt-1 border-t border-border/50">
+                          <span className="text-muted-foreground">Mass: {(result.mass_kg * 1000).toFixed(0)}g</span>
+                          <span className="font-medium text-primary">Req: {result.requiredForce_N.toFixed(0)}N</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Current Requirements */}
@@ -507,7 +695,7 @@ export default function OCWModelComparison() {
                     <span className="font-medium">{currentResults.severity.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Required Force:</span>
+                    <span className="text-muted-foreground">Max Required Force:</span>
                     <span className="font-medium">{currentResults.requiredForce.toLocaleString()} N</span>
                   </div>
                 </div>
