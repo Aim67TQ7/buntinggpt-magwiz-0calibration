@@ -17,7 +17,8 @@ import {
   TrampOrientation, 
   BurdenSeverity, 
   TrampGeometry,
-  calculateMarginRatioFromGauss 
+  calculateMarginRatioFromGauss,
+  marginRatioToConfidence
 } from "@/utils/trampPickup";
 
 // Constants for force-based calculations
@@ -128,6 +129,20 @@ interface ComparisonDataPoint {
   modelWatts: number | null;
   sufficient: boolean | null;
   margin: number | null;
+  confidencePercent: number | null;
+}
+
+// Helper to get confidence color class
+function getConfidenceColor(confidence: number): string {
+  if (confidence >= 75) return 'text-green-600';
+  if (confidence >= 50) return 'text-yellow-600';
+  return 'text-red-600';
+}
+
+function getConfidenceBadgeVariant(confidence: number): 'default' | 'secondary' | 'destructive' {
+  if (confidence >= 75) return 'default';
+  if (confidence >= 50) return 'secondary';
+  return 'destructive';
 }
 
 /**
@@ -395,6 +410,11 @@ export default function OCWModelComparison() {
           )
         : null;
       
+      // Calculate confidence percentage (available/required ratio)
+      const confidencePercent = (currentTempForce && reqForce > 0) 
+        ? marginRatioToConfidence(currentTempForce / reqForce)
+        : null;
+      
       data.push({
         gap: g,
         severity: Math.round(S * 100) / 100,
@@ -406,7 +426,8 @@ export default function OCWModelComparison() {
         sufficient: currentTempForce ? currentTempForce >= reqForce : null,
         margin: currentTempForce 
           ? ((currentTempForce - reqForce) / reqForce * 100)
-          : null
+          : null,
+        confidencePercent
       });
     }
     return data;
@@ -444,7 +465,7 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Force @ 20C (N)', 'Force @ 30C (N)', 'Force @ 40C (N)', 'Margin %', 'Model Watts', 'Status', 'Ambient Temp'];
+    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Force @ 20C (N)', 'Force @ 30C (N)', 'Force @ 40C (N)', 'Margin %', 'Confidence %', 'Model Watts', 'Status', 'Ambient Temp'];
     const rows = comparisonData.map(row => [
       row.gap,
       row.severity,
@@ -453,6 +474,7 @@ export default function OCWModelComparison() {
       row.modelForce30C || '',
       row.modelForce40C || '',
       row.margin?.toFixed(1) || '',
+      row.confidencePercent ?? '',
       row.modelWatts || '',
       row.sufficient ? 'OK' : 'INSUFFICIENT',
       `${ambientTemp}°C`
@@ -604,9 +626,19 @@ export default function OCWModelComparison() {
                 </div>
                 
                 {/* Tramp Items */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
                   {trampItems.map((item, index) => {
                     const result = calculateTrampRequiredForce(item, burdenSeverity, trampSafetyFactor);
+                    
+                    // Calculate confidence if model is selected
+                    let itemConfidence: number | null = null;
+                    if (selectedModel) {
+                      const tempConfig = TEMP_CONFIGS[ambientTemp];
+                      const modelForceAtGap = calculateFFAtGap(selectedModel.force_factor, airGap, tempConfig);
+                      const marginRatio = result.requiredForce_N > 0 ? modelForceAtGap / result.requiredForce_N : 0;
+                      itemConfidence = marginRatioToConfidence(marginRatio);
+                    }
+                    
                     return (
                       <div key={item.id} className="bg-muted/50 rounded-md p-2 space-y-2">
                         <div className="flex items-center justify-between">
@@ -675,11 +707,21 @@ export default function OCWModelComparison() {
                           </Select>
                         </div>
                         
-                        {/* Calculated Force */}
+                        {/* Calculated Force & Confidence */}
                         <div className="flex justify-between items-center text-xs pt-1 border-t border-border/50">
                           <span className="text-muted-foreground">Mass: {(result.mass_kg * 1000).toFixed(0)}g</span>
                           <span className="font-medium text-primary">Req: {result.requiredForce_N.toFixed(0)}N</span>
                         </div>
+                        
+                        {/* Per-item Confidence */}
+                        {itemConfidence !== null && (
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">Pickup Confidence:</span>
+                            <Badge variant={getConfidenceBadgeVariant(itemConfidence)} className="text-[10px] px-1.5 py-0">
+                              {itemConfidence}%
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -727,6 +769,51 @@ export default function OCWModelComparison() {
                       </Badge>
                     </div>
                   </div>
+                </div>
+              )}
+              
+              {/* Tramp Pickup Summary */}
+              {selectedModel && currentResults.requiredForce > 0 && (
+                <div className="pt-4 border-t space-y-2">
+                  <h4 className="font-semibold text-sm">Tramp Pickup Summary</h4>
+                  {(() => {
+                    const tempConfig = TEMP_CONFIGS[ambientTemp];
+                    const modelForceAtGap = calculateFFAtGap(selectedModel.force_factor, airGap, tempConfig);
+                    const worstMarginRatio = currentResults.requiredForce > 0 
+                      ? modelForceAtGap / currentResults.requiredForce 
+                      : 0;
+                    const worstConfidence = marginRatioToConfidence(worstMarginRatio);
+                    
+                    return (
+                      <div className="bg-muted/30 rounded-md p-3 space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">At {airGap}mm gap ({ambientTemp}°C):</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Model Force:</span>
+                          <span className="font-medium">{modelForceAtGap.toLocaleString(undefined, { maximumFractionDigits: 0 })} N</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Max Required:</span>
+                          <span className="font-medium">{currentResults.requiredForce.toLocaleString(undefined, { maximumFractionDigits: 0 })} N</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
+                          <span className="font-medium">Worst Case Confidence:</span>
+                          <Badge 
+                            variant={getConfidenceBadgeVariant(worstConfidence)} 
+                            className="text-sm px-2"
+                          >
+                            {worstConfidence}%
+                          </Badge>
+                        </div>
+                        <p className={`text-xs ${worstConfidence >= 75 ? 'text-green-600' : worstConfidence >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {worstConfidence >= 75 ? '✓ High confidence all tramp will be removed' :
+                           worstConfidence >= 50 ? '⚠ Moderate confidence - consider larger model' :
+                           '✗ Low confidence - larger model recommended'}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
@@ -1175,6 +1262,7 @@ export default function OCWModelComparison() {
                         <TableHead className="text-right">Force @ 40°C (N)</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
+                        <TableHead className="text-center">Confidence</TableHead>
                         <TableHead className="text-right">Model Watts</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1206,6 +1294,16 @@ export default function OCWModelComparison() {
                               }>
                                 {row.margin > 0 ? '+' : ''}{row.margin.toFixed(1)}%
                               </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {row.confidencePercent !== null && (
+                              <Badge 
+                                variant={getConfidenceBadgeVariant(row.confidencePercent)}
+                                className="text-xs"
+                              >
+                                {row.confidencePercent}%
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right">{row.modelWatts?.toLocaleString() || '-'}</TableCell>
