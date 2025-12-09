@@ -605,20 +605,21 @@ const OCW = () => {
             </Card>
           </div>
 
+          {/* Compact Tramp Metal Section */}
+          <TrampSizeSection 
+            surfaceGauss={minGauss ? parseFloat(minGauss) : (selectedOCW?.surface_gauss || 0)}
+            airGap={airGap}
+            burden={burdenSeverity}
+            onBurdenChange={setBurdenSeverity}
+            compact
+          />
+
           <Button onClick={handleCalculate} disabled={isCalculating} className="w-full">
             <Calculator className="w-4 h-4 mr-2" />
             {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
           </Button>
         </CardContent>
       </Card>
-
-      {/* Tramp Metal Pickup Section */}
-      <TrampSizeSection 
-        surfaceGauss={minGauss ? parseFloat(minGauss) : (selectedOCW?.surface_gauss || 0)}
-        airGap={airGap}
-        burden={burdenSeverity}
-        onBurdenChange={setBurdenSeverity}
-      />
 
       {/* Recommendations List */}
       {hasActiveList && (
