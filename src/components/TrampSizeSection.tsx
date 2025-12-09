@@ -1,13 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Trash2, ChevronDown, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Trash2, ChevronDown, Info, HelpCircle } from "lucide-react";
 import { 
   TrampShape, 
   TrampOrientation, 
@@ -32,6 +32,7 @@ interface TrampSizeSectionProps {
   airGap: number;
   burden: BurdenSeverity;
   onBurdenChange: (burden: BurdenSeverity) => void;
+  compact?: boolean;
 }
 
 const DEFAULT_TRAMPS: TrampItem[] = [
@@ -56,7 +57,7 @@ function getConfidenceProgressColor(confidence: number): string {
   return "bg-green-500";
 }
 
-export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange }: TrampSizeSectionProps) {
+export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange, compact = false }: TrampSizeSectionProps) {
   const [trampItems, setTrampItems] = useState<TrampItem[]>(DEFAULT_TRAMPS);
   const [safetyFactor, setSafetyFactor] = useState<number>(3.0);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -128,6 +129,99 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange 
     });
   };
 
+  // Compact mode: render inline without the Card wrapper
+  if (compact) {
+    return (
+      <div className="space-y-3 border-t pt-4 mt-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Tramp Metal Evaluation</h4>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Safety Factor:</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    <Input 
+                      type="number" 
+                      value={safetyFactor} 
+                      onChange={(e) => setSafetyFactor(parseFloat(e.target.value) || 3.0)}
+                      step="0.5"
+                      min="1"
+                      max="10"
+                      className="h-7 w-16 text-xs" 
+                    />
+                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs p-3">
+                  <p className="font-medium mb-1">Safety Factor (SF)</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    A multiplier (typically 2-4) that increases the required lifting force to provide a margin of safety.
+                  </p>
+                  <p className="text-xs font-mono bg-muted p-1.5 rounded">
+                    Required Force = Weight × SF × Orientation × Burden
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    SF of 3 means the magnet must provide 3× the basic force needed.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        {/* Compact Tramp Items List */}
+        <div className="space-y-2">
+          {trampItems.map((item) => {
+            const { result, error } = getResultForItem(item);
+            return (
+              <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md text-xs">
+                <Input
+                  value={item.name}
+                  onChange={(e) => updateTrampItem(item.id, { name: e.target.value })}
+                  className="h-6 w-24 text-xs"
+                />
+                <span className="text-muted-foreground">
+                  {item.width}×{item.length}×{item.thickness}mm
+                </span>
+                <Badge variant="outline" className="text-xs py-0">
+                  {item.orientation}
+                </Badge>
+                <span className="flex-1" />
+                {error ? (
+                  <Badge variant="outline" className="text-muted-foreground text-xs">N/A</Badge>
+                ) : result ? (
+                  <span className={`font-medium ${getConfidenceColor(result.confidencePercent)}`}>
+                    {result.confidencePercent}%
+                  </span>
+                ) : null}
+                {result && (
+                  <span className="text-muted-foreground">
+                    {result.requiredForce_N.toFixed(0)}N req
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 text-destructive hover:text-destructive"
+                  onClick={() => removeTrampItem(item.id)}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        <Button variant="outline" size="sm" onClick={addTrampItem} className="w-full h-7 text-xs">
+          <Plus className="w-3 h-3 mr-1" />
+          Add Tramp Item
+        </Button>
+      </div>
+    );
+  }
+
+  // Full mode: original Card-based layout
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -159,7 +253,28 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange 
             <Input type="number" value={airGap} disabled className="h-8 bg-muted" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Safety Factor</Label>
+            <div className="flex items-center gap-1">
+              <Label className="text-xs">Safety Factor</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs p-3">
+                    <p className="font-medium mb-1">Safety Factor (SF)</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      A multiplier (typically 2-4) that increases the required lifting force to provide a margin of safety.
+                    </p>
+                    <p className="text-xs font-mono bg-muted p-1.5 rounded">
+                      Required Force = Weight × SF × Orientation × Burden
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      SF of 3 means the magnet must provide 3× the basic force needed.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input 
               type="number" 
               value={safetyFactor} 
