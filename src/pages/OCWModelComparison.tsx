@@ -8,8 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { RotateCcw, Info, Download, Eye, EyeOff, FileText, Plus, X } from "lucide-react";
+import { RotateCcw, Info, Download, FileText, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { 
@@ -123,6 +122,9 @@ interface ComparisonDataPoint {
   gap: number;
   requiredForce: number;
   severity: number;
+  gauss20C: number | null;
+  gauss30C: number | null;
+  gauss40C: number | null;
   modelForce20C: number | null;
   modelForce30C: number | null;
   modelForce40C: number | null;
@@ -271,7 +273,7 @@ export default function OCWModelComparison() {
   const [ambientTemp, setAmbientTemp] = useState<AmbientTemp>(20);
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
-  const [showTable, setShowTable] = useState(false);
+  const [showTable, setShowTable] = useState(true);
   const [showSpecsDialog, setShowSpecsDialog] = useState(false);
   const [detailedOCWData, setDetailedOCWData] = useState<any>(null);
   const [loadingSpecs, setLoadingSpecs] = useState(false);
@@ -375,39 +377,36 @@ export default function OCWModelComparison() {
       const S = severity(beltSpeed, g, burdenDepth);
       const reqForce = getMaxRequiredForce(trampItems, burdenSeverity, trampSafetyFactor);
       
+      // Calculate Gauss at all three temperatures
+      const gauss20C = selectedModel 
+        ? calculateGaussAtGap(selectedModel.surface_gauss, g, TEMP_CONFIGS[20])
+        : null;
+      
+      const gauss30C = selectedModel 
+        ? calculateGaussAtGap(selectedModel.surface_gauss, g, TEMP_CONFIGS[30])
+        : null;
+      
+      const gauss40C = selectedModel 
+        ? calculateGaussAtGap(selectedModel.surface_gauss, g, TEMP_CONFIGS[40])
+        : null;
+      
       // Calculate force at all three temperatures using FF-specific decay
       const modelForce20C = selectedModel 
-        ? calculateFFAtGap(
-            selectedModel.force_factor, 
-            g, 
-            TEMP_CONFIGS[20]
-          )
+        ? calculateFFAtGap(selectedModel.force_factor, g, TEMP_CONFIGS[20])
         : null;
       
       const modelForce30C = selectedModel 
-        ? calculateFFAtGap(
-            selectedModel.force_factor, 
-            g, 
-            TEMP_CONFIGS[30]
-          )
+        ? calculateFFAtGap(selectedModel.force_factor, g, TEMP_CONFIGS[30])
         : null;
       
       const modelForce40C = selectedModel 
-        ? calculateFFAtGap(
-            selectedModel.force_factor, 
-            g, 
-            TEMP_CONFIGS[40]
-          )
+        ? calculateFFAtGap(selectedModel.force_factor, g, TEMP_CONFIGS[40])
         : null;
       
       // Use current temperature for sufficient check
       const tempConfig = TEMP_CONFIGS[ambientTemp];
       const currentTempForce = selectedModel 
-        ? calculateFFAtGap(
-            selectedModel.force_factor, 
-            g, 
-            tempConfig
-          )
+        ? calculateFFAtGap(selectedModel.force_factor, g, tempConfig)
         : null;
       
       // Calculate confidence percentage (available/required ratio)
@@ -419,6 +418,9 @@ export default function OCWModelComparison() {
         gap: g,
         severity: Math.round(S * 100) / 100,
         requiredForce: Math.round(reqForce),
+        gauss20C: gauss20C ? Math.round(gauss20C) : null,
+        gauss30C: gauss30C ? Math.round(gauss30C) : null,
+        gauss40C: gauss40C ? Math.round(gauss40C) : null,
         modelForce20C: modelForce20C ? Math.round(modelForce20C) : null,
         modelForce30C: modelForce30C ? Math.round(modelForce30C) : null,
         modelForce40C: modelForce40C ? Math.round(modelForce40C) : null,
@@ -465,19 +467,19 @@ export default function OCWModelComparison() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Severity', 'Required Force (N)', 'Force @ 20C (N)', 'Force @ 30C (N)', 'Force @ 40C (N)', 'Margin %', 'Confidence %', 'Model Watts', 'Status', 'Ambient Temp'];
+    const headers = ['Gap (mm)', 'Gauss @ 20°C', 'Gauss @ 30°C', 'Gauss @ 40°C', 'Force @ 20°C (N)', 'Force @ 30°C (N)', 'Force @ 40°C (N)', 'Required Force (N)', 'Margin %', 'Confidence %', 'Status'];
     const rows = comparisonData.map(row => [
       row.gap,
-      row.severity,
-      row.requiredForce,
+      row.gauss20C || '',
+      row.gauss30C || '',
+      row.gauss40C || '',
       row.modelForce20C || '',
       row.modelForce30C || '',
       row.modelForce40C || '',
+      row.requiredForce,
       row.margin?.toFixed(1) || '',
       row.confidencePercent ?? '',
-      row.modelWatts || '',
-      row.sufficient ? 'OK' : 'INSUFFICIENT',
-      `${ambientTemp}°C`
+      row.sufficient ? 'OK' : 'INSUFFICIENT'
     ]);
     
     const csv = [headers, ...rows]
@@ -488,7 +490,7 @@ export default function OCWModelComparison() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ocw-comparison-${selectedModel?.model || 'requirements'}-${ambientTemp}C-belt${beltWidth}mm-${Date.now()}.csv`;
+    a.download = `ocw-gauss-table-${selectedModel?.model || 'model'}-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1111,80 +1113,6 @@ export default function OCWModelComparison() {
                   )}
                 </div>
 
-                {/* Chart */}
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={comparisonData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="gap" 
-                        label={{ value: 'Air Gap (mm)', position: 'insideBottom', offset: -5 }}
-                      />
-                      <YAxis 
-                        label={{ value: 'Pull Force (N)', angle: -90, position: 'insideLeft' }}
-                      />
-                      <Tooltip />
-                      <Legend />
-                      
-                      {/* Requirements Line */}
-                      <Line 
-                        type="monotone"
-                        dataKey="requiredForce"
-                        stroke="hsl(var(--destructive))"
-                        strokeWidth={2}
-                        name="Required Force"
-                        dot={false}
-                      />
-                      
-                      {/* Force @ 20°C */}
-                      {selectedModel && (
-                        <Line 
-                          type="monotone"
-                          dataKey="modelForce20C"
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          name={`${selectedModel.model} @ 20°C`}
-                          dot={false}
-                          strokeDasharray="5 5"
-                        />
-                      )}
-                      
-                      {/* Force @ 30°C */}
-                      {selectedModel && (
-                        <Line 
-                          type="monotone"
-                          dataKey="modelForce30C"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          name={`${selectedModel.model} @ 30°C`}
-                          dot={false}
-                          strokeDasharray="5 5"
-                        />
-                      )}
-                      
-                      {/* Force @ 40°C */}
-                      {selectedModel && (
-                        <Line 
-                          type="monotone"
-                          dataKey="modelForce40C"
-                          stroke="#ef4444"
-                          strokeWidth={2}
-                          name={`${selectedModel.model} @ 40°C`}
-                          dot={false}
-                          strokeDasharray="5 5"
-                        />
-                      )}
-                      
-                      {/* Current gap reference line */}
-                      <ReferenceLine 
-                        x={airGap} 
-                        stroke="hsl(var(--muted-foreground))" 
-                        strokeDasharray="3 3"
-                        label="Current"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
               </CardContent>
             </Card>
 
@@ -1219,101 +1147,77 @@ export default function OCWModelComparison() {
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* Gauss Table */}
         {selectedModel && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Detailed Comparison Table</CardTitle>
-                  <CardDescription>Gap-by-gap performance analysis</CardDescription>
+                  <CardTitle>Gauss Table</CardTitle>
+                  <CardDescription>Gauss values at each gap distance for all three operating temperatures</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={exportToCSV}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export CSV
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowTable(!showTable)}
-                  >
-                    {showTable ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                    {showTable ? 'Hide' : 'Show'} Table
-                  </Button>
-                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={exportToCSV}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
               </div>
             </CardHeader>
-            {showTable && (
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Gap (mm)</TableHead>
-                        <TableHead className="text-right">Severity</TableHead>
-                        <TableHead className="text-right">Required Force (N)</TableHead>
-                        <TableHead className="text-right">Force @ 20°C (N)</TableHead>
-                        <TableHead className="text-right">Force @ 30°C (N)</TableHead>
-                        <TableHead className="text-right">Force @ 40°C (N)</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Margin</TableHead>
-                        <TableHead className="text-center">Confidence</TableHead>
-                        <TableHead className="text-right">Model Watts</TableHead>
+            <CardContent>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Gap (mm)</TableHead>
+                      <TableHead className="text-right">Gauss @ 20°C</TableHead>
+                      <TableHead className="text-right">Gauss @ 30°C</TableHead>
+                      <TableHead className="text-right">Gauss @ 40°C</TableHead>
+                      <TableHead className="text-right">Force @ 20°C (N)</TableHead>
+                      <TableHead className="text-right">Force @ 30°C (N)</TableHead>
+                      <TableHead className="text-right">Force @ 40°C (N)</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Confidence</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comparisonData.map((row) => (
+                      <TableRow 
+                        key={row.gap}
+                        className={row.gap === airGap ? 'bg-muted/50 font-medium' : ''}
+                      >
+                        <TableCell>{row.gap}</TableCell>
+                        <TableCell className="text-right">{row.gauss20C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-right">{row.gauss30C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-right">{row.gauss40C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-right">{row.modelForce20C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-right">{row.modelForce30C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-right">{row.modelForce40C?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {row.sufficient !== null && (
+                            <Badge variant={row.sufficient ? 'default' : 'destructive'}>
+                              {row.sufficient ? '✓' : '✗'}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {row.confidencePercent !== null && (
+                            <Badge 
+                              variant={getConfidenceBadgeVariant(row.confidencePercent)}
+                              className="text-xs"
+                            >
+                              {row.confidencePercent}%
+                            </Badge>
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {comparisonData.map((row) => (
-                        <TableRow 
-                          key={row.gap}
-                          className={row.gap === airGap ? 'bg-muted/50 font-medium' : ''}
-                        >
-                          <TableCell>{row.gap}</TableCell>
-                          <TableCell className="text-right">{row.severity}</TableCell>
-                          <TableCell className="text-right">{row.requiredForce.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{row.modelForce20C?.toLocaleString() || '-'}</TableCell>
-                          <TableCell className="text-right">{row.modelForce30C?.toLocaleString() || '-'}</TableCell>
-                          <TableCell className="text-right">{row.modelForce40C?.toLocaleString() || '-'}</TableCell>
-                          <TableCell className="text-center">
-                            {row.sufficient !== null && (
-                              <Badge variant={row.sufficient ? 'default' : 'destructive'}>
-                                {row.sufficient ? '✓' : '✗'}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {row.margin !== null && (
-                              <span className={
-                                row.margin > 50 ? 'text-green-600 font-medium' : 
-                                row.margin > 0 ? 'text-yellow-600' : 
-                                'text-red-600 font-medium'
-                              }>
-                                {row.margin > 0 ? '+' : ''}{row.margin.toFixed(1)}%
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {row.confidencePercent !== null && (
-                              <Badge 
-                                variant={getConfidenceBadgeVariant(row.confidencePercent)}
-                                className="text-xs"
-                              >
-                                {row.confidencePercent}%
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">{row.modelWatts?.toLocaleString() || '-'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            )}
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </Card>
         )}
       </div>
