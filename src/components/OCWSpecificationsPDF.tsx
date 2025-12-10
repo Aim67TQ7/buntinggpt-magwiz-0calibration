@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, pdf, Image } from '@react-pdf/renderer';
 
 interface OCWSpecData {
   prefix: number;
@@ -84,17 +84,30 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontFamily: 'Helvetica',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingBottom: 10,
+  },
+  logo: {
+    width: 120,
+    height: 40,
+    marginRight: 20,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   header: {
     fontSize: 16,
-    marginBottom: 5,
-    textAlign: 'center',
     fontWeight: 'bold',
   },
   subheader: {
     fontSize: 10,
-    marginBottom: 15,
-    textAlign: 'center',
     color: '#666',
+    marginTop: 2,
   },
   section: {
     marginBottom: 12,
@@ -225,13 +238,18 @@ const OCWSpecificationsPDF: React.FC<OCWSpecificationsPDFProps> = ({ data }) => 
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
-        {/* Header */}
-        <Text style={styles.header}>
-          OVERHEAD CONVEYOR MAGNET SPECIFICATIONS
-        </Text>
-        <Text style={styles.subheader}>
-          Model: {data.prefix} OCW {data.suffix} | Date: {new Date().toLocaleDateString('en-US')}
-        </Text>
+        {/* Header with Logo */}
+        <View style={styles.headerContainer}>
+          <Image style={styles.logo} src="/bunting-logo.png" />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.header}>
+              OVERHEAD CONVEYOR MAGNET SPECIFICATIONS
+            </Text>
+            <Text style={styles.subheader}>
+              Model: {data.prefix} OCW {data.suffix} | Date: {new Date().toLocaleDateString('en-US')}
+            </Text>
+          </View>
+        </View>
 
         {/* Performance Specifications */}
         <View style={styles.section}>
