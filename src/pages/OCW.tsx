@@ -224,20 +224,15 @@ const OCW = () => {
       setSavingConfig(configId);
       
       try {
-      // Fetch full data from OCW_magwiz table
-      const { data: magwizData, error: magwizError } = await supabase
-        .from('OCW_magwiz')
-        .select('*')
-        .eq('prefix', unit.Prefix)
-        .eq('suffix', unit.Suffix)
-        .maybeSingle();
-      
-      if (magwizError) throw magwizError;
-      if (!magwizData) {
-        throw new Error('Configuration data not found');
-      }
+        // Try to fetch additional data from OCW_magwiz table (optional)
+        const { data: magwizData } = await supabase
+          .from('OCW_magwiz')
+          .select('*')
+          .eq('prefix', unit.Prefix)
+          .eq('suffix', unit.Suffix)
+          .maybeSingle();
         
-        // Save to saved_ocw_configurations
+        // Save to saved_ocw_configurations - magwizData is optional
         const { error: saveError } = await supabase
           .from('saved_ocw_configurations')
           .insert({
@@ -249,7 +244,7 @@ const OCW = () => {
             watts: unit.watts,
             width: unit.width,
             frame: unit.frame,
-            // Map OCW_magwiz fields to saved_ocw_configurations fields
+            // Map OCW_magwiz fields if available
             radial_depth: magwizData?.radial_depth,
             coil_height: magwizData?.coil_height,
             number_of_sections: magwizData?.number_of_sections,
@@ -334,8 +329,7 @@ const OCW = () => {
           .from('saved_ocw_configurations')
           .delete()
           .eq('prefix', unit.Prefix)
-          .eq('suffix', unit.Suffix)
-          .eq('name', `${unit.Prefix} OCW ${unit.Suffix}`);
+          .eq('suffix', unit.Suffix);
         
         if (error) throw error;
         
