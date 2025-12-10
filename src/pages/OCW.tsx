@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Calculator, Waves, Settings, X, HelpCircle } from "lucide-react";
+import { ArrowLeft, ChevronDown, Calculator, Waves, X, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
@@ -84,21 +84,6 @@ interface OCWData {
   expected_rise_C?: number;
 }
 
-interface TrampMetalProfile {
-  value: string;
-  label: string;
-  description: string;
-}
-
-const TRAMP_METAL_PROFILES: TrampMetalProfile[] = [
-  { value: "mining-general", label: "Mining - General", description: "Standard mining tramp: loader teeth, rebar, fasteners" },
-  { value: "mining-heavy", label: "Mining - Heavy", description: "Heavy duty: drill rods, crusher plates, large fasteners" },
-  { value: "quarry", label: "Quarry & Aggregates", description: "Screen hooks, blast fragments, bucket teeth" },
-  { value: "coal", label: "Coal Processing", description: "Roof bolts, cable wire, continuous miner picks" },
-  { value: "recycling", label: "Recycling", description: "Wire bundles, engine components, mixed ferrous" },
-  { value: "industrial", label: "Industrial", description: "Tools, fasteners, wear plates, cable pieces" },
-];
-
 const OCW = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -126,19 +111,34 @@ const OCW = () => {
   const [isWindingOpen, setIsWindingOpen] = useState(false);
   const [isTempElectricalOpen, setIsTempElectricalOpen] = useState(false);
   
+  // Conveyor parameters
   const [beltSpeed, setBeltSpeed] = useState<number>(1.5);
+  const [beltTroughingAngle, setBeltTroughingAngle] = useState<number>(0);
   const [beltWidth, setBeltWidth] = useState<number>(1200);
+  
+  // Burden parameters
   const [burdenDepth, setBurdenDepth] = useState<number>(100);
   const [throughput, setThroughput] = useState<number>(500);
+  const [bulkDensity, setBulkDensity] = useState<number>(1.8);
+  const [waterContent, setWaterContent] = useState<number>(8);
+  
+  // Tramp Metal parameters
+  const [trampWidth, setTrampWidth] = useState<number>(50);
+  const [trampLength, setTrampLength] = useState<number>(150);
+  const [trampHeight, setTrampHeight] = useState<number>(10);
+  
+  // Magnet parameters
   const [airGap, setAirGap] = useState<number>(150);
   const [coreBeltRatio, setCoreBeltRatio] = useState<number>(0.25);
   const [magnetPosition, setMagnetPosition] = useState<string>("overhead");
-  const [bulkDensity, setBulkDensity] = useState<number>(1.8);
-  const [waterContent, setWaterContent] = useState<number>(8);
+  
+  // Misc parameters
+  const [altitude, setAltitude] = useState<number>(0);
   const [ambientTemp, setAmbientTemp] = useState<number>(25);
+  const [resultsCount, setResultsCount] = useState<number>(20);
+  
   const [minGauss, setMinGauss] = useState<string>("");
   const [minForce, setMinForce] = useState<string>("");
-  const [beltTroughingAngle, setBeltTroughingAngle] = useState<number>(0);
   const [isCalculating, setIsCalculating] = useState(false);
   const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>("moderate");
   const [savedConfigIds, setSavedConfigIds] = useState<Set<string>>(new Set());
@@ -415,7 +415,9 @@ const OCW = () => {
         return a.Prefix - b.Prefix;
       });
       
-      const allRecommendations: OCWRecommendation[] = sorted.map((unit: any) => ({
+      const limitedResults = sorted.slice(0, resultsCount);
+      
+      const allRecommendations: OCWRecommendation[] = limitedResults.map((unit: any) => ({
         model: unit.model,
         Prefix: unit.Prefix,
         Suffix: unit.Suffix,
@@ -444,6 +446,13 @@ const OCW = () => {
         waterContent,
         ambientTemp,
         beltTroughingAngle,
+        trampMetals: [{
+          id: '1',
+          name: 'Custom',
+          width: trampWidth,
+          length: trampLength,
+          height: trampHeight,
+        }],
       });
       
       if (allRecommendations.length > 0) {
@@ -476,6 +485,38 @@ const OCW = () => {
     setSelectedSuffix(unit.Suffix);
   };
 
+  const getSortedRecommendations = () => {
+    let sorted = [...recommendations];
+    if (sortBy) {
+      sorted.sort((a, b) => {
+        let aVal: number | string = 0;
+        let bVal: number | string = 0;
+        
+        if (sortBy === 'gauss') {
+          aVal = a.surface_gauss || 0;
+          bVal = b.surface_gauss || 0;
+        } else if (sortBy === 'width') {
+          aVal = a.width || 0;
+          bVal = b.width || 0;
+        } else if (sortBy === 'frame') {
+          aVal = a.frame || '';
+          bVal = b.frame || '';
+        }
+        
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDirection === 'asc' 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+        
+        return sortDirection === 'asc' 
+          ? (aVal as number) - (bVal as number)
+          : (bVal as number) - (aVal as number);
+      });
+    }
+    return sorted;
+  };
+
   const componentData = selectedRecord ? [
     { name: "Core", amount: 1, material: "Mild Steel", dimension: selectedRecord.core_dimension, mass: selectedRecord.core_mass },
     { name: "Winding", amount: 1, material: "Aluminium Nomex", dimension: selectedRecord.winding_dimension, mass: selectedRecord.winding_mass },
@@ -495,258 +536,310 @@ const OCW = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/">
             <Button variant="outline" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">OCW Selector</h1>
+            <h1 className="text-2xl font-bold">OCW Selector</h1>
             {hasActiveList && (
               <Badge variant="secondary" className="mt-1">
-                {recommendations.length} units in list
+                {recommendations.length} units
               </Badge>
             )}
           </div>
         </div>
         
-        {hasActiveList && (
-          <Button variant="outline" size="sm" onClick={clearList}>
-            <X className="w-4 h-4 mr-2" />
-            Clear List
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <HelpCircle className="w-5 h-5 text-muted-foreground cursor-help" onClick={() => setShowHelpDialog(true)} />
+          {hasActiveList && (
+            <Button variant="outline" size="sm" onClick={clearList}>
+              <X className="w-4 h-4 mr-2" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Calculator Inputs Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Calculate OCW Recommendations</CardTitle>
-            <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" onClick={() => setShowHelpDialog(true)} />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Required Parameters */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  Required Parameters
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="beltWidth" className="text-xs">Belt Width (mm)</Label>
-                    <Input id="beltWidth" type="number" value={beltWidth} onChange={(e) => setBeltWidth(parseFloat(e.target.value))} className="h-8" placeholder="1200" />
+      {/* Main Two-Panel Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Panel - Input Form */}
+        <div className="lg:col-span-5 space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              {/* Conveyor Section */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">
+                  — Conveyor —
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="beltSpeed" className="text-sm">Belt Speed (m/s)</Label>
+                    <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8 w-24 text-right" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="coreBeltRatio" className="text-xs">Core/Belt Ratio</Label>
-                    <Input id="coreBeltRatio" type="number" value={coreBeltRatio} onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))} step="0.01" min="0" max="1" className="h-8" placeholder="0.3" />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="beltTroughingAngle" className="text-sm">Trough Angle (°)</Label>
+                    <Input id="beltTroughingAngle" type="number" value={beltTroughingAngle} onChange={(e) => setBeltTroughingAngle(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="minGauss" className="text-xs">Min Gauss (optional)</Label>
-                    <Input id="minGauss" type="number" value={minGauss} onChange={(e) => setMinGauss(e.target.value)} className="h-8" placeholder="" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="minForce" className="text-xs">Min Force (optional)</Label>
-                    <Input id="minForce" type="number" value={minForce} onChange={(e) => setMinForce(e.target.value)} className="h-8" placeholder="" />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="beltWidth" className="text-sm">Belt Width (mm)</Label>
+                    <Input id="beltWidth" type="number" value={beltWidth} onChange={(e) => setBeltWidth(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Process Parameters */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Process Parameters</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 pt-0">
-                <div className="space-y-1.5">
-                  <Label htmlFor="beltSpeed" className="text-xs">Belt Speed (m/s)</Label>
-                  <Input id="beltSpeed" type="number" value={beltSpeed} onChange={(e) => setBeltSpeed(parseFloat(e.target.value))} step="0.1" className="h-8" />
+              {/* Burden Section */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">
+                  — Burden —
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="beltTroughingAngle" className="text-xs">Belt Troughing Angle (degrees)</Label>
-                  <Input id="beltTroughingAngle" type="number" value={beltTroughingAngle} onChange={(e) => setBeltTroughingAngle(parseFloat(e.target.value))} step="1" className="h-8" placeholder="0" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="burdenDepth" className="text-sm">Feed Depth (mm)</Label>
+                    <Input id="burdenDepth" type="number" value={burdenDepth} onChange={(e) => setBurdenDepth(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="throughput" className="text-sm">Through Put (t/h)</Label>
+                    <Input id="throughput" type="number" value={throughput} onChange={(e) => setThroughput(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="bulkDensity" className="text-sm">Density (t/m³)</Label>
+                    <Input id="bulkDensity" type="number" value={bulkDensity} onChange={(e) => setBulkDensity(parseFloat(e.target.value))} step="0.1" className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="waterContent" className="text-sm">Water Content (%)</Label>
+                    <Input id="waterContent" type="number" value={waterContent} onChange={(e) => setWaterContent(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="burdenDepth" className="text-xs">Burden Depth (mm)</Label>
-                  <Input id="burdenDepth" type="number" value={burdenDepth} onChange={(e) => setBurdenDepth(parseFloat(e.target.value))} className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="throughput" className="text-xs">Throughput (TPH)</Label>
-                  <Input id="throughput" type="number" value={throughput} onChange={(e) => setThroughput(parseFloat(e.target.value))} className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="airGap" className="text-xs">Air Gap (mm)</Label>
-                  <Input id="airGap" type="number" value={airGap} onChange={(e) => setAirGap(parseFloat(e.target.value))} className="h-8" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="magnetPosition" className="text-xs">Magnet Position</Label>
-                  <Select value={magnetPosition} onValueChange={setMagnetPosition}>
-                    <SelectTrigger id="magnetPosition" className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="overhead">Overhead</SelectItem>
-                      <SelectItem value="inline">Inline</SelectItem>
-                      <SelectItem value="drum">Drum</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
 
-          {/* Compact Tramp Metal Section */}
-          <TrampSizeSection 
-            surfaceGauss={minGauss ? parseFloat(minGauss) : (selectedOCW?.surface_gauss || 0)}
-            airGap={airGap}
-            burden={burdenSeverity}
-            onBurdenChange={setBurdenSeverity}
-            compact
-          />
+              {/* Tramp Metal Section */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">
+                  — Tramp Metal —
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="trampWidth" className="text-sm">Width (mm)</Label>
+                    <Input id="trampWidth" type="number" value={trampWidth} onChange={(e) => setTrampWidth(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="trampLength" className="text-sm">Length (mm)</Label>
+                    <Input id="trampLength" type="number" value={trampLength} onChange={(e) => setTrampLength(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="trampHeight" className="text-sm">Height (mm)</Label>
+                    <Input id="trampHeight" type="number" value={trampHeight} onChange={(e) => setTrampHeight(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                </div>
+              </div>
 
-          <Button onClick={handleCalculate} disabled={isCalculating} className="w-full">
-            <Calculator className="w-4 h-4 mr-2" />
-            {isCalculating ? "Calculating..." : "Calculate OCW Recommendations"}
-          </Button>
-        </CardContent>
-      </Card>
+              {/* Magnet Section */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">
+                  — Magnet —
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="airGap" className="text-sm">Gap (mm)</Label>
+                    <Input id="airGap" type="number" value={airGap} onChange={(e) => setAirGap(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="coreBeltRatio" className="text-sm">Core : Belt Ratio</Label>
+                    <Input id="coreBeltRatio" type="number" value={coreBeltRatio} onChange={(e) => setCoreBeltRatio(parseFloat(e.target.value))} step="0.01" min="0" max="1" className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="magnetPosition" className="text-sm">Position</Label>
+                    <Select value={magnetPosition} onValueChange={setMagnetPosition}>
+                      <SelectTrigger id="magnetPosition" className="h-8 w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="overhead">Overhead</SelectItem>
+                        <SelectItem value="inline">Inline</SelectItem>
+                        <SelectItem value="crossbelt">Crossbelt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
 
-      {/* Recommendations List */}
-      {hasActiveList && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Recommended OCW Units</CardTitle>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sort by:</span>
-                <Button
-                  variant={sortBy === 'gauss' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    if (sortBy === 'gauss') {
-                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortBy('gauss');
-                      setSortDirection('desc');
-                    }
-                  }}
-                >
-                  Gauss {sortBy === 'gauss' && (sortDirection === 'asc' ? '↑' : '↓')}
+              {/* Misc Section */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">
+                  — Misc —
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="altitude" className="text-sm">Altitude (m)</Label>
+                    <Input id="altitude" type="number" value={altitude} onChange={(e) => setAltitude(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="ambientTemp" className="text-sm">Ambient Temp (°C)</Label>
+                    <Input id="ambientTemp" type="number" value={ambientTemp} onChange={(e) => setAmbientTemp(parseFloat(e.target.value))} className="h-8 w-24 text-right" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="resultsCount" className="text-sm">Results Count</Label>
+                    <Input id="resultsCount" type="number" value={resultsCount} onChange={(e) => setResultsCount(parseInt(e.target.value))} min="1" max="100" className="h-8 w-24 text-right" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleCalculate} disabled={isCalculating} className="flex-1">
+                  <Calculator className="w-4 h-4 mr-2" />
+                  {isCalculating ? "..." : "Run"}
                 </Button>
-                <Button
-                  variant={sortBy === 'width' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    if (sortBy === 'width') {
-                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortBy('width');
-                      setSortDirection('desc');
-                    }
-                  }}
-                >
-                  Width {sortBy === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
-                </Button>
-                <Button
-                  variant={sortBy === 'frame' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    if (sortBy === 'frame') {
-                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortBy('frame');
-                      setSortDirection('asc');
-                    }
-                  }}
-                >
-                  Frame {sortBy === 'frame' && (sortDirection === 'asc' ? '↑' : '↓')}
+                <Button variant="outline" className="flex-1" disabled>
+                  Optimize
                 </Button>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              {(() => {
-                let sorted = [...recommendations];
-                if (sortBy) {
-                  sorted.sort((a, b) => {
-                    let aVal: number | string = 0;
-                    let bVal: number | string = 0;
-                    
-                    if (sortBy === 'gauss') {
-                      aVal = a.surface_gauss || 0;
-                      bVal = b.surface_gauss || 0;
-                    } else if (sortBy === 'width') {
-                      aVal = a.width || 0;
-                      bVal = b.width || 0;
-                    } else if (sortBy === 'frame') {
-                      aVal = a.frame || '';
-                      bVal = b.frame || '';
-                    }
-                    
-                    if (typeof aVal === 'string' && typeof bVal === 'string') {
-                      return sortDirection === 'asc' 
-                        ? aVal.localeCompare(bVal)
-                        : bVal.localeCompare(aVal);
-                    }
-                    
-                    return sortDirection === 'asc' 
-                      ? (aVal as number) - (bVal as number)
-                      : (bVal as number) - (aVal as number);
-                  });
-                }
-                return sorted;
-              })().map((unit, index) => (
-                <div key={index} className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors ${
-                  selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'border-primary bg-primary/5' : ''
-                } ${savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) ? 'bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800' : ''}`}>
-                  
-                  {/* Existing content */}
-                  <div className="flex-1 space-y-0.5">
-                    <div className="font-semibold text-sm">
-                      {unit.Prefix} OCW {unit.Suffix}
-                      {savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) && (
-                        <Badge variant="secondary" className="ml-2 text-xs">Saved</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-5 gap-x-3">
-                      <span>Gauss: {unit.surface_gauss}</span>
-                      <span>Force: {unit.force_factor}</span>
-                      <span>Watts: {unit.watts}</span>
-                      <span>Width: {unit.width}mm</span>
-                      <span>Frame: {unit.frame}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Existing buttons */}
-                  <div className="flex gap-2">
-                    <Button onClick={() => navigate('/ocw-specs', { state: { unit }})} variant="outline" size="sm">
-                      View
-                    </Button>
-                    <Button onClick={() => navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }})} variant="outline" size="sm">
-                      Decay Chart
-                    </Button>
-                  </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Panel - Results Table */}
+        <div className="lg:col-span-7">
+          <Card className="h-full">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">OCW Recommendations</CardTitle>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mr-1">Sort:</span>
+                  <Button
+                    variant={sortBy === 'gauss' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      if (sortBy === 'gauss') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('gauss');
+                        setSortDirection('desc');
+                      }
+                    }}
+                  >
+                    Gauss {sortBy === 'gauss' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </Button>
+                  <Button
+                    variant={sortBy === 'width' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      if (sortBy === 'width') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('width');
+                        setSortDirection('desc');
+                      }
+                    }}
+                  >
+                    Width {sortBy === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </Button>
+                  <Button
+                    variant={sortBy === 'frame' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      if (sortBy === 'frame') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('frame');
+                        setSortDirection('asc');
+                      }
+                    }}
+                  >
+                    Frame {sortBy === 'frame' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {hasActiveList ? (
+                <div className="overflow-auto max-h-[600px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="text-xs">
+                        <TableHead className="py-2">Model n°</TableHead>
+                        <TableHead className="py-2 text-right">Gauss (G)</TableHead>
+                        <TableHead className="py-2 text-right">Force Factor</TableHead>
+                        <TableHead className="py-2 text-right">Watts (W)</TableHead>
+                        <TableHead className="py-2 text-right">Width (mm)</TableHead>
+                        <TableHead className="py-2">Frame</TableHead>
+                        <TableHead className="py-2 text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getSortedRecommendations().map((unit, index) => (
+                        <TableRow 
+                          key={index} 
+                          className={`text-sm cursor-pointer hover:bg-accent ${
+                            selectedOCW?.Prefix === unit.Prefix && selectedOCW?.Suffix === unit.Suffix ? 'bg-primary/10' : ''
+                          } ${savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) ? 'bg-green-50 dark:bg-green-950/20' : ''}`}
+                          onClick={() => handleViewOCW(unit)}
+                        >
+                          <TableCell className="py-2 font-medium">
+                            {unit.Prefix} OCW {unit.Suffix}
+                            {savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`) && (
+                              <Badge variant="secondary" className="ml-1 text-[10px] py-0">Saved</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2 text-right">{unit.surface_gauss}</TableCell>
+                          <TableCell className="py-2 text-right">{unit.force_factor?.toLocaleString()}</TableCell>
+                          <TableCell className="py-2 text-right">{unit.watts}</TableCell>
+                          <TableCell className="py-2 text-right">{unit.width}</TableCell>
+                          <TableCell className="py-2">{unit.frame}</TableCell>
+                          <TableCell className="py-2 text-right">
+                            <div className="flex gap-1 justify-end">
+                              <Button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate('/ocw-specs', { state: { unit }});
+                                }} 
+                                variant="outline" 
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                              >
+                                Specs
+                              </Button>
+                              <Button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }});
+                                }} 
+                                variant="outline" 
+                                size="sm"
+                                className="h-6 px-2 text-xs"
+                              >
+                                Gauss
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+                  Enter parameters and click "Run" to see recommendations
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-
+      {/* Selected Record Details (Collapsible sections below) */}
       {selectedRecord && (
-        <>
+        <div className="space-y-4">
           <div className="bg-muted rounded-lg p-3 text-sm">
             <p className="font-medium">Selected: {selectedRecord.filename}</p>
             <p className="text-base font-semibold text-primary mt-1">
@@ -778,8 +871,6 @@ const OCW = () => {
                 variant={temp === 20 ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => {
-                  // Calculate gauss and force based on temperature
-                  // A20 is baseline, others will be calculated later
                   const baseGauss = 2410;
                   const baseForce = 499496;
                   navigate('/magnetic-decay', { 
@@ -827,16 +918,16 @@ const OCW = () => {
                               <TableCell className="font-medium py-2">{component.name}</TableCell>
                               <TableCell className="py-2">{component.amount}</TableCell>
                               <TableCell className="py-2">{component.material}</TableCell>
-                              <TableCell className="py-2">{component.dimension || 'N/A'}</TableCell>
-                              <TableCell className="py-2">{component.mass?.toFixed(2) || 'N/A'}</TableCell>
+                              <TableCell className="py-2 text-xs">{component.dimension}</TableCell>
+                              <TableCell className="py-2">{component.mass?.toFixed(2)}</TableCell>
                             </TableRow>
                           ))}
-                          <TableRow className="font-bold h-10">
-                            <TableCell colSpan={4} className="py-2">Total</TableCell>
-                            <TableCell className="py-2">{selectedRecord.total_mass?.toFixed(2) || 'N/A'}</TableCell>
-                          </TableRow>
                         </TableBody>
                       </Table>
+                      <div className="mt-4 text-sm font-bold flex justify-between">
+                        <span>Total Mass:</span>
+                        <span>{selectedRecord.total_mass?.toFixed(2)} kg</span>
+                      </div>
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
@@ -853,16 +944,24 @@ const OCW = () => {
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between"><span>Radial Depth:</span><span>{selectedRecord.radial_depth || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Coil Height:</span><span>{selectedRecord.coil_height || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Number of Sections:</span><span>{selectedRecord.number_of_sections || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Diameter:</span><span>{selectedRecord.diameter || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Mean Length of Turn:</span><span>{selectedRecord.mean_length_of_turn || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Number of Turns:</span><span>{selectedRecord.number_of_turns || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Surface Area:</span><span>{selectedRecord.surface_area || 'N/A'}</span></div>
-                        <div className="flex justify-between"><span>Wires in Parallel:</span><span>{selectedRecord.wires_in_parallel || 'N/A'}</span></div>
+                    <CardContent className="space-y-2 pt-0">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <span className="text-muted-foreground">Radial Depth:</span>
+                        <span className="font-medium">{selectedRecord.radial_depth} mm</span>
+                        <span className="text-muted-foreground">Coil Height:</span>
+                        <span className="font-medium">{selectedRecord.coil_height?.toFixed(2)} mm</span>
+                        <span className="text-muted-foreground">Number of Sections:</span>
+                        <span className="font-medium">{selectedRecord.number_of_sections}</span>
+                        <span className="text-muted-foreground">Diameter:</span>
+                        <span className="font-medium">{selectedRecord.diameter?.toFixed(2)} mm</span>
+                        <span className="text-muted-foreground">Mean Length of Turn:</span>
+                        <span className="font-medium">{selectedRecord.mean_length_of_turn?.toFixed(2)} mm</span>
+                        <span className="text-muted-foreground">Number of Turns:</span>
+                        <span className="font-medium">{selectedRecord.number_of_turns}</span>
+                        <span className="text-muted-foreground">Surface Area:</span>
+                        <span className="font-medium">{selectedRecord.surface_area?.toFixed(2)} m²</span>
+                        <span className="text-muted-foreground">Wires in Parallel:</span>
+                        <span className="font-medium">{selectedRecord.wires_in_parallel}</span>
                       </div>
                     </CardContent>
                   </CollapsibleContent>
@@ -881,10 +980,16 @@ const OCW = () => {
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="grid grid-cols-4 gap-2 text-sm font-semibold mb-2">
+                      <span></span>
+                      <span>A (20°C)</span>
+                      <span>B (30°C)</span>
+                      <span>C (40°C)</span>
+                    </div>
+                    <div className="space-y-1">
                       <div className="grid grid-cols-4 gap-2 text-xs">
-                        <span>Ambient Temperature:</span>
+                        <span>Ambient Temp:</span>
                         <span>{selectedRecord.ambient_temperature_A || 'N/A'}</span>
                         <span>{selectedRecord.ambient_temperature_B || 'N/A'}</span>
                         <span>{selectedRecord.ambient_temperature_C || 'N/A'}</span>
@@ -967,7 +1072,7 @@ const OCW = () => {
               </Card>
             </Collapsible>
           </div>
-        </>
+        </div>
       )}
 
       {/* Help Dialog */}
@@ -1010,25 +1115,6 @@ const OCW = () => {
                     <li>Decrease for fine, uniform burdens or tight installations.</li>
                   </ul>
                 </div>
-
-                <div>
-                  <h4 className="font-medium">1.3 Minimum Gauss (optional)</h4>
-                  <p className="mt-1"><strong>Definition:</strong> Minimum field intensity at the burden surface required for capture.</p>
-                  <p className="mt-1"><strong>Selection Guidance:</strong></p>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    <li>Ferrous fines: 1500–3000 Gauss</li>
-                    <li>Tramp steel / larger objects: 3000–5000 Gauss</li>
-                    <li>Leave blank to let the system optimize based on force and air gap.</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-medium">1.4 Minimum Force (optional)</h4>
-                  <p className="mt-1"><strong>Definition:</strong> Required attractive force at the material surface.</p>
-                  <p className="mt-1"><strong>Use Case:</strong> When a specific pick-up force is known (from tests or spec sheets).</p>
-                  <p className="mt-1"><strong>Typical Range:</strong> 250,000 – 800,000 dynes.</p>
-                  <p className="mt-1 italic">Leave blank if you want the algorithm to infer force based on throughput and air gap.</p>
-                </div>
               </div>
             </section>
 
@@ -1039,75 +1125,15 @@ const OCW = () => {
                 <div>
                   <h4 className="font-medium">2.1 Belt Speed (m/s)</h4>
                   <p className="mt-1"><strong>Definition:</strong> Conveyor belt velocity under the magnet.</p>
-                  <p className="mt-1"><strong>Selection:</strong></p>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    <li>Use process data or measure actual line speed.</li>
-                    <li>High belt speeds reduce exposure time, requiring stronger or lower-mounted magnets.</li>
-                  </ul>
-                  <table className="w-full mt-2 border">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border p-2 text-left">Application</th>
-                        <th className="border p-2 text-left">Typical Speed</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr><td className="border p-2">Light-duty recycling</td><td className="border p-2">0.8 – 1.2 m/s</td></tr>
-                      <tr><td className="border p-2">Aggregates</td><td className="border p-2">1.2 – 2.0 m/s</td></tr>
-                      <tr><td className="border p-2">Mining / High throughput</td><td className="border p-2">2.0 – 3.0 m/s</td></tr>
-                    </tbody>
-                  </table>
                 </div>
 
                 <div>
-                  <h4 className="font-medium">2.2 Belt Troughing Angle (°)</h4>
-                  <p className="mt-1"><strong>Definition:</strong> Angle of side idlers.</p>
-                  <p className="mt-1">Input "0" for flat conveyors.</p>
-                  <p className="mt-1"><strong>Effect:</strong> Higher troughing angles increase material depth and can require more magnetic depth or adjusted air gap.</p>
-                </div>
-
-                <div>
-                  <h4 className="font-medium">2.3 Burden Depth (mm)</h4>
-                  <p className="mt-1"><strong>Definition:</strong> Material thickness on the belt under normal loading conditions.</p>
-                  <p className="mt-1"><strong>Measurement:</strong></p>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    <li>Measure average height of the material profile.</li>
-                    <li>Avoid peak loads—use nominal running depth.</li>
-                  </ul>
-                  <p className="mt-1"><strong>Effect:</strong> Increased depth → greater air gap → requires higher magnetic power.</p>
-                </div>
-
-                <div>
-                  <h4 className="font-medium">2.4 Throughput (TPH)</h4>
-                  <p className="mt-1"><strong>Definition:</strong> Tons per hour of conveyed material.</p>
-                  <p className="mt-1"><strong>Used to:</strong> Estimate mass loading and particle density.</p>
-                  <p className="mt-1"><strong>Input:</strong> From process line specs or weigh belt data.</p>
-                </div>
-
-                <div>
-                  <h4 className="font-medium">2.5 Air Gap (mm)</h4>
+                  <h4 className="font-medium">2.2 Air Gap (mm)</h4>
                   <p className="mt-1"><strong>Definition:</strong> Vertical distance from magnet face to top of burden.</p>
-                  <p className="mt-1"><strong>Determination Steps:</strong></p>
-                  <ol className="list-decimal ml-5 mt-1 space-y-1">
-                    <li>Measure from conveyor belt surface to magnet face.</li>
-                    <li>Subtract burden depth (mm).</li>
-                    <li>Verify clearance for belt splice and bounce (add 25–50 mm buffer).</li>
-                  </ol>
                   <p className="mt-1"><strong>Typical Range:</strong></p>
                   <ul className="list-disc ml-5 mt-1 space-y-1">
                     <li>100–150 mm for standard OCW</li>
                     <li>200–300 mm for high-speed or deep burden applications</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-medium">2.6 Magnet Position</h4>
-                  <p className="mt-1"><strong>Options:</strong> Overhead, Inline, Crossbelt.</p>
-                  <p className="mt-1"><strong>Effect on Design:</strong></p>
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    <li><strong>Overhead:</strong> Captures ferrous contamination from the top, most common.</li>
-                    <li><strong>Inline:</strong> Magnet installed parallel to belt, suited for tramp metal removal in material flow direction.</li>
-                    <li><strong>Crossbelt:</strong> Magnet positioned across belt width; typically requires greater core width.</li>
                   </ul>
                 </div>
               </div>
@@ -1119,33 +1145,9 @@ const OCW = () => {
                 <li>Input required parameters: Belt width and core/belt ratio (start with 0.25).</li>
                 <li>Enter process data: Belt speed, burden depth, throughput, and air gap.</li>
                 <li>Select magnet position.</li>
-                <li>Click "Calculate OCW Recommendations."</li>
-                <li>Review outputs:
-                  <ul className="list-disc ml-5 mt-1 space-y-1">
-                    <li>Magnet width recommendation (core width = belt width × ratio).</li>
-                    <li>Suggested air gap or field strength adjustments.</li>
-                    <li>Warnings if throughput or air gap exceed recommended magnetic performance limits.</li>
-                  </ul>
-                </li>
+                <li>Click "Run" to calculate recommendations.</li>
+                <li>Review outputs in the table on the right.</li>
               </ol>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-base mb-2">4. Adjustment Guidelines</h3>
-              <table className="w-full border">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="border p-2 text-left">Scenario</th>
-                    <th className="border p-2 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td className="border p-2">Burden depth exceeds spec</td><td className="border p-2">Increase air gap or magnet size</td></tr>
-                  <tr><td className="border p-2">Weak pickup</td><td className="border p-2">Increase field strength or lower magnet</td></tr>
-                  <tr><td className="border p-2">Over-saturation</td><td className="border p-2">Reduce core width or increase air gap</td></tr>
-                  <tr><td className="border p-2">Excessive belt speed</td><td className="border p-2">Use stronger magnet or longer exposure</td></tr>
-                </tbody>
-              </table>
             </section>
           </div>
         </DialogContent>
