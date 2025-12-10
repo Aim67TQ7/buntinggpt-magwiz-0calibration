@@ -226,6 +226,7 @@ export function evaluateTrampPickup(input: TrampPickupInput): TrampPickupResult 
  * @param orientation - Tramp orientation
  * @param burden - Burden severity
  * @param safetyFactor - Safety factor (default 3.0)
+ * @deprecated Use calculateMarginRatioFromForce for more accurate results
  */
 export function calculateMarginRatioFromGauss(
   surfaceGauss: number,
@@ -249,4 +250,93 @@ export function calculateMarginRatioFromGauss(
     fluxDensity_T: fluxAtGap_T,
     baseSafetyFactor: safetyFactor,
   });
+}
+
+// Force Factor decay constant (2× Gauss decay rate due to squared relationship)
+export const DECAY_FORCE_FACTOR = 0.0115;
+
+/**
+ * Calculate margin ratio from Force Factor - preferred method for tramp pickup evaluation
+ * Force Factor directly represents lifting capability and decays at 2× the Gauss rate
+ * @param surfaceForceFactor - Surface Force Factor (at 0 gap) in Newtons
+ * @param gapMm - Air gap in mm
+ * @param geometry - Tramp geometry
+ * @param orientation - Tramp orientation
+ * @param burden - Burden severity
+ * @param safetyFactor - Safety factor (default 3.0)
+ */
+export function calculateMarginRatioFromForce(
+  surfaceForceFactor: number,
+  gapMm: number,
+  geometry: TrampGeometry,
+  orientation: TrampOrientation = "unknown",
+  burden: BurdenSeverity = "moderate",
+  safetyFactor: number = 3.0
+): TrampPickupResult {
+  const g = 9.81;
+  const baseSF = safetyFactor;
+
+  // Calculate mass and weight from geometry
+  const mass_kg = estimateMassKgExported(geometry);
+  const weight_N = mass_kg * g;
+
+  // Get effective contact area
+  const A_eff = effectiveContactAreaExported(geometry, orientation);
+
+  if (A_eff <= 0) {
+    throw new Error("Effective contact area is zero or invalid; check geometry.");
+  }
+  if (surfaceForceFactor <= 0) {
+    throw new Error("surfaceForceFactor must be > 0 for tramp pickup evaluation.");
+  }
+
+  // Apply FF decay based on gap
+  const forceAtGap = surfaceForceFactor * Math.exp(-DECAY_FORCE_FACTOR * gapMm);
+
+  const oriFactor = orientationFactor(orientation);
+  const burFactor = burdenFactor(burden);
+
+  const combinedFactor = baseSF * oriFactor * burFactor;
+  const required = weight_N * combinedFactor;
+
+  const margin_N = forceAtGap - required;
+  const marginRatio = required > 0 ? forceAtGap / required : Infinity;
+  const isLikelyPickup = marginRatio >= 1.0;
+  const confidencePercent = marginRatioToConfidence(marginRatio);
+
+  const notes: string[] = [];
+  notes.push(`Mass ≈ ${mass_kg.toFixed(3)} kg, effective area ≈ ${(A_eff * 1e4).toFixed(2)} cm².`);
+  notes.push(`Orientation factor = ${oriFactor.toFixed(2)}, burden factor = ${burFactor.toFixed(2)}, base SF = ${baseSF.toFixed(2)}.`);
+  notes.push(`Available F ≈ ${forceAtGap.toFixed(1)} N (from FF), required ≈ ${required.toFixed(1)} N (margin ratio ≈ ${marginRatio.toFixed(2)}).`);
+  if (!isLikelyPickup) {
+    notes.push("Result: NOT LIKELY to reliably pull this tramp through burden.");
+  } else {
+    notes.push("Result: Likely to pull this tramp under the assumed conditions.");
+  }
+
+  return {
+    mass_kg,
+    weight_N,
+    effectiveArea_m2: A_eff,
+    orientationFactor: oriFactor,
+    burdenFactor: burFactor,
+    baseSafetyFactor: baseSF,
+    combinedFactor,
+    availableMagForce_N: forceAtGap,
+    requiredForce_N: required,
+    margin_N,
+    marginRatio,
+    isLikelyPickup,
+    confidencePercent,
+    notes,
+  };
+}
+
+// Export helper functions for use in calculateMarginRatioFromForce
+function estimateMassKgExported(geom: TrampGeometry): number {
+  return estimateMassKg(geom);
+}
+
+function effectiveContactAreaExported(geom: TrampGeometry, orientation: TrampOrientation): number {
+  return effectiveContactArea_m2(geom, orientation);
 }

@@ -13,7 +13,7 @@ import {
   TrampOrientation, 
   BurdenSeverity, 
   TrampGeometry,
-  calculateMarginRatioFromGauss,
+  calculateMarginRatioFromForce,
   TrampPickupResult
 } from "@/utils/trampPickup";
 
@@ -28,7 +28,7 @@ interface TrampItem {
 }
 
 interface TrampSizeSectionProps {
-  surfaceGauss: number;
+  surfaceForceFactor: number;
   airGap: number;
   burden: BurdenSeverity;
   onBurdenChange: (burden: BurdenSeverity) => void;
@@ -57,14 +57,14 @@ function getConfidenceProgressColor(confidence: number): string {
   return "bg-green-500";
 }
 
-export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange, compact = false }: TrampSizeSectionProps) {
+export function TrampSizeSection({ surfaceForceFactor, airGap, burden, onBurdenChange, compact = false }: TrampSizeSectionProps) {
   const [trampItems, setTrampItems] = useState<TrampItem[]>(DEFAULT_TRAMPS);
   const [safetyFactor, setSafetyFactor] = useState<number>(3.0);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   const getResultForItem = (item: TrampItem): { result: TrampPickupResult | null; error: string | null } => {
-    if (!surfaceGauss || surfaceGauss <= 0) {
-      return { result: null, error: "No surface Gauss value" };
+    if (!surfaceForceFactor || surfaceForceFactor <= 0) {
+      return { result: null, error: "No Force Factor value" };
     }
     
     const geometry: TrampGeometry = {
@@ -75,8 +75,8 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange,
     };
     
     try {
-      const result = calculateMarginRatioFromGauss(
-        surfaceGauss,
+      const result = calculateMarginRatioFromForce(
+        surfaceForceFactor,
         airGap,
         geometry,
         item.orientation,
@@ -227,7 +227,7 @@ export function TrampSizeSection({ surfaceGauss, airGap, burden, onBurdenChange,
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Tramp Metal Pickup Check</CardTitle>
-          <Badge variant="outline">Surface Gauss: {surfaceGauss || "N/A"}</Badge>
+          <Badge variant="outline">Force Factor: {surfaceForceFactor?.toLocaleString() || "N/A"} N</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
