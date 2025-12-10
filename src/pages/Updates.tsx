@@ -6,6 +6,23 @@ import { Link } from "react-router-dom";
 
 const updates = [
   {
+    version: "3.10.1",
+    date: "2025-12-10",
+    type: "patch",
+    changes: [
+      "Redesigned OCW Selector with side-by-side layout (inputs left, results right)",
+      "Added toggle checkbox to save configurations for Model Comparison",
+      "Model Comparison now displays saved/toggled models as a list with confidence indicators",
+      "Removed dropdown model selector from Model Comparison page",
+      "Removed Gauss table from Model Comparison (available via separate Gauss button)",
+      "Parameters now passed from OCW Selector to Model Comparison instead of sliders",
+      "Added 'Back to OCW Selector' button on OCW Specs and Gauss Table pages",
+      "Added Bunting logo to OCW Specifications PDF header",
+      "Renamed 'Shape' section to 'Tramp Metal' in OCW Selector",
+      "Changed 'View' button to 'Specs' and 'Decay Chart' to 'Gauss'",
+    ]
+  },
+  {
     version: "3.10.0",
     date: "2025-12-05",
     type: "minor",
