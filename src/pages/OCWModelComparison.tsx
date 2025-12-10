@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -8,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { RotateCcw, Info, Download, FileText, Plus, X } from "lucide-react";
+import { RotateCcw, Info, Download, FileText, Plus, X, LineChart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { 
@@ -263,6 +264,7 @@ function validateModel(requiredForce: number, modelForce: number): {
 }
 
 export default function OCWModelComparison() {
+  const navigate = useNavigate();
   const [beltSpeed, setBeltSpeed] = useState(2.0);
   const [airGap, setAirGap] = useState(200);
   const [burdenDepth, setBurdenDepth] = useState(100);
@@ -868,13 +870,29 @@ export default function OCWModelComparison() {
                     </Select>
                     
                     {selectedModel && (
-                      <Dialog open={showSpecsDialog} onOpenChange={setShowSpecsDialog}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="default" className="shrink-0">
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Specifications
-                          </Button>
-                        </DialogTrigger>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="default"
+                          className="shrink-0"
+                          onClick={() => navigate('/magnetic-decay', {
+                            state: {
+                              model: `${selectedModel.Prefix} OCW ${selectedModel.Suffix}`,
+                              gauss: selectedModel.surface_gauss,
+                              force: selectedModel.force_factor
+                            }
+                          })}
+                        >
+                          <LineChart className="mr-2 h-4 w-4" />
+                          Decay Chart
+                        </Button>
+                        <Dialog open={showSpecsDialog} onOpenChange={setShowSpecsDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="default" className="shrink-0">
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Specifications
+                            </Button>
+                          </DialogTrigger>
                         <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>OCW Specifications - {selectedModel.Prefix} OCW {selectedModel.Suffix}</DialogTitle>
@@ -1094,6 +1112,7 @@ export default function OCWModelComparison() {
                           )}
                         </DialogContent>
                       </Dialog>
+                      </>
                     )}
                   </div>
                   

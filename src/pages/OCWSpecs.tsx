@@ -384,6 +384,18 @@ export default function OCWSpecs() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      <TableRow className="bg-primary/10 font-semibold">
+                        <TableCell className="font-medium">Surface Gauss (G)</TableCell>
+                        <TableCell className="text-right">{unit.surface_gauss}</TableCell>
+                        <TableCell className="text-right">{Math.round(unit.surface_gauss * 0.95484)}</TableCell>
+                        <TableCell className="text-right">{Math.round(unit.surface_gauss * 0.90451)}</TableCell>
+                      </TableRow>
+                      <TableRow className="bg-primary/10 font-semibold">
+                        <TableCell className="font-medium">Force Factor (N)</TableCell>
+                        <TableCell className="text-right">{unit.force_factor?.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{Math.round((unit.force_factor || 0) * 0.9117).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{Math.round((unit.force_factor || 0) * 0.8181).toLocaleString()}</TableCell>
+                      </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Voltage (V)</TableCell>
                         <TableCell className="text-right">{ocwData.voltage_A}</TableCell>

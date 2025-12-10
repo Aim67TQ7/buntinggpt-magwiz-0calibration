@@ -14,6 +14,7 @@ import OCWSpecs from "./pages/OCWSpecs";
 import OCWComparison from "./pages/OCWComparison";
 import OCWAnalyzer from "./pages/OCWAnalyzer";
 import OCWModelComparison from "./pages/OCWModelComparison";
+import GaussTable from "./pages/GaussTable";
 import WindingSheet from "./pages/WindingSheet";
 import Configurator from "./pages/Configurator";
 import PCBChat from "./pages/PCBChat";
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/winding-sheet" element={<WindingSheet />} />
               <Route path="/configurator" element={<Configurator />} />
               <Route path="/calculator" element={<Index />} />
+              <Route path="/gauss-table" element={<GaussTable />} />
               <Route path="/magnetic-decay" element={<MagneticDecay />} />
               <Route path="/field-simulator" element={<MagneticFieldSimulator />} />
               <Route path="/updates" element={<Updates />} />
