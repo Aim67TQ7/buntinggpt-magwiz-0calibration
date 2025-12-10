@@ -15,7 +15,7 @@ import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrampSizeSection } from "@/components/TrampSizeSection";
-import { BurdenSeverity, calculateMarginRatioFromForce, marginRatioToConfidence } from "@/utils/trampPickup";
+import { BurdenSeverity } from "@/utils/trampPickup";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface OCWData {
@@ -799,34 +799,11 @@ const OCW = () => {
                         <TableHead className="py-2 text-right">Watts (W)</TableHead>
                         <TableHead className="py-2 text-right">Width (mm)</TableHead>
                         <TableHead className="py-2">Frame</TableHead>
-                        <TableHead className="py-2 text-center">Confidence</TableHead>
                         <TableHead className="py-2 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getSortedRecommendations().map((unit, index) => {
-                        // Calculate confidence for this model
-                        const geometry = { 
-                          shape: 'plate' as const, 
-                          width_mm: trampWidth, 
-                          length_mm: trampLength, 
-                          thickness_mm: trampHeight 
-                        };
-                        let confidence = 0;
-                        try {
-                          const result = calculateMarginRatioFromForce(
-                            unit.force_factor || 0,
-                            airGap,
-                            geometry,
-                            'flat',
-                            burdenSeverity,
-                            3.0 // safety factor
-                          );
-                          confidence = result.confidencePercent;
-                        } catch {
-                          confidence = 0;
-                        }
-                        const confidenceColor = confidence >= 75 ? 'bg-green-500' : confidence >= 50 ? 'bg-yellow-500' : 'bg-red-500';
                         const isSaved = savedConfigIds.has(`${unit.Prefix}-${unit.Suffix}`);
                         
                         return (
@@ -855,14 +832,6 @@ const OCW = () => {
                           <TableCell className="py-2 text-right">{unit.watts}</TableCell>
                           <TableCell className="py-2 text-right">{unit.width}</TableCell>
                           <TableCell className="py-2">{unit.frame}</TableCell>
-                          <TableCell className="py-2 text-center">
-                            <Badge 
-                              variant="outline" 
-                              className={`text-[10px] py-0 px-1.5 ${confidenceColor} text-white border-0`}
-                            >
-                              {confidence}%
-                            </Badge>
-                          </TableCell>
                           <TableCell className="py-2 text-right">
                             <div className="flex gap-1 justify-end">
                               <Button 
