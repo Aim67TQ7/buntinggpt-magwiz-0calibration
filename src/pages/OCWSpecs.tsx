@@ -460,7 +460,7 @@ export default function OCWSpecs() {
 
           {/* Tramp Metal Pickup Check */}
           <TrampSizeSection
-            surfaceGauss={unit.surface_gauss || 0}
+            surfaceForceFactor={unit.force_factor || 0}
             airGap={airGap}
             burden={burdenSeverity}
             onBurdenChange={setBurdenSeverity}
