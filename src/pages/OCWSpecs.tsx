@@ -178,11 +178,20 @@ export default function OCWSpecs() {
   }].filter(item => item.mass !== undefined && item.mass !== null) : [];
   return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">OCW Specifications</h1>
-          <p className="text-muted-foreground">
-            Model: <span className="font-semibold">{unit.Prefix} OCW {unit.Suffix}</span>
-          </p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/ocw')}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to OCW Selector
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold mb-1">OCW Specifications</h1>
+            <p className="text-muted-foreground">
+              Model: <span className="font-semibold">{unit.Prefix} OCW {unit.Suffix}</span>
+            </p>
+          </div>
         </div>
       </div>
 

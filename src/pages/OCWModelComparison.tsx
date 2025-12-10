@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { RotateCcw, Info, Download, FileText, Plus, X, LineChart } from "lucide-react";
+import { RotateCcw, Info, Download, FileText, Plus, X, LineChart, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { 
@@ -263,22 +263,51 @@ function validateModel(requiredForce: number, modelForce: number): {
   }
 }
 
+// Interface for location state from OCW Selector
+interface OCWSelectorState {
+  beltSpeed?: number;
+  beltWidth?: number;
+  burdenDepth?: number;
+  airGap?: number;
+  ambientTemp?: number;
+  burdenSeverity?: BurdenSeverity;
+  trampWidth?: number;
+  trampLength?: number;
+  trampHeight?: number;
+}
+
 export default function OCWModelComparison() {
   const navigate = useNavigate();
-  const [beltSpeed, setBeltSpeed] = useState(2.0);
-  const [airGap, setAirGap] = useState(200);
-  const [burdenDepth, setBurdenDepth] = useState(100);
-  const [beltWidth, setBeltWidth] = useState(1200);
-  const [trampItems, setTrampItems] = useState<TrampItem[]>([DEFAULT_TRAMP]);
-  const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>('moderate');
+  const location = useLocation();
+  const passedParams = location.state as OCWSelectorState | undefined;
+  
+  // Use passed parameters as defaults, or fallback to standard defaults
+  const [beltSpeed, setBeltSpeed] = useState(passedParams?.beltSpeed ?? 2.0);
+  const [airGap, setAirGap] = useState(passedParams?.airGap ?? 200);
+  const [burdenDepth, setBurdenDepth] = useState(passedParams?.burdenDepth ?? 100);
+  const [beltWidth, setBeltWidth] = useState(passedParams?.beltWidth ?? 1200);
+  const [trampItems, setTrampItems] = useState<TrampItem[]>([{
+    ...DEFAULT_TRAMP,
+    width_mm: passedParams?.trampWidth ?? DEFAULT_TRAMP.width_mm,
+    length_mm: passedParams?.trampLength ?? DEFAULT_TRAMP.length_mm,
+    thickness_mm: passedParams?.trampHeight ?? DEFAULT_TRAMP.thickness_mm,
+  }]);
+  const [burdenSeverity, setBurdenSeverity] = useState<BurdenSeverity>(passedParams?.burdenSeverity ?? 'moderate');
   const [trampSafetyFactor, setTrampSafetyFactor] = useState(3.0);
-  const [ambientTemp, setAmbientTemp] = useState<AmbientTemp>(20);
+  const [ambientTemp, setAmbientTemp] = useState<AmbientTemp>(
+    passedParams?.ambientTemp && [20, 30, 40].includes(passedParams.ambientTemp) 
+      ? passedParams.ambientTemp as AmbientTemp 
+      : 20
+  );
   const [selectedModel, setSelectedModel] = useState<OCWModel | null>(null);
   const [ocwModels, setOcwModels] = useState<OCWModel[]>([]);
   const [showTable, setShowTable] = useState(true);
   const [showSpecsDialog, setShowSpecsDialog] = useState(false);
   const [detailedOCWData, setDetailedOCWData] = useState<any>(null);
   const [loadingSpecs, setLoadingSpecs] = useState(false);
+  
+  // Track if parameters were passed from OCW Selector
+  const hasPassedParams = !!passedParams;
   
   // Tramp item management functions
   const addTrampItem = () => {
@@ -501,11 +530,20 @@ export default function OCWModelComparison() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">OCW Model Comparison</h1>
-            <p className="text-muted-foreground mt-2">
-              Compare operating requirements against actual OCW model capabilities
-            </p>
+          <div className="flex items-center gap-4">
+            <Link to="/ocw">
+              <Button variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to OCW Selector
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold">OCW Model Comparison</h1>
+              <p className="text-muted-foreground mt-1">
+                Compare operating requirements against actual OCW model capabilities
+                {hasPassedParams && <Badge variant="secondary" className="ml-2 text-xs">Parameters from OCW Selector</Badge>}
+              </p>
+            </div>
           </div>
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-2 h-4 w-4" />

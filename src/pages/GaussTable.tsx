@@ -154,7 +154,7 @@ export default function GaussTable() {
           <Link to="/ocw">
             <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              Back to OCW Selector
             </Button>
           </Link>
           <Link to="/magnetic-decay" state={{ 
