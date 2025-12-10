@@ -812,7 +812,7 @@ const OCW = () => {
                               <Button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate('/magnetic-decay', { state: { model: `${unit.Prefix} OCW ${unit.Suffix}`, gauss: unit.surface_gauss, force: unit.force_factor }});
+                                  navigate('/gauss-table', { state: { unit }});
                                 }} 
                                 variant="outline" 
                                 size="sm"
