@@ -18,6 +18,18 @@ import { TrampSizeSection } from "@/components/TrampSizeSection";
 import { BurdenSeverity } from "@/utils/trampPickup";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Decay constants for gap-adjusted calculations
+const DECAY_GAUSS = 0.00575;
+const DECAY_FF = 0.01150;
+
+function calculateGaussAtGap(surfaceGauss: number, gap: number): number {
+  return surfaceGauss * Math.exp(-DECAY_GAUSS * gap);
+}
+
+function calculateFFAtGap(surfaceFF: number, gap: number): number {
+  return surfaceFF * Math.exp(-DECAY_FF * gap);
+}
+
 interface OCWData {
   filename: string;
   prefix?: number;
@@ -788,8 +800,8 @@ const OCW = () => {
                       <TableRow className="text-xs">
                         <TableHead className="py-2 w-10"></TableHead>
                         <TableHead className="py-2">Model n°</TableHead>
-                        <TableHead className="py-2 text-right">Gauss (G)</TableHead>
-                        <TableHead className="py-2 text-right">Force Factor</TableHead>
+                        <TableHead className="py-2 text-right">Gauss @ {airGap}mm</TableHead>
+                        <TableHead className="py-2 text-right">FF @ {airGap}mm</TableHead>
                         <TableHead className="py-2 text-right">Watts (W)</TableHead>
                         <TableHead className="py-2 text-right">Width (mm)</TableHead>
                         <TableHead className="py-2">Frame</TableHead>
@@ -821,8 +833,12 @@ const OCW = () => {
                               <Check className="inline-block ml-1 w-3 h-3 text-green-600" />
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-right">{unit.surface_gauss}</TableCell>
-                          <TableCell className="py-2 text-right">{unit.force_factor?.toLocaleString()}</TableCell>
+                          <TableCell className="py-2 text-right" title={`Surface: ${unit.surface_gauss}`}>
+                            {Math.round(calculateGaussAtGap(unit.surface_gauss || 0, airGap)).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="py-2 text-right" title={`Surface: ${unit.force_factor?.toLocaleString()}`}>
+                            {Math.round(calculateFFAtGap(unit.force_factor || 0, airGap)).toLocaleString()}
+                          </TableCell>
                           <TableCell className="py-2 text-right">{unit.watts}</TableCell>
                           <TableCell className="py-2 text-right">{unit.width}</TableCell>
                           <TableCell className="py-2">{unit.frame}</TableCell>
