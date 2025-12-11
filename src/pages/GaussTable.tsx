@@ -104,16 +104,16 @@ export default function GaussTable() {
   }, [unit]);
 
   const exportToCSV = () => {
-    const headers = ['Gap (mm)', 'Gauss A20', 'Gauss A30', 'Gauss A40', 'Gauss A45', 'FF A20 (N)', 'FF A30 (N)', 'FF A40 (N)', 'FF A45 (N)'];
+    const headers = ['Gap (mm)', 'A20 Gauss', 'A20 FF', 'A30 Gauss', 'A30 FF', 'A40 Gauss', 'A40 FF', 'A45 Gauss', 'A45 FF'];
     const rows = tableData.map(row => [
       row.gap,
       row.gauss20,
-      row.gauss30,
-      row.gauss40,
-      row.gauss45,
       row.ff20,
+      row.gauss30,
       row.ff30,
+      row.gauss40,
       row.ff40,
+      row.gauss45,
       row.ff45,
     ]);
     
@@ -232,18 +232,20 @@ export default function GaussTable() {
               <TableHeader>
                 <TableRow>
                   <TableHead rowSpan={2} className="text-center border-r">Gap (mm)</TableHead>
-                  <TableHead colSpan={4} className="text-center border-r bg-muted/30">Gauss (G)</TableHead>
-                  <TableHead colSpan={4} className="text-center bg-muted/30">Force Factor (N)</TableHead>
+                  <TableHead colSpan={2} className="text-center border-r bg-muted/30">A20</TableHead>
+                  <TableHead colSpan={2} className="text-center border-r bg-muted/30">A30</TableHead>
+                  <TableHead colSpan={2} className="text-center border-r bg-muted/30">A40</TableHead>
+                  <TableHead colSpan={2} className="text-center bg-muted/30">A45</TableHead>
                 </TableRow>
                 <TableRow>
-                  <TableHead className="text-right">A20</TableHead>
-                  <TableHead className="text-right">A30</TableHead>
-                  <TableHead className="text-right">A40</TableHead>
-                  <TableHead className="text-right border-r">A45</TableHead>
-                  <TableHead className="text-right">A20</TableHead>
-                  <TableHead className="text-right">A30</TableHead>
-                  <TableHead className="text-right">A40</TableHead>
-                  <TableHead className="text-right">A45</TableHead>
+                  <TableHead className="text-right">Gauss</TableHead>
+                  <TableHead className="text-right border-r">FF</TableHead>
+                  <TableHead className="text-right">Gauss</TableHead>
+                  <TableHead className="text-right border-r">FF</TableHead>
+                  <TableHead className="text-right">Gauss</TableHead>
+                  <TableHead className="text-right border-r">FF</TableHead>
+                  <TableHead className="text-right">Gauss</TableHead>
+                  <TableHead className="text-right">FF</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,12 +253,12 @@ export default function GaussTable() {
                   <TableRow key={row.gap} className={row.gap === 0 ? 'bg-primary/10 font-semibold' : ''}>
                     <TableCell className="text-center border-r font-medium">{row.gap}</TableCell>
                     <TableCell className="text-right">{row.gauss20.toLocaleString()}</TableCell>
+                    <TableCell className="text-right border-r">{row.ff20.toLocaleString()}</TableCell>
                     <TableCell className="text-right">{row.gauss30.toLocaleString()}</TableCell>
+                    <TableCell className="text-right border-r">{row.ff30.toLocaleString()}</TableCell>
                     <TableCell className="text-right">{row.gauss40.toLocaleString()}</TableCell>
-                    <TableCell className="text-right border-r">{row.gauss45.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{row.ff20.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{row.ff30.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{row.ff40.toLocaleString()}</TableCell>
+                    <TableCell className="text-right border-r">{row.ff40.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{row.gauss45.toLocaleString()}</TableCell>
                     <TableCell className="text-right">{row.ff45.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
