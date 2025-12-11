@@ -3,8 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, History } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const updates = [
+export const updates = [
   {
     version: "3.12.0",
     date: "2025-12-11",
@@ -65,6 +66,43 @@ const updates = [
     ]
   },
 ];
+
+// Reusable component for displaying updates content (used in dialog)
+export function UpdatesContent() {
+  return (
+    <ScrollArea className="max-h-[60vh]">
+      <div className="space-y-4 pr-4">
+        {updates.map((update) => (
+          <Card key={update.version}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    Version {update.version}
+                    <Badge variant={update.type === "minor" ? "default" : "secondary"} className="text-xs">
+                      {update.type}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-xs">{update.date}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ul className="space-y-1 text-sm">
+                {update.changes.map((change, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>{change}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
 
 export default function Updates() {
   return (

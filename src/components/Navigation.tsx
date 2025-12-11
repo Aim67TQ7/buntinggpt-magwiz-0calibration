@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart, TrendingUp, History } from "lucide-react";
+import { Calculator, BarChart3, Zap, Home, Settings, MessageSquare, Database, GitCompare, LineChart, TrendingUp } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { updates, UpdatesContent } from "@/pages/Updates";
 
 export const Navigation = () => {
   const location = useLocation();
@@ -11,6 +13,8 @@ export const Navigation = () => {
     if (path !== "/" && location.pathname.startsWith(path)) return true;
     return false;
   };
+
+  const latestVersion = updates[0]?.version || "3.12.0";
 
   const navItems = [
     {
@@ -28,11 +32,6 @@ export const Navigation = () => {
       label: "Model Comparison",
       icon: TrendingUp,
     },
-    {
-      path: "/updates",
-      label: "Updates",
-      icon: History,
-    },
   ];
 
   return (
@@ -44,7 +43,20 @@ export const Navigation = () => {
               <Home className="h-6 w-6" />
               <div className="flex flex-col">
                 <span className="font-bold text-lg">MagWiz 3</span>
-                <span className="text-xs text-muted-foreground">3.12.0</span>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button className="text-xs text-muted-foreground hover:text-primary transition-colors text-left cursor-pointer">
+                      {latestVersion}
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>MagWiz 3 Updates</DialogTitle>
+                      <DialogDescription>Version history and release notes</DialogDescription>
+                    </DialogHeader>
+                    <UpdatesContent />
+                  </DialogContent>
+                </Dialog>
               </div>
             </Link>
           </div>
