@@ -10,12 +10,26 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
+// Decay constants for gap-adjusted calculations
+const DECAY_GAUSS = 0.00575;
+const DECAY_FF = 0.01150;
+
+function calculateGaussAtGap(surfaceGauss: number, gap: number): number {
+  return surfaceGauss * Math.exp(-DECAY_GAUSS * gap);
+}
+
+function calculateFFAtGap(surfaceFF: number, gap: number): number {
+  return surfaceFF * Math.exp(-DECAY_FF * gap);
+}
+
 interface OCWRecommendation {
   model: string;
   Prefix: number;
   Suffix: number;
   surface_gauss: number;
   force_factor: number;
+  gauss_at_gap: number;
+  force_factor_at_gap: number;
   watts: number;
   width: number;
   frame: string;
@@ -155,13 +169,15 @@ export function MagneticSeparatorCalculator() {
         return a.Prefix - b.Prefix;
       });
       
-      // Map to recommendation format
+      // Map to recommendation format with gap-adjusted values
       const allRecommendations = sorted.map((unit: any) => ({
         model: unit.model,
         Prefix: unit.Prefix,
         Suffix: unit.Suffix,
         surface_gauss: unit.surface_gauss,
         force_factor: unit.force_factor,
+        gauss_at_gap: Math.round(calculateGaussAtGap(unit.surface_gauss || 0, magnetGap)),
+        force_factor_at_gap: Math.round(calculateFFAtGap(unit.force_factor || 0, magnetGap)),
         watts: unit.watts,
         width: unit.width,
         frame: unit.frame
@@ -478,8 +494,8 @@ export function MagneticSeparatorCalculator() {
                       {unit.Prefix} OCW {unit.Suffix}
                     </div>
                     <div className="text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-x-3">
-                      <span>Gauss: {unit.surface_gauss}</span>
-                      <span>Force: {unit.force_factor}</span>
+                      <span>Gauss: {unit.gauss_at_gap?.toLocaleString()} @ {magnetGap}mm</span>
+                      <span>Force: {unit.force_factor_at_gap?.toLocaleString()} @ {magnetGap}mm</span>
                       <span>Watts: {unit.watts}</span>
                       <span>Width: {unit.width}mm</span>
                     </div>
