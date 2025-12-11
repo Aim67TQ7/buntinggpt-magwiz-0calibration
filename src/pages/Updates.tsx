@@ -6,9 +6,19 @@ import { Link } from "react-router-dom";
 
 const updates = [
   {
-    version: "3.10.1",
+    version: "3.12.0",
+    date: "2025-12-11",
+    type: "minor",
+    changes: [
+      "Fixed toggle save functionality - now works without requiring OCW_magwiz data",
+      "Improved delete logic for saved configurations",
+      "Enhanced error handling for configuration save/remove operations",
+    ]
+  },
+  {
+    version: "3.11.0",
     date: "2025-12-10",
-    type: "patch",
+    type: "minor",
     changes: [
       "Redesigned OCW Selector with side-by-side layout (inputs left, results right)",
       "Added toggle checkbox to save configurations for Model Comparison",
