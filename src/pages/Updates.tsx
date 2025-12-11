@@ -7,6 +7,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.13.0",
+    date: "2025-12-11",
+    type: "minor",
+    changes: [
+      "Fixed Gauss and Force Factor display - now shows values calculated at operating gap, not surface values",
+      "Aligned calculations with legacy MagWiz application behavior",
+      "Values now correctly decay based on specified air gap distance"
+    ]
+  },
+  {
     version: "3.12.0",
     date: "2025-12-11",
     type: "minor",
