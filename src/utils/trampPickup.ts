@@ -206,11 +206,13 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   // Step 1: Material factor
   const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
 
-  // Step 2: Loss factors
-  const speedLoss = 1 - Math.min(beltSpeed_mps / 3.0, 0.35);
-  // Embedding loss represents tramp burial in burden (not distance scaling)
-  const embeddingLoss = 1 - Math.min(Math.pow(burden_mm / 500, 0.6), 0.35);
-  const waterPenalty = 1 - Math.min(waterPercent / 20, 0.25);
+  // Step 2: Loss factors (adjusted caps/bases for responsive slider ranges)
+  // Speed: max 50% penalty at 4+ m/s (previously capped at 1.05 m/s)
+  const speedLoss = 1 - Math.min(beltSpeed_mps / 8.0, 0.50);
+  // Embedding loss: max 50% penalty at ~400mm+ burden (previously capped at ~90mm)
+  const embeddingLoss = 1 - Math.min(Math.pow(burden_mm / 800, 0.7), 0.50);
+  // Water: max 40% penalty at 20%+ moisture
+  const waterPenalty = 1 - Math.min(waterPercent / 50, 0.40);
 
   // Step 3: Shape penalty
   const major = Math.max(width_mm, length_mm);
