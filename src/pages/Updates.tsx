@@ -7,6 +7,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.25.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Calibrated FF-based extraction against legacy pack (15 OCW 15 @ 200mm, coal)",
+      "New formula: RequiredFF = K × momentFactor × envMultiplier × typeMultiplier",
+      "Added explicit partType field for all tramps (Generic/Nut/Bolt/Plate/Auto-detect)",
+      "Custom items default to Generic - no name inference unless Auto-detect selected",
+      "Per-orientation NUT_FLAT_MULT (×1.3) applied only when height is smallest dimension",
+      "Capped environmental penalties: burden ≤2.5×, speed ≤2.0×, water ≤2.5×",
+      "Added row-level debug popover showing full calibration breakdown",
+      "100% legacy targets treated as ≥99% constraints (ratio ≥ 2.0)"
+    ]
+  },
+  {
     version: "3.24.0",
     date: "2025-12-12",
     type: "minor",

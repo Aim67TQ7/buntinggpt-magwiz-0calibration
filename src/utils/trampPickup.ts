@@ -175,6 +175,18 @@ export const MATERIAL_FACTORS: Record<string, number> = {
   "msw": 0.50,
 };
 
+// -----------------------
+// CALIBRATION CONSTANTS
+// Tuned against legacy: 15 OCW 15 @ 200mm gap, coal (ModelFF=2667)
+// -----------------------
+const CALIBRATION_K = 1.65;      // Global scaling constant
+const NUT_MULT = 2.2;            // Nuts: hollow geometry, poor contact
+const BOLT_MULT = 0.6;           // Bolts: elongated but easier
+const PLATE_MULT = 0.5;          // Plates: large flat surface
+const NUT_FLAT_MULT = 1.3;       // Extra penalty for nuts when height is smallest
+
+export type PartType = 'generic' | 'nut' | 'bolt' | 'plate' | 'auto-detect';
+
 export interface TrampExtractionInput {
   width_mm: number;
   length_mm: number;
@@ -183,29 +195,24 @@ export interface TrampExtractionInput {
   burden_mm?: number;          // default 0 (embedding depth)
   waterPercent?: number;       // default 0
   material?: string;           // default "coal"
-  description?: string;        // for nut/bolt detection
-  partType?: 'generic' | 'nut' | 'bolt' | 'plate';  // explicit part type (takes precedence over name detection)
+  description?: string;        // only used for auto-detect
+  partType?: PartType;         // explicit part type (no name inference unless 'auto-detect')
 }
 
 export interface TrampExtractionResult {
   requiredForceFactor: number;  // Primary metric for extraction calculation
   momentFactor: number;         // Debug: mass × √volume
-  difficultyMultiplier: number; // Debug: composite difficulty from conditions
-  stabilityFactor: number;      // Debug: contact stability (nut/bolt/plate)
-  effectiveType: 'generic' | 'nut' | 'bolt' | 'plate';  // Debug: detected or specified type
+  envMultiplier: number;        // Debug: environmental difficulty multiplier
+  typeMultiplier: number;       // Debug: type-based multiplier (nut/bolt/plate)
+  effectiveType: 'generic' | 'nut' | 'bolt' | 'plate';  // Debug: final type used
+  isNutFlat: boolean;           // Debug: whether NUT_FLAT_MULT was applied
 }
 
 /**
- * Calculate baseline required Gauss for tramp metal pickup using engineering heuristic model.
- * This is a baseline value independent of air gap - compare with gap-adjusted Model Gauss.
- * Uses material factors, speed loss, embedding loss, water penalty, and shape penalty.
- * @param input - Tramp extraction input parameters
- * @returns Baseline Required Gauss (integer)
- */
-/**
  * Calculate Required Force Factor for tramp metal pickup.
- * This is the PRIMARY metric for extraction calculation.
- * Formula: requiredFF = momentFactor × difficultyMultiplier × stabilityFactor
+ * Calibrated against legacy: 15 OCW 15 @ 200mm gap, coal (ModelFF=2667)
+ * 
+ * Formula: RequiredFF = K × momentFactor × envMultiplier × typeMultiplier
  * 
  * Extraction ratio = modelForceFactorAtGap / requiredForceFactor
  * 
@@ -222,69 +229,65 @@ export function calculateRequiredForceFactor(input: TrampExtractionInput): Tramp
   const waterPercent = Math.min(Math.max(input.waterPercent ?? 0, 0), 100);
   const material = (input.material ?? "coal").toLowerCase();
 
-  // Step 1: Material factor
-  const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
-
-  // Step 2: Loss factors (adjusted caps/bases for responsive slider ranges)
-  const speedLoss = 1 - Math.min(beltSpeed_mps / 8.0, 0.50);
-  const embeddingLoss = 1 - Math.min(Math.pow(burden_mm / 800, 0.7), 0.50);
-  const waterPenalty = 1 - Math.min(waterPercent / 50, 0.40);
-
-  // Step 3: Shape penalty
-  const major = Math.max(width_mm, length_mm);
-  const minor = Math.min(width_mm, length_mm);
-  const aspectRatio = major / Math.max(1, minor);
-  const thinness = height_mm / Math.max(1, minor);
-  
-  let shapePenalty = 0.9 
-    - 0.25 * (aspectRatio - 1) 
-    - 0.3 * (thinness < 0.2 ? (0.2 - thinness) : 0);
-  shapePenalty = Math.max(0.25, Math.min(1.0, shapePenalty));
-
-  // Step 4: Magnetic moment proxy
+  // Step 1: Moment factor (physics-based)
   const volume_cm3 = (width_mm * length_mm * height_mm) / 1000;
   const mass_g = volume_cm3 * 7.85;
   const momentFactor = mass_g * Math.sqrt(Math.max(0.0001, volume_cm3));
 
-  // Step 5: Composite difficulty - INVERT ease factors to get difficulty
-  const easeFactor = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
-  const difficultyMultiplier = 1 / Math.max(easeFactor, 0.05);
+  // Step 2: Environmental multiplier with CAPPED penalties (enforces monotonicity)
+  // Higher burden/speed/water → higher envMultiplier → higher requiredFF → lower extraction
+  const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
+  const burdenPenalty = Math.min(1 + burden_mm / 300, 2.5);   // Cap at 2.5×
+  const speedPenalty = Math.min(1 + beltSpeed_mps / 3, 2.0);  // Cap at 2.0×
+  const waterPenalty = Math.min(1 + waterPercent / 15, 2.5);  // Cap at 2.5×
+  const envMultiplier = (1 / materialFactor) * burdenPenalty * speedPenalty * waterPenalty;
 
-  // Step 6: Contact Stability Factors
-  // Use explicit partType if provided, otherwise fall back to name detection
+  // Step 3: Determine effective type
+  // Only use name-based detection if partType is 'auto-detect'
   const partType = input.partType ?? 'generic';
   const descLower = (input.description ?? "").toLowerCase();
-  const minFace = Math.min(width_mm, length_mm);
-  const isThinPlate = height_mm < 0.15 * minFace;
-
-  // Determine effective type: explicit partType takes precedence
-  let effectiveType: 'generic' | 'nut' | 'bolt' | 'plate' = partType;
-  if (partType === 'generic') {
-    // Fall back to name detection for backwards compat
+  
+  let effectiveType: 'generic' | 'nut' | 'bolt' | 'plate' = 'generic';
+  if (partType === 'auto-detect') {
+    // Name-based inference ONLY for auto-detect
     if (descLower.includes("nut")) effectiveType = 'nut';
     else if (descLower.includes("bolt")) effectiveType = 'bolt';
-    else if (isThinPlate) effectiveType = 'plate';
+    else if (descLower.includes("plate")) effectiveType = 'plate';
+  } else if (partType !== 'generic') {
+    effectiveType = partType as 'nut' | 'bolt' | 'plate';
   }
 
-  // Apply contact stability factor based on effective type
-  let stabilityFactor = 1.0;
+  // Step 4: Type multiplier with per-orientation NUT_FLAT_MULT
+  let typeMultiplier = 1.0;
+  let isNutFlat = false;
+  
   switch (effectiveType) {
-    case 'nut': stabilityFactor = 1.8; break;
-    case 'bolt': stabilityFactor = 1.3; break;
-    case 'plate': stabilityFactor = 1.5; break;
-    // 'generic' = 1.0, no penalty
+    case 'nut':
+      typeMultiplier = NUT_MULT;
+      // Apply NUT_FLAT_MULT only if THIS orientation's height is smallest dimension
+      if (height_mm <= Math.min(width_mm, length_mm)) {
+        typeMultiplier *= NUT_FLAT_MULT;
+        isNutFlat = true;
+      }
+      break;
+    case 'bolt': 
+      typeMultiplier = BOLT_MULT; 
+      break;
+    case 'plate': 
+      typeMultiplier = PLATE_MULT; 
+      break;
   }
 
-  // Step 7: Calculate Required Force Factor (no calibration constant - set to 1.0)
-  // requiredFF = momentFactor × difficultyMultiplier × stabilityFactor
-  const requiredForceFactor = momentFactor * difficultyMultiplier * stabilityFactor;
+  // Step 5: Calculate Required Force Factor
+  const requiredForceFactor = CALIBRATION_K * momentFactor * envMultiplier * typeMultiplier;
 
   return {
     requiredForceFactor,
     momentFactor,
-    difficultyMultiplier,
-    stabilityFactor,
-    effectiveType
+    envMultiplier,
+    typeMultiplier,
+    effectiveType,
+    isNutFlat
   };
 }
 

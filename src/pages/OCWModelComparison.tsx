@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Trash2, Plus, X } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, X, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   calculateGaussAtGap,
   calculateForceFactorAtGap,
   calculateRequiredForceFactor,
-  MATERIAL_FACTORS
+  MATERIAL_FACTORS,
+  PartType
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,22 +31,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-// Standard tramp metal presets
+// Standard tramp metal presets with explicit partType
 interface TrampPreset {
   id: string;
   name: string;
   w: number;
   l: number;
   h: number;
+  partType: PartType;
 }
 
 const STANDARD_TRAMPS: TrampPreset[] = [
-  { id: "cube-25", name: "25mm Cube", w: 25, l: 25, h: 25 },
-  { id: "m12-nut", name: "M12 Nut", w: 19, l: 19, h: 6 },
-  { id: "m16-bolt", name: "M16×75mm Bolt", w: 24, l: 24, h: 75 },
-  { id: "m18-nut", name: "M18 Nut", w: 27, l: 27, h: 9 },
-  { id: "plate-6mm", name: "6mm Plate", w: 100, l: 100, h: 6 },
+  { id: "cube-25", name: "25mm Cube", w: 25, l: 25, h: 25, partType: 'generic' },
+  { id: "m12-nut", name: "M12 Nut", w: 19, l: 19, h: 6, partType: 'nut' },
+  { id: "m16-bolt", name: "M16×75mm Bolt", w: 24, l: 24, h: 75, partType: 'bolt' },
+  { id: "m18-nut", name: "M18 Nut", w: 27, l: 27, h: 9, partType: 'nut' },
+  { id: "plate-6mm", name: "6mm Plate", w: 100, l: 100, h: 6, partType: 'plate' },
 ];
 
 // Material options with display names
@@ -131,10 +138,16 @@ export default function OCWModelComparison() {
   const [loading, setLoading] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   
-  // Custom tramps
+  // Custom tramps - with explicit partType defaulting to 'generic'
   const [customTramps, setCustomTramps] = useState<TrampPreset[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newTramp, setNewTramp] = useState({ name: '', w: 50, l: 50, h: 10 });
+  const [newTramp, setNewTramp] = useState<{ name: string; w: number; l: number; h: number; partType: PartType }>({ 
+    name: '', 
+    w: 50, 
+    l: 50, 
+    h: 10, 
+    partType: 'generic' 
+  });
   
   // Combine standard and custom tramps
   const allTramps = useMemo(() => [...STANDARD_TRAMPS, ...customTramps], [customTramps]);
@@ -203,6 +216,7 @@ export default function OCWModelComparison() {
       const orientations = getOrientationPermutations(tramp.w, tramp.l, tramp.h);
       
       // Calculate required Force Factor for each orientation
+      // Pass partType explicitly - NUT_FLAT_MULT applied per-orientation based on height
       const results = orientations.map(dims => {
         return calculateRequiredForceFactor({
           width_mm: dims.w,
@@ -212,7 +226,8 @@ export default function OCWModelComparison() {
           burden_mm: burdenMm,
           waterPercent: waterPercent,
           material: material,
-          description: tramp.name  // For nut/bolt detection
+          description: tramp.name,
+          partType: tramp.partType  // Pass explicit part type
         });
       });
       
@@ -232,13 +247,22 @@ export default function OCWModelComparison() {
         requiredFF: Math.round(maxRequiredFF),
         ratio,
         extractionPercent,
-        // Debug info
+        // Full debug info for calibration instrumentation
         debugInfo: {
           momentFactor: worstCaseResult.momentFactor,
-          difficultyMultiplier: worstCaseResult.difficultyMultiplier,
-          stabilityFactor: worstCaseResult.stabilityFactor,
+          envMultiplier: worstCaseResult.envMultiplier,
+          typeMultiplier: worstCaseResult.typeMultiplier,
           effectiveType: worstCaseResult.effectiveType,
-          worstCaseOrientation: orientations[worstCaseIdx]
+          isNutFlat: worstCaseResult.isNutFlat,
+          worstCaseIdx,
+          worstCaseOrientation: orientations[worstCaseIdx],
+          // All 3 orientations for detailed debug
+          allOrientations: orientations.map((dims, i) => ({
+            dims: `${dims.w}×${dims.l}×${dims.h}`,
+            requiredFF: Math.round(results[i].requiredForceFactor),
+            typeMultiplier: results[i].typeMultiplier,
+            isNutFlat: results[i].isNutFlat
+          }))
         }
       };
     });
@@ -284,7 +308,7 @@ export default function OCWModelComparison() {
     }
   };
   
-  // Add custom tramp
+  // Add custom tramp with explicit partType
   const handleAddCustomTramp = () => {
     if (!newTramp.name.trim()) {
       toast({ title: "Error", description: "Please enter a name", variant: "destructive" });
@@ -292,8 +316,8 @@ export default function OCWModelComparison() {
     }
     
     const id = `custom-${Date.now()}`;
-    setCustomTramps(prev => [...prev, { ...newTramp, id }]);
-    setNewTramp({ name: '', w: 50, l: 50, h: 10 });
+    setCustomTramps(prev => [...prev, { ...newTramp, id, partType: newTramp.partType }]);
+    setNewTramp({ name: '', w: 50, l: 50, h: 10, partType: 'generic' });
     setShowAddForm(false);
   };
   
@@ -512,8 +536,8 @@ export default function OCWModelComparison() {
                     {/* Add Custom Tramp Form */}
                     {showAddForm && (
                       <div className="mb-4 p-3 border rounded-lg bg-muted/30">
-                        <div className="flex items-end gap-3">
-                          <div className="flex-1">
+                        <div className="flex items-end gap-3 flex-wrap">
+                          <div className="flex-1 min-w-[120px]">
                             <Label className="text-xs">Name</Label>
                             <Input
                               value={newTramp.name}
@@ -549,6 +573,27 @@ export default function OCWModelComparison() {
                               className="h-8 text-sm"
                             />
                           </div>
+                          <div className="w-28">
+                            <Label className="text-xs">Part Type</Label>
+                            <Select 
+                              value={newTramp.partType} 
+                              onValueChange={(v) => setNewTramp(prev => ({ 
+                                ...prev, 
+                                partType: v as PartType 
+                              }))}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="generic">Generic</SelectItem>
+                                <SelectItem value="nut">Nut</SelectItem>
+                                <SelectItem value="bolt">Bolt</SelectItem>
+                                <SelectItem value="plate">Plate</SelectItem>
+                                <SelectItem value="auto-detect">Auto-detect</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Button size="sm" onClick={handleAddCustomTramp}>Add</Button>
                           <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>
                             <X className="w-4 h-4" />
@@ -574,9 +619,38 @@ export default function OCWModelComparison() {
                           {trampResults.map((result) => (
                             <TableRow key={result.id}>
                               <TableCell className="text-sm font-medium">
-                                <div>{result.name}</div>
+                                <div className="flex items-center gap-1">
+                                  {result.name}
+                                  {/* Debug Info Popover */}
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-5 w-5 ml-1">
+                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 text-xs font-mono" side="right">
+                                      <div className="space-y-1">
+                                        <div><strong>Part Type:</strong> {result.debugInfo.effectiveType} {result.debugInfo.isNutFlat && '(flat)'}</div>
+                                        <div><strong>Moment Factor:</strong> {result.debugInfo.momentFactor.toFixed(2)}</div>
+                                        <div><strong>Env Multiplier:</strong> {result.debugInfo.envMultiplier.toFixed(3)}</div>
+                                        <div><strong>Type Multiplier:</strong> {result.debugInfo.typeMultiplier.toFixed(2)} {result.debugInfo.isNutFlat && '(+NUT_FLAT)'}</div>
+                                        <div><strong>Required FF:</strong> {result.requiredFF.toLocaleString()}</div>
+                                        <div><strong>Ratio:</strong> {result.ratio.toFixed(3)}</div>
+                                        <div><strong>Predicted %:</strong> {result.extractionPercent}%</div>
+                                        <div className="pt-1 border-t mt-1">
+                                          <strong>Orientations:</strong>
+                                          {result.debugInfo.allOrientations.map((o, i) => (
+                                            <div key={i} className={i === result.debugInfo.worstCaseIdx ? 'text-destructive font-bold' : ''}>
+                                              {o.dims} → FF:{o.requiredFF.toLocaleString()} (×{o.typeMultiplier.toFixed(1)}) {o.isNutFlat && '+flat'}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
                                 <div className="text-[10px] text-muted-foreground">
-                                  {result.debugInfo.effectiveType !== 'generic' && `(${result.debugInfo.effectiveType} ×${result.debugInfo.stabilityFactor})`}
+                                  {result.debugInfo.effectiveType !== 'generic' && `(${result.debugInfo.effectiveType} ×${result.debugInfo.typeMultiplier.toFixed(1)})`}
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs font-mono">
