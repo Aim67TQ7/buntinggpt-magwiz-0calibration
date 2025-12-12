@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, LineChart } from "lucide-react";
+import { ArrowLeft, Download, LineChart, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateGaussAtGap, calculateForceFactorAtGap } from "@/utils/trampPickup";
-
+import { downloadGaussTablePDF } from "@/components/GaussTablePDF";
 // Temperature scaling factors
 const TEMP_CONFIGS = {
   20: { label: 'A20', gaussScale: 1.000, ffScale: 1.000 },
@@ -165,6 +165,10 @@ export default function GaussTable() {
               Decay Chart
             </Button>
           </Link>
+          <Button variant="outline" onClick={() => downloadGaussTablePDF(unit, tableData)}>
+            <FileText className="w-4 h-4 mr-2" />
+            Export PDF
+          </Button>
           <Button onClick={exportToCSV}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
