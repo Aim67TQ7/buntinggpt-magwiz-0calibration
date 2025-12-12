@@ -7,8 +7,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
-    version: "3.15.0",
+    version: "3.16.0",
     date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Restructured OCW Model Comparison page with saved models on left panel and tramp extraction table on right",
+      "Added standard tramp metal presets (25mm Cube, M12 Nut, M16×75mm Bolt, M18 Nut, 6mm Plate)",
+      "Auto-generates 3 orientations (flat, edge, corner) for each tramp item with rotated dimensions",
+      "Shows extraction percentage confidence for each tramp/orientation combination",
+      "Displays gap-adjusted Gauss and Force Factor values used in calculations",
+      "Added ability to add custom tramp items with user-defined dimensions"
+    ]
+  },
+  {
+    version: "3.15.0",
+    date: "2025-12-11",
     type: "minor",
     changes: [
       "Geometry-based magnetic decay calculations - decay constants now derived from backplate thickness",
