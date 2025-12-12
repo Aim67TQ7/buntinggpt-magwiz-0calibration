@@ -280,28 +280,6 @@ const GaussTablePDF: React.FC<GaussTablePDFProps> = ({ unit, tableData }) => {
                 </View>
               </View>
 
-              {/* Temperature Scaling Reference */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>TEMPERATURE SCALING</Text>
-                <View style={styles.tempScaleRow}>
-                  <View style={styles.tempBox}>
-                    <Text style={styles.tempLabel}>A20</Text>
-                    <Text style={styles.tempValue}>G: 100% | FF: 100%</Text>
-                  </View>
-                  <View style={styles.tempBox}>
-                    <Text style={styles.tempLabel}>A30</Text>
-                    <Text style={styles.tempValue}>G: 95.5% | FF: 91.2%</Text>
-                  </View>
-                  <View style={styles.tempBox}>
-                    <Text style={styles.tempLabel}>A40</Text>
-                    <Text style={styles.tempValue}>G: 90.5% | FF: 81.8%</Text>
-                  </View>
-                  <View style={[styles.tempBox, { marginRight: 0 }]}>
-                    <Text style={styles.tempLabel}>A45</Text>
-                    <Text style={styles.tempValue}>G: 87.7% | FF: 76.9%</Text>
-                  </View>
-                </View>
-              </View>
             </>
           )}
 
