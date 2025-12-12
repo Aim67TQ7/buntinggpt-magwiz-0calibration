@@ -7,6 +7,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.18.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "New tramp metal extraction calculation based on engineering heuristic model",
+      "Added material type selector with 11 material difficulty factors",
+      "Added water content and belt speed parameters to extraction calculation",
+      "Replaced orientation variants with shape penalty based on aspect ratio and thinness",
+      "Required Gauss now calculated using speed loss, burden loss, water penalty, and shape penalty"
+    ]
+  },
+  {
     version: "3.17.0",
     date: "2025-12-12",
     type: "minor",

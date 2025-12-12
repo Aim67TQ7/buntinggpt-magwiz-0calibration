@@ -157,18 +157,87 @@ export function calculateSurfaceForceFactor(surfaceGauss: number, backplate_mm: 
   return 1.725 * Math.pow(surfaceGauss, 2) / backplate_mm;
 }
 
+// -----------------------
+// Material Difficulty Factors
+// For tramp extraction calculation
+// -----------------------
+export const MATERIAL_FACTORS: Record<string, number> = {
+  "coal": 0.90,
+  "limestone": 0.75,
+  "gravel": 0.70,
+  "sand": 0.55,
+  "slag": 0.50,
+  "wood": 0.85,
+  "aggregate": 0.70,
+  "glass": 0.60,
+  "c&d": 0.65,
+  "compost": 0.60,
+  "msw": 0.50,
+};
+
+export interface TrampExtractionInput {
+  width_mm: number;
+  length_mm: number;
+  height_mm: number;
+  beltSpeed_mps?: number;      // default 1.5
+  burden_mm?: number;          // default 0
+  waterPercent?: number;       // default 0
+  material?: string;           // default "coal"
+}
+
 /**
- * Calculate required Gauss at gap for tramp metal pickup
- * Reverses the force calculation to find minimum Gauss needed for reliable pickup
- * @param widthMm - Tramp width in mm
- * @param lengthMm - Tramp length in mm  
- * @param heightMm - Tramp height in mm
- * @param orientation - Tramp orientation
- * @param burden - Burden severity
- * @param gap_mm - Air gap in mm
- * @param backplate_mm - Backplate thickness in mm
- * @param safetyFactor - Safety factor (default 3.0)
- * @returns Required Gauss at the specified gap for pickup
+ * Calculate required Gauss at gap for tramp metal pickup using engineering heuristic model.
+ * Uses material factors, speed loss, burden loss, water penalty, and shape penalty.
+ * @param input - Tramp extraction input parameters
+ * @returns Required Gauss at gap (integer)
+ */
+export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
+  // Clamp/default inputs
+  const width_mm = Math.max(input.width_mm, 0.001);
+  const length_mm = Math.max(input.length_mm, 0.001);
+  const height_mm = Math.max(input.height_mm, 0.001);
+  const beltSpeed_mps = Math.max(input.beltSpeed_mps ?? 1.5, 0);
+  const burden_mm = Math.max(input.burden_mm ?? 0, 0);
+  const waterPercent = Math.min(Math.max(input.waterPercent ?? 0, 0), 100);
+  const material = (input.material ?? "coal").toLowerCase();
+
+  // Step 1: Material factor
+  const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
+
+  // Step 2: Loss factors
+  const speedLoss = 1 - Math.min(beltSpeed_mps / 3.0, 0.35);
+  const burdenLoss = 1 - Math.min(Math.pow(burden_mm / 500, 0.6), 0.6);
+  const waterPenalty = 1 - Math.min(waterPercent / 20, 0.25);
+
+  // Step 3: Shape penalty
+  const major = Math.max(width_mm, length_mm);
+  const minor = Math.min(width_mm, length_mm);
+  const aspectRatio = major / Math.max(1, minor);
+  const thinness = height_mm / Math.max(1, minor);
+  
+  let shapePenalty = 0.9 
+    - 0.25 * (aspectRatio - 1) 
+    - 0.3 * (thinness < 0.2 ? (0.2 - thinness) : 0);
+  shapePenalty = Math.max(0.25, Math.min(1.0, shapePenalty)); // clamp
+
+  // Step 4: Magnetic moment proxy
+  const volume_cm3 = (width_mm * length_mm * height_mm) / 1000;
+  const mass_g = volume_cm3 * 7.85;
+  const momentFactor = mass_g * Math.sqrt(Math.max(0.0001, volume_cm3));
+
+  // Step 5: Composite difficulty
+  const difficultyModifier = shapePenalty * materialFactor * burdenLoss * speedLoss * waterPenalty;
+  const forceFactor = momentFactor * difficultyModifier;
+
+  // Step 6: Map to Required Gauss
+  const gradientReq = forceFactor > 0 ? Math.pow(forceFactor, 0.33) : 0;
+  const requiredGauss = 30 * gradientReq + 70;
+
+  return Math.round(requiredGauss);
+}
+
+/**
+ * @deprecated Use calculateRequiredGaussV2 instead - this is the legacy force-based calculation
  */
 export function calculateRequiredGaussForPickup(
   widthMm: number,
