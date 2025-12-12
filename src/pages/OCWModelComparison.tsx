@@ -190,7 +190,6 @@ export default function OCWModelComparison() {
         height_mm: tramp.h,
         beltSpeed_mps: beltSpeed,
         burden_mm: burdenMm,
-        gap_mm: airGap,  // Pass air gap for distance scaling
         waterPercent: waterPercent,
         material: material
       });
@@ -506,7 +505,7 @@ export default function OCWModelComparison() {
                           <TableRow className="bg-muted/50">
                             <TableHead className="w-[160px] text-xs font-semibold">Description</TableHead>
                             <TableHead className="w-[120px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
-                            <TableHead className="w-[120px] text-xs font-semibold text-right">Reqd Gauss @ {airGap}mm</TableHead>
+                            <TableHead className="w-[120px] text-xs font-semibold text-right">Reqd Gauss (Baseline)</TableHead>
                             <TableHead className="w-[100px] text-xs font-semibold text-right">Model Gauss</TableHead>
                             <TableHead className="w-[100px] text-xs font-semibold text-right">Extraction</TableHead>
                             <TableHead className="w-[40px]"></TableHead>
