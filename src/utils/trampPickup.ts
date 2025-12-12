@@ -158,6 +158,57 @@ export function calculateSurfaceForceFactor(surfaceGauss: number, backplate_mm: 
 }
 
 /**
+ * Calculate required Gauss at gap for tramp metal pickup
+ * Reverses the force calculation to find minimum Gauss needed for reliable pickup
+ * @param widthMm - Tramp width in mm
+ * @param lengthMm - Tramp length in mm  
+ * @param heightMm - Tramp height in mm
+ * @param orientation - Tramp orientation
+ * @param burden - Burden severity
+ * @param gap_mm - Air gap in mm
+ * @param backplate_mm - Backplate thickness in mm
+ * @param safetyFactor - Safety factor (default 3.0)
+ * @returns Required Gauss at the specified gap for pickup
+ */
+export function calculateRequiredGaussForPickup(
+  widthMm: number,
+  lengthMm: number,
+  heightMm: number,
+  orientation: TrampOrientation,
+  burden: BurdenSeverity,
+  gap_mm: number,
+  backplate_mm: number,
+  safetyFactor: number = 3.0
+): number {
+  const STEEL_DENSITY = 7850; // kg/m³
+  const g = 9.81;
+  
+  // Calculate required force
+  const volume_m3 = (widthMm / 1000) * (lengthMm / 1000) * (heightMm / 1000);
+  const mass_kg = volume_m3 * STEEL_DENSITY;
+  const weight_N = mass_kg * g;
+  
+  const oriFactor = orientationFactor(orientation);
+  const burFactor = burdenFactor(burden);
+  const requiredForce = weight_N * oriFactor * burFactor * safetyFactor;
+  
+  // Get decay constants
+  const kFF = getDecayForceFactor(backplate_mm);
+  const kGauss = getDecayGauss(backplate_mm);
+  
+  // Required FF at surface = requiredForce / e^(-k * gap)
+  const requiredSurfaceFF = requiredForce / Math.exp(-kFF * gap_mm);
+  
+  // Reverse the FF formula: FF₀ = 1.725 × G₀² / BP → G₀ = √(FF₀ × BP / 1.725)
+  const requiredSurfaceGauss = Math.sqrt(requiredSurfaceFF * backplate_mm / 1.725);
+  
+  // Gauss at gap using decay
+  const requiredGaussAtGap = requiredSurfaceGauss * Math.exp(-kGauss * gap_mm);
+  
+  return requiredGaussAtGap;
+}
+
+/**
  * Calculate Gauss at a specific gap distance
  * Formula: Gauss(gap) = G₀ × e^(-K_gauss × gap)
  * @param surfaceGauss - Surface Gauss value (G₀)
