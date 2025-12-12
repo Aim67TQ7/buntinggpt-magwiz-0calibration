@@ -100,6 +100,16 @@ function getExtractionPercent(ratio: number): number {
   return Math.max(0, Math.round(ratio * 50));
 }
 
+// Legacy 3-orientation permutations: height-axis swaps
+// (W,L,H), (W,H,L), (H,L,W) where H becomes the new W in the third permutation
+function getOrientationPermutations(w: number, l: number, h: number) {
+  return [
+    { w, l, h },           // Original: (W, L, H)
+    { w, l: h, h: l },     // Swap L/H: (W, H, L)  
+    { w: h, l, h: w },     // H becomes W: (H, L, W)
+  ];
+}
+
 export default function OCWModelComparison() {
   const location = useLocation();
   const { toast } = useToast();
@@ -179,32 +189,51 @@ export default function OCWModelComparison() {
     };
   }, [selectedModel, airGap]);
   
-  // Calculate extraction results for each tramp
+  // Calculate extraction results for each tramp (with 3 orientation permutations)
   const trampResults = useMemo(() => {
     if (!selectedModel || !modelValues) return [];
     
     return allTramps.map(tramp => {
-      const requiredGauss = calculateRequiredGaussV2({
-        width_mm: tramp.w,
-        length_mm: tramp.l,
-        height_mm: tramp.h,
-        beltSpeed_mps: beltSpeed,
-        burden_mm: burdenMm,
-        waterPercent: waterPercent,
-        material: material
+      // Get 3 legacy orientation permutations: (W,L,H), (W,H,L), (H,L,W)
+      const orientations = getOrientationPermutations(tramp.w, tramp.l, tramp.h);
+      
+      // Calculate required Gauss for each orientation
+      const requiredGaussValues = orientations.map(dims => {
+        return calculateRequiredGaussV2({
+          width_mm: dims.w,
+          length_mm: dims.l,
+          height_mm: dims.h,
+          beltSpeed_mps: beltSpeed,
+          burden_mm: burdenMm,
+          waterPercent: waterPercent,
+          material: material,
+          description: tramp.name  // For nut detection
+        });
       });
       
-      const ratio = requiredGauss > 0 ? modelValues.gaussAtGap / requiredGauss : 0;
+      // Use MAX required Gauss (worst-case orientation)
+      const maxRequiredGauss = Math.max(...requiredGaussValues);
+      
+      // Calculate extraction ratio using worst case
+      const ratio = maxRequiredGauss > 0 ? modelValues.gaussAtGap / maxRequiredGauss : 0;
       const extractionPercent = getExtractionPercent(ratio);
       
       return {
         ...tramp,
-        requiredGauss,
+        requiredGauss: maxRequiredGauss,
         ratio,
         extractionPercent
       };
     });
   }, [selectedModel, modelValues, allTramps, beltSpeed, burdenMm, airGap, waterPercent, material]);
+  
+  // Sanity check: log when burden/water changes affect required Gauss
+  useEffect(() => {
+    if (trampResults.length > 0) {
+      console.log('[Sanity Check] First tramp required Gauss:', trampResults[0].requiredGauss);
+      console.log('[Sanity Check] Burden:', burdenMm, 'Water:', waterPercent, 'Speed:', beltSpeed);
+    }
+  }, [trampResults, burdenMm, waterPercent, beltSpeed]);
   
   // Remove a saved configuration
   const handleRemoveConfig = async (config: SavedConfiguration) => {

@@ -7,6 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.21.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Fixed difficulty factor inversion - higher burden/water/speed now correctly increases Required Gauss",
+      "Added 3-orientation permutations (W,L,H), (W,H,L), (H,L,W) - displays worst-case (max) Required Gauss",
+      "Added nut correction - hollow geometry multiplies Required Gauss by 1.35",
+      "Extraction calculated from Model Gauss @ Gap / max Required Gauss"
+    ]
+  },
+  {
     version: "3.20.0",
     date: "2025-12-12",
     type: "patch",
