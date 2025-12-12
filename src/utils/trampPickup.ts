@@ -243,11 +243,27 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   const gradientReq = forceFactor > 0 ? Math.pow(forceFactor, 0.33) : 0;
   let baselineRequiredGauss = 30 * gradientReq + 70;
 
-  // Nut correction - hollow geometry requires higher field to extract
-  const isNut = (input.description ?? "").toLowerCase().includes("nut");
-  if (isNut) {
-    baselineRequiredGauss *= 1.35;
+  // ===== Contact Stability Factors =====
+  // Discrete heuristic to match legacy behavior:
+  // - Solid cubes: easiest (no penalty)
+  // - Nuts: hollow geometry, poor contact (×1.8)
+  // - Bolts: elongated, rolling (×1.3)
+  // - Thin plates: flat, poor grip (×1.5)
+  const descLower = (input.description ?? "").toLowerCase();
+  const minFace = Math.min(width_mm, length_mm);
+  const isThinPlate = height_mm < 0.15 * minFace;
+
+  if (descLower.includes("nut")) {
+    // Hollow geometry + poor magnetic contact
+    baselineRequiredGauss *= 1.8;
+  } else if (descLower.includes("bolt")) {
+    // Elongated shape, tends to roll
+    baselineRequiredGauss *= 1.3;
+  } else if (isThinPlate) {
+    // Flat pieces have poor magnetic grip
+    baselineRequiredGauss *= 1.5;
   }
+  // Solid cubes: no additional factor (easiest to pick up)
 
   return Math.round(baselineRequiredGauss);
 }
