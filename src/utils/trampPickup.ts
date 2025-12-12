@@ -183,6 +183,7 @@ export interface TrampExtractionInput {
   burden_mm?: number;          // default 0 (embedding depth)
   waterPercent?: number;       // default 0
   material?: string;           // default "coal"
+  description?: string;        // for nut detection
 }
 
 /**
@@ -227,13 +228,26 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   const mass_g = volume_cm3 * 7.85;
   const momentFactor = mass_g * Math.sqrt(Math.max(0.0001, volume_cm3));
 
-  // Step 5: Composite difficulty
-  const difficultyModifier = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
-  const forceFactor = momentFactor * difficultyModifier;
+  // Step 5: Composite difficulty - INVERT ease factors to get difficulty
+  // easeFactor represents how easy it is to pick up (lower = harder)
+  const easeFactor = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
+  
+  // Invert to get difficulty multiplier (higher = harder to pick up)
+  // Clamped at 0.20 to avoid extreme values (max 5x multiplier)
+  const difficultyMultiplier = 1 / Math.max(easeFactor, 0.20);
+  
+  // forceFactor now INCREASES when conditions are harder
+  const forceFactor = momentFactor * difficultyMultiplier;
 
   // Step 6: Map to baseline Required Gauss (no gap distance scaling)
   const gradientReq = forceFactor > 0 ? Math.pow(forceFactor, 0.33) : 0;
-  const baselineRequiredGauss = 30 * gradientReq + 70;
+  let baselineRequiredGauss = 30 * gradientReq + 70;
+
+  // Nut correction - hollow geometry requires higher field to extract
+  const isNut = (input.description ?? "").toLowerCase().includes("nut");
+  if (isNut) {
+    baselineRequiredGauss *= 1.35;
+  }
 
   return Math.round(baselineRequiredGauss);
 }
