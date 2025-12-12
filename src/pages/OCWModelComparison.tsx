@@ -9,12 +9,10 @@ import { ArrowLeft, Info, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   BurdenSeverity, 
-  marginRatioToConfidence
+  marginRatioToConfidence,
+  calculateForceFactorAtGap
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
-
-// Force Factor decay constant
-const DECAY_FF = 0.0115;
 
 // Temperature scaling for Force Factor
 const FF_TEMP_RATIOS: Record<number, number> = {
@@ -52,11 +50,11 @@ interface OCWSelectorState {
   trampHeight?: number;
 }
 
-// Calculate Force Factor at gap with temperature adjustment
-function calculateFFAtGap(surfaceFF: number, gap: number, temp: number): number {
-  const decayFactor = Math.exp(-DECAY_FF * gap);
+// Calculate Force Factor at gap with temperature adjustment (uses backplate-based decay)
+function calculateFFAtGapWithTemp(surfaceFF: number, gap: number, backplate: number, temp: number): number {
+  const ffAtGap = calculateForceFactorAtGap(surfaceFF, gap, backplate);
   const tempRatio = FF_TEMP_RATIOS[temp] || 1.0;
-  return surfaceFF * decayFactor * tempRatio;
+  return ffAtGap * tempRatio;
 }
 
 // Calculate required force for tramp pickup
@@ -181,7 +179,9 @@ export default function OCWModelComparison() {
   const configsWithConfidence = useMemo(() => {
     return savedConfigs.map(config => {
       const ff = config.force_factor || 0;
-      const availableForce = calculateFFAtGap(ff, airGap, ambientTemp);
+      // Backplate is the suffix value (e.g., 30 from "70 OCW 30")
+      const backplate = config.suffix || 30;
+      const availableForce = calculateFFAtGapWithTemp(ff, airGap, backplate, ambientTemp);
       const marginRatio = requiredForce > 0 ? availableForce / requiredForce : 0;
       const confidence = marginRatioToConfidence(marginRatio);
       
