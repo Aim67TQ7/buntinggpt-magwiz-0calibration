@@ -1,18 +1,27 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Info, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Trash2, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   BurdenSeverity, 
   marginRatioToConfidence,
-  calculateForceFactorAtGap
+  calculateForceFactorAtGap,
+  calculateGaussAtGap
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Temperature scaling for Force Factor
 const FF_TEMP_RATIOS: Record<number, number> = {
@@ -23,6 +32,76 @@ const FF_TEMP_RATIOS: Record<number, number> = {
 
 // Steel density for mass calculation
 const STEEL_DENSITY = 7850; // kg/m³
+
+// Standard tramp metal presets
+interface TrampPreset {
+  id: string;
+  name: string;
+  w: number;
+  l: number;
+  h: number;
+}
+
+const STANDARD_TRAMPS: TrampPreset[] = [
+  { id: "cube-25", name: "25mm Cube", w: 25, l: 25, h: 25 },
+  { id: "m12-nut", name: "M12 Nut", w: 19, l: 19, h: 6 },
+  { id: "m16-bolt", name: "M16×75mm Bolt", w: 24, l: 24, h: 75 },
+  { id: "m18-nut", name: "M18 Nut", w: 27, l: 27, h: 9 },
+  { id: "plate-6mm", name: "6mm Plate", w: 100, l: 100, h: 6 },
+];
+
+// Orientation types
+type Orientation = 'flat' | 'edge' | 'corner';
+
+interface OrientedTramp {
+  name: string;
+  orientation: Orientation;
+  w: number;
+  l: number;
+  h: number;
+  isFirstOfGroup: boolean;
+  groupRowSpan: number;
+}
+
+// Generate all orientation variants for a tramp item
+function generateOrientations(tramp: TrampPreset): OrientedTramp[] {
+  const orientations: OrientedTramp[] = [];
+  
+  // Flat: original W × L × H
+  orientations.push({
+    name: tramp.name,
+    orientation: 'flat',
+    w: tramp.w,
+    l: tramp.l,
+    h: tramp.h,
+    isFirstOfGroup: true,
+    groupRowSpan: 3
+  });
+  
+  // Edge: W × H × L (swap L and H)
+  orientations.push({
+    name: tramp.name,
+    orientation: 'edge',
+    w: tramp.w,
+    l: tramp.h,
+    h: tramp.l,
+    isFirstOfGroup: false,
+    groupRowSpan: 0
+  });
+  
+  // Corner: H × L × W (rotate all)
+  orientations.push({
+    name: tramp.name,
+    orientation: 'corner',
+    w: tramp.h,
+    l: tramp.l,
+    h: tramp.w,
+    isFirstOfGroup: false,
+    groupRowSpan: 0
+  });
+  
+  return orientations;
+}
 
 // Interface for saved configuration from database
 interface SavedConfiguration {
@@ -50,18 +129,19 @@ interface OCWSelectorState {
   trampHeight?: number;
 }
 
-// Calculate Force Factor at gap with temperature adjustment (uses backplate-based decay)
+// Calculate Force Factor at gap with temperature adjustment
 function calculateFFAtGapWithTemp(surfaceFF: number, gap: number, backplate: number, temp: number): number {
   const ffAtGap = calculateForceFactorAtGap(surfaceFF, gap, backplate);
   const tempRatio = FF_TEMP_RATIOS[temp] || 1.0;
   return ffAtGap * tempRatio;
 }
 
-// Calculate required force for tramp pickup
+// Calculate required force for tramp pickup with orientation
 function calculateRequiredForce(
   widthMm: number,
   lengthMm: number,
   heightMm: number,
+  orientation: Orientation,
   burdenSeverity: BurdenSeverity,
   safetyFactor: number = 3.0
 ): number {
@@ -69,8 +149,10 @@ function calculateRequiredForce(
   const mass_kg = volume_m3 * STEEL_DENSITY;
   const weight_N = mass_kg * 9.81;
   
-  // Orientation factor (flat = 1.0)
-  const oriFactor = 1.0;
+  // Orientation factor
+  const oriFactor = orientation === 'flat' ? 1.0 
+    : orientation === 'edge' ? 4.0 
+    : 6.0; // corner
   
   // Burden factor
   const burFactor = burdenSeverity === 'none' ? 1.0
@@ -83,17 +165,23 @@ function calculateRequiredForce(
   return weight_N * oriFactor * burFactor * safetyFactor;
 }
 
-// Get confidence badge color
+// Get confidence badge variant
 function getConfidenceBadgeVariant(confidence: number): 'default' | 'secondary' | 'destructive' {
   if (confidence >= 75) return 'default';
   if (confidence >= 50) return 'secondary';
   return 'destructive';
 }
 
+// Get confidence color class
 function getConfidenceColor(confidence: number): string {
   if (confidence >= 75) return 'text-green-600';
   if (confidence >= 50) return 'text-yellow-600';
   return 'text-red-600';
+}
+
+// Get extraction percentage display
+function getExtractionDisplay(confidence: number): string {
+  return `${confidence}%`;
 }
 
 export default function OCWModelComparison() {
@@ -102,23 +190,29 @@ export default function OCWModelComparison() {
   const { toast } = useToast();
   const passedParams = location.state as OCWSelectorState | undefined;
   
-  // Parameters from OCW Selector (read-only)
-  const beltSpeed = passedParams?.beltSpeed ?? 2.0;
-  const beltWidth = passedParams?.beltWidth ?? 1200;
-  const burdenDepth = passedParams?.burdenDepth ?? 100;
+  // Parameters from OCW Selector
   const airGap = passedParams?.airGap ?? 200;
   const ambientTemp = passedParams?.ambientTemp ?? 20;
   const burdenSeverity = passedParams?.burdenSeverity ?? 'moderate';
-  const trampWidth = passedParams?.trampWidth ?? 50;
-  const trampLength = passedParams?.trampLength ?? 150;
-  const trampHeight = passedParams?.trampHeight ?? 10;
-  
-  const hasPassedParams = !!passedParams;
   
   const [savedConfigs, setSavedConfigs] = useState<SavedConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   
-  // Fetch saved configurations from database
+  // Custom tramps
+  const [customTramps, setCustomTramps] = useState<TrampPreset[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTramp, setNewTramp] = useState({ name: '', w: 50, l: 50, h: 10 });
+  
+  // Combine standard and custom tramps
+  const allTramps = useMemo(() => [...STANDARD_TRAMPS, ...customTramps], [customTramps]);
+  
+  // Generate all oriented tramps
+  const orientedTramps = useMemo(() => {
+    return allTramps.flatMap(tramp => generateOrientations(tramp));
+  }, [allTramps]);
+  
+  // Fetch saved configurations
   useEffect(() => {
     const fetchSavedConfigs = async () => {
       try {
@@ -130,6 +224,11 @@ export default function OCWModelComparison() {
         
         if (error) throw error;
         setSavedConfigs(data || []);
+        
+        // Auto-select first model if available
+        if (data && data.length > 0 && !selectedModelId) {
+          setSelectedModelId(data[0].id);
+        }
       } catch (error) {
         console.error('Error fetching saved configurations:', error);
         toast({
@@ -145,6 +244,55 @@ export default function OCWModelComparison() {
     fetchSavedConfigs();
   }, [toast]);
   
+  // Get selected model
+  const selectedModel = useMemo(() => {
+    return savedConfigs.find(c => c.id === selectedModelId) || null;
+  }, [savedConfigs, selectedModelId]);
+  
+  // Calculate gap-adjusted values for selected model
+  const modelValues = useMemo(() => {
+    if (!selectedModel) return null;
+    
+    const backplate = selectedModel.suffix || 30;
+    const surfaceGauss = selectedModel.surface_gauss || 0;
+    const surfaceFF = selectedModel.force_factor || 0;
+    
+    const gaussAtGap = calculateGaussAtGap(surfaceGauss, airGap, backplate);
+    const ffAtGap = calculateFFAtGapWithTemp(surfaceFF, airGap, backplate, ambientTemp);
+    
+    return {
+      gaussAtGap: Math.round(gaussAtGap),
+      ffAtGap: Math.round(ffAtGap)
+    };
+  }, [selectedModel, airGap, ambientTemp]);
+  
+  // Calculate extraction percentages for each oriented tramp
+  const trampResults = useMemo(() => {
+    if (!selectedModel || !modelValues) return [];
+    
+    const backplate = selectedModel.suffix || 30;
+    const surfaceFF = selectedModel.force_factor || 0;
+    const availableForce = calculateFFAtGapWithTemp(surfaceFF, airGap, backplate, ambientTemp);
+    
+    return orientedTramps.map(tramp => {
+      const requiredForce = calculateRequiredForce(
+        tramp.w, tramp.l, tramp.h,
+        tramp.orientation,
+        burdenSeverity,
+        3.0
+      );
+      
+      const marginRatio = requiredForce > 0 ? availableForce / requiredForce : 0;
+      const confidence = marginRatioToConfidence(marginRatio);
+      
+      return {
+        ...tramp,
+        requiredForce,
+        confidence
+      };
+    });
+  }, [selectedModel, modelValues, orientedTramps, airGap, ambientTemp, burdenSeverity]);
+  
   // Remove a saved configuration
   const handleRemoveConfig = async (config: SavedConfiguration) => {
     try {
@@ -156,6 +304,12 @@ export default function OCWModelComparison() {
       if (error) throw error;
       
       setSavedConfigs(prev => prev.filter(c => c.id !== config.id));
+      
+      // Select next model if removing selected
+      if (selectedModelId === config.id) {
+        const remaining = savedConfigs.filter(c => c.id !== config.id);
+        setSelectedModelId(remaining.length > 0 ? remaining[0].id : null);
+      }
       
       toast({
         title: "Removed",
@@ -170,218 +324,273 @@ export default function OCWModelComparison() {
     }
   };
   
-  // Calculate required force for tramp pickup
-  const requiredForce = useMemo(() => {
-    return calculateRequiredForce(trampWidth, trampLength, trampHeight, burdenSeverity, 3.0);
-  }, [trampWidth, trampLength, trampHeight, burdenSeverity]);
+  // Add custom tramp
+  const handleAddCustomTramp = () => {
+    if (!newTramp.name.trim()) {
+      toast({ title: "Error", description: "Please enter a name", variant: "destructive" });
+      return;
+    }
+    
+    const id = `custom-${Date.now()}`;
+    setCustomTramps(prev => [...prev, { ...newTramp, id }]);
+    setNewTramp({ name: '', w: 50, l: 50, h: 10 });
+    setShowAddForm(false);
+  };
   
-  // Calculate confidence for each saved configuration
-  const configsWithConfidence = useMemo(() => {
-    return savedConfigs.map(config => {
-      const ff = config.force_factor || 0;
-      // Backplate is the suffix value (e.g., 30 from "70 OCW 30")
-      const backplate = config.suffix || 30;
-      const availableForce = calculateFFAtGapWithTemp(ff, airGap, backplate, ambientTemp);
-      const marginRatio = requiredForce > 0 ? availableForce / requiredForce : 0;
-      const confidence = marginRatioToConfidence(marginRatio);
-      
-      return {
-        ...config,
-        availableForce,
-        marginRatio,
-        confidence
-      };
-    });
-  }, [savedConfigs, airGap, ambientTemp, requiredForce]);
+  // Remove custom tramp
+  const handleRemoveCustomTramp = (id: string) => {
+    setCustomTramps(prev => prev.filter(t => t.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/ocw">
-              <Button variant="outline">
+              <Button variant="outline" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to OCW Selector
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">OCW Model Comparison</h1>
-              <p className="text-muted-foreground mt-1">
-                Compare saved models for tramp pickup capability
-                {hasPassedParams && <Badge variant="secondary" className="ml-2 text-xs">Parameters from OCW Selector</Badge>}
+              <h1 className="text-2xl font-bold">OCW Model Comparison</h1>
+              <p className="text-sm text-muted-foreground">
+                Tramp metal extraction analysis at {airGap}mm gap
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Parameters Panel (Read-Only) */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Operating Parameters</CardTitle>
-              <CardDescription>
-                {hasPassedParams ? 'From OCW Selector' : 'Default values - go to OCW Selector to adjust'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Belt Speed:</span>
-                  <span className="font-medium">{beltSpeed.toFixed(2)} m/s</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Belt Width:</span>
-                  <span className="font-medium">{beltWidth} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Burden Depth:</span>
-                  <span className="font-medium">{burdenDepth} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Air Gap:</span>
-                  <span className="font-medium">{airGap} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ambient Temp:</span>
-                  <span className="font-medium">{ambientTemp}°C</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Burden Severity:</span>
-                  <span className="font-medium capitalize">{burdenSeverity}</span>
-                </div>
-              </div>
-              
-              <div className="pt-4 border-t">
-                <h4 className="font-semibold text-sm mb-2">Tramp Metal Dimensions</h4>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="text-center">
-                    <span className="text-muted-foreground block text-xs">Width</span>
-                    <span className="font-medium">{trampWidth} mm</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-muted-foreground block text-xs">Length</span>
-                    <span className="font-medium">{trampLength} mm</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-muted-foreground block text-xs">Height</span>
-                    <span className="font-medium">{trampHeight} mm</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-4 border-t">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Required Force:</span>
-                  <span className="font-bold text-primary">{requiredForce.toLocaleString(undefined, { maximumFractionDigits: 0 })} N</span>
-                </div>
-              </div>
-              
-              {!hasPassedParams && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Go to OCW Selector, configure parameters, and click "Compare" to pass your settings here.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Saved Models List */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Saved Models for Comparison</CardTitle>
-                    <CardDescription>
-                      {savedConfigs.length} model{savedConfigs.length !== 1 ? 's' : ''} saved - toggle checkboxes in OCW Selector to add more
-                    </CardDescription>
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Panel - Saved Models (35%) */}
+          <div className="lg:col-span-4">
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Saved Models</CardTitle>
+                <CardDescription className="text-xs">
+                  Select a model to view extraction analysis
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 {loading ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    Loading saved configurations...
+                  <div className="py-8 text-center text-muted-foreground text-sm">
+                    Loading...
                   </div>
                 ) : savedConfigs.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <p className="text-muted-foreground mb-4">No models saved for comparison</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Go to OCW Selector and check the boxes next to models you want to compare.
-                    </p>
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">No models saved</p>
                     <Link to="/ocw">
-                      <Button variant="outline">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+                      <Button variant="outline" size="sm">
                         Go to OCW Selector
                       </Button>
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {configsWithConfidence.map((config) => (
+                  savedConfigs.map((config) => {
+                    const backplate = config.suffix || 30;
+                    const gaussAtGap = Math.round(calculateGaussAtGap(config.surface_gauss || 0, airGap, backplate));
+                    const ffAtGap = Math.round(calculateFFAtGapWithTemp(config.force_factor || 0, airGap, backplate, ambientTemp));
+                    
+                    return (
                       <div 
                         key={config.id}
-                        className="rounded-lg border p-4 hover:bg-accent/50 transition-colors"
+                        className={`rounded-lg border p-3 cursor-pointer transition-colors ${
+                          selectedModelId === config.id 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'hover:bg-accent/50'
+                        }`}
+                        onClick={() => setSelectedModelId(config.id)}
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">{config.name}</h3>
-                              <Badge 
-                                variant={getConfidenceBadgeVariant(config.confidence)}
-                                className="text-sm"
-                              >
-                                {config.confidence}% Confidence
-                              </Badge>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Gauss:</span>
-                                <span className="ml-2 font-medium">{config.surface_gauss?.toLocaleString() || '-'}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Force Factor:</span>
-                                <span className="ml-2 font-medium">{config.force_factor?.toLocaleString() || '-'}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Watts:</span>
-                                <span className="ml-2 font-medium">{config.watts?.toLocaleString() || '-'}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Width:</span>
-                                <span className="ml-2 font-medium">{config.width} mm</span>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-3 pt-3 border-t flex items-center gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Available Force @ {airGap}mm:</span>
-                                <span className="ml-2 font-bold">{config.availableForce.toLocaleString(undefined, { maximumFractionDigits: 0 })} N</span>
-                              </div>
-                              <div className={getConfidenceColor(config.confidence)}>
-                                {config.confidence >= 75 ? '✓ High confidence' :
-                                 config.confidence >= 50 ? '⚠ Moderate confidence' :
-                                 '✗ Low confidence'}
-                              </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm truncate">{config.name}</h3>
+                            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                              <div>Gauss @ {airGap}mm: <span className="font-medium text-foreground">{gaussAtGap.toLocaleString()}</span></div>
+                              <div>FF @ {airGap}mm: <span className="font-medium text-foreground">{ffAtGap.toLocaleString()}</span></div>
+                              <div>{config.watts?.toLocaleString()} W | {config.width}mm | Frame {config.frame}</div>
                             </div>
                           </div>
-                          
                           <Button 
                             variant="ghost" 
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveConfig(config)}
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveConfig(config);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Panel - Tramp Extraction Table (65%) */}
+          <div className="lg:col-span-8">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">
+                      {selectedModel ? `${selectedModel.name} - Tramp Metal Extraction` : 'Tramp Metal Extraction'}
+                    </CardTitle>
+                    {modelValues && (
+                      <CardDescription className="text-xs mt-1">
+                        Gauss @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.gaussAtGap.toLocaleString()}</span>
+                        {' | '}
+                        Force Factor @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.ffAtGap.toLocaleString()}</span>
+                        {' | '}
+                        Burden: <span className="capitalize">{burdenSeverity}</span>
+                      </CardDescription>
+                    )}
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddForm(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Custom
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!selectedModel ? (
+                  <div className="py-12 text-center text-muted-foreground">
+                    Select a model from the left panel to view extraction analysis
+                  </div>
+                ) : (
+                  <>
+                    {/* Add Custom Tramp Form */}
+                    {showAddForm && (
+                      <div className="mb-4 p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-end gap-3">
+                          <div className="flex-1">
+                            <Label className="text-xs">Name</Label>
+                            <Input
+                              value={newTramp.name}
+                              onChange={(e) => setNewTramp(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="Custom Item"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="w-20">
+                            <Label className="text-xs">W (mm)</Label>
+                            <Input
+                              type="number"
+                              value={newTramp.w}
+                              onChange={(e) => setNewTramp(prev => ({ ...prev, w: Number(e.target.value) }))}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="w-20">
+                            <Label className="text-xs">L (mm)</Label>
+                            <Input
+                              type="number"
+                              value={newTramp.l}
+                              onChange={(e) => setNewTramp(prev => ({ ...prev, l: Number(e.target.value) }))}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="w-20">
+                            <Label className="text-xs">H (mm)</Label>
+                            <Input
+                              type="number"
+                              value={newTramp.h}
+                              onChange={(e) => setNewTramp(prev => ({ ...prev, h: Number(e.target.value) }))}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <Button size="sm" onClick={handleAddCustomTramp}>Add</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Extraction Table */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="w-[180px] text-xs font-semibold">Description</TableHead>
+                            <TableHead className="w-[140px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
+                            <TableHead className="w-[100px] text-xs font-semibold text-right">Extraction %</TableHead>
+                            <TableHead className="w-[40px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {trampResults.map((result, idx) => (
+                            <TableRow 
+                              key={`${result.name}-${result.orientation}-${idx}`}
+                              className={result.isFirstOfGroup ? 'border-t-2' : ''}
+                            >
+                              {result.isFirstOfGroup && (
+                                <TableCell 
+                                  rowSpan={result.groupRowSpan} 
+                                  className="text-sm font-medium align-top pt-3"
+                                >
+                                  {result.name}
+                                </TableCell>
+                              )}
+                              <TableCell className="text-sm font-mono">
+                                {result.w} × {result.l} × {result.h}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge 
+                                  variant={getConfidenceBadgeVariant(result.confidence)}
+                                  className="text-xs font-mono min-w-[50px] justify-center"
+                                >
+                                  {getExtractionDisplay(result.confidence)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="p-1">
+                                {result.name.startsWith('custom-') || customTramps.some(t => t.name === result.name) ? (
+                                  result.isFirstOfGroup && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                      onClick={() => {
+                                        const tramp = customTramps.find(t => t.name === result.name);
+                                        if (tramp) handleRemoveCustomTramp(tramp.id);
+                                      }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  )
+                                ) : null}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Badge variant="default" className="text-[10px] px-1.5">75%+</Badge>
+                        <span>High confidence</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-[10px] px-1.5">50-74%</Badge>
+                        <span>Moderate</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="destructive" className="text-[10px] px-1.5">&lt;50%</Badge>
+                        <span>Low confidence</span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
