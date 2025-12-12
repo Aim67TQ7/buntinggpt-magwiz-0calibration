@@ -9,18 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-
-// Decay constants for gap-adjusted calculations
-const DECAY_GAUSS = 0.00575;
-const DECAY_FF = 0.01150;
-
-function calculateGaussAtGap(surfaceGauss: number, gap: number): number {
-  return surfaceGauss * Math.exp(-DECAY_GAUSS * gap);
-}
-
-function calculateFFAtGap(surfaceFF: number, gap: number): number {
-  return surfaceFF * Math.exp(-DECAY_FF * gap);
-}
+import { calculateGaussAtGap, calculateForceFactorAtGap } from "@/utils/trampPickup";
 
 interface OCWRecommendation {
   model: string;
@@ -170,18 +159,22 @@ export function MagneticSeparatorCalculator() {
       });
       
       // Map to recommendation format with gap-adjusted values
-      const allRecommendations = sorted.map((unit: any) => ({
-        model: unit.model,
-        Prefix: unit.Prefix,
-        Suffix: unit.Suffix,
-        surface_gauss: unit.surface_gauss,
-        force_factor: unit.force_factor,
-        gauss_at_gap: Math.round(calculateGaussAtGap(unit.surface_gauss || 0, magnetGap)),
-        force_factor_at_gap: Math.round(calculateFFAtGap(unit.force_factor || 0, magnetGap)),
-        watts: unit.watts,
-        width: unit.width,
-        frame: unit.frame
-      }));
+      // Backplate is the Suffix value (e.g., 30 from "70 OCW 30")
+      const allRecommendations = sorted.map((unit: any) => {
+        const backplate = unit.Suffix || 30;
+        return {
+          model: unit.model,
+          Prefix: unit.Prefix,
+          Suffix: unit.Suffix,
+          surface_gauss: unit.surface_gauss,
+          force_factor: unit.force_factor,
+          gauss_at_gap: Math.round(calculateGaussAtGap(unit.surface_gauss || 0, magnetGap, backplate)),
+          force_factor_at_gap: Math.round(calculateForceFactorAtGap(unit.force_factor || 0, magnetGap, backplate)),
+          watts: unit.watts,
+          width: unit.width,
+          frame: unit.frame
+        };
+      });
       
       setRecommendations(allRecommendations);
       

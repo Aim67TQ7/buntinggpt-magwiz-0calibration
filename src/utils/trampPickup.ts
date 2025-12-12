@@ -1,5 +1,6 @@
 // trampPickup.ts
 // Tramp metal pick-up check using lifting physics with geometry/orientation/burden factors.
+// UPDATED: Now uses geometry-based decay constants derived from empirical regression analysis.
 
 // Magnetic permeability of free space [H/m]
 export const MU0 = 4 * Math.PI * 1e-7;
@@ -23,6 +24,8 @@ export type BurdenSeverity =
   | "heavy"       // deep / dense burden
   | "severe";     // worst-case: deep + compacted
 
+export type MagnetGrade = "A20" | "A30" | "A40" | "A45";
+
 export interface TrampGeometry {
   shape: TrampShape;
   /** Length [mm] */
@@ -35,6 +38,15 @@ export interface TrampGeometry {
   cubeSize_mm?: number;
   /** Approx density [kg/m³] (default assumes mild steel) */
   density_kg_m3?: number;
+}
+
+export interface MagnetGeometry {
+  /** Core diameter [mm] - first number in model name (e.g., 70 in "70 OCW 30") */
+  core_mm: number;
+  /** Backplate thickness [mm] - second number in model name (e.g., 30 in "70 OCW 30") */
+  backplate_mm: number;
+  /** Magnet grade based on operating environment */
+  grade: MagnetGrade;
 }
 
 export interface TrampPickupInput {
@@ -66,6 +78,190 @@ export interface TrampPickupResult {
   notes: string[];
 }
 
+// -----------------------
+// Grade Multipliers
+// Based on operating environment (temperature/altitude derating)
+// -----------------------
+
+export const GRADE_MULTIPLIERS: Record<MagnetGrade, number> = {
+  A20: 1.000,  // Standard conditions
+  A30: 0.949,  // Moderate derating
+  A40: 0.893,  // High temperature / altitude
+  A45: 0.865,  // Severe conditions
+};
+
+// -----------------------
+// Legacy Constants (for backwards compatibility)
+// -----------------------
+export const DECAY_GAUSS_LEGACY = 0.00575;
+export const DECAY_FORCE_FACTOR = 0.0115;
+
+// -----------------------
+// Geometry-Based Magnetic Field Calculations
+// Derived from empirical regression (R² > 0.999)
+// -----------------------
+
+/**
+ * Calculate decay constant for Gauss based on backplate thickness
+ * Formula: K_gauss = 0.1485 / Backplate^0.95
+ * @param backplate_mm - Backplate thickness in mm
+ * @returns Decay constant K for Gauss calculations
+ */
+export function getDecayGauss(backplate_mm: number): number {
+  if (backplate_mm <= 0) {
+    return DECAY_GAUSS_LEGACY; // Fallback to legacy
+  }
+  return 0.1485 / Math.pow(backplate_mm, 0.95);
+}
+
+/**
+ * Calculate decay constant for Force Factor based on backplate thickness
+ * Formula: K_ff = 0.3438 / Backplate
+ * Note: This is NOT simply 2×K_gauss - it has its own regression-derived formula
+ * @param backplate_mm - Backplate thickness in mm
+ * @returns Decay constant K for Force Factor calculations
+ */
+export function getDecayForceFactor(backplate_mm: number): number {
+  if (backplate_mm <= 0) {
+    return DECAY_FORCE_FACTOR; // Fallback to legacy
+  }
+  return 0.3438 / backplate_mm;
+}
+
+/**
+ * Calculate surface Gauss (G₀) from magnet geometry
+ * Formula: G₀ = 2701 × Core^0.88 / Backplate^1.08 × GradeMult
+ * @param magnet - Magnet geometry including core, backplate, and grade
+ * @returns Surface Gauss value at gap = 0
+ */
+export function calculateSurfaceGauss(magnet: MagnetGeometry): number {
+  const { core_mm, backplate_mm, grade } = magnet;
+  if (core_mm <= 0 || backplate_mm <= 0) {
+    throw new Error("Core and backplate dimensions must be > 0");
+  }
+  const gradeMult = GRADE_MULTIPLIERS[grade];
+  return 2701 * Math.pow(core_mm, 0.88) / Math.pow(backplate_mm, 1.08) * gradeMult;
+}
+
+/**
+ * Calculate surface Force Factor (FF₀) from surface Gauss and backplate
+ * Formula: FF₀ = 1.725 × G₀² / Backplate
+ * @param surfaceGauss - Surface Gauss value (G₀)
+ * @param backplate_mm - Backplate thickness in mm
+ * @returns Surface Force Factor at gap = 0
+ */
+export function calculateSurfaceForceFactor(surfaceGauss: number, backplate_mm: number): number {
+  if (backplate_mm <= 0) {
+    throw new Error("Backplate thickness must be > 0");
+  }
+  return 1.725 * Math.pow(surfaceGauss, 2) / backplate_mm;
+}
+
+/**
+ * Calculate Gauss at a specific gap distance
+ * Formula: Gauss(gap) = G₀ × e^(-K_gauss × gap)
+ * @param surfaceGauss - Surface Gauss value (G₀)
+ * @param gap_mm - Gap distance in mm
+ * @param backplate_mm - Backplate thickness in mm (for K calculation)
+ * @returns Gauss value at specified gap
+ */
+export function calculateGaussAtGap(
+  surfaceGauss: number,
+  gap_mm: number,
+  backplate_mm: number
+): number {
+  const k = getDecayGauss(backplate_mm);
+  return surfaceGauss * Math.exp(-k * gap_mm);
+}
+
+/**
+ * Calculate Force Factor at a specific gap distance
+ * Formula: FF(gap) = FF₀ × e^(-K_ff × gap)
+ * @param surfaceForceFactor - Surface Force Factor (FF₀)
+ * @param gap_mm - Gap distance in mm
+ * @param backplate_mm - Backplate thickness in mm (for K calculation)
+ * @returns Force Factor at specified gap
+ */
+export function calculateForceFactorAtGap(
+  surfaceForceFactor: number,
+  gap_mm: number,
+  backplate_mm: number
+): number {
+  const k = getDecayForceFactor(backplate_mm);
+  return surfaceForceFactor * Math.exp(-k * gap_mm);
+}
+
+/**
+ * Calculate all magnetic field values from magnet geometry and gap
+ * Convenience function that returns both Gauss and FF at surface and at gap
+ */
+export interface MagneticFieldValues {
+  surfaceGauss: number;
+  surfaceForceFactor: number;
+  gaussAtGap: number;
+  forceFactorAtGap: number;
+  decayConstantGauss: number;
+  decayConstantFF: number;
+  fiftyPercentReachGauss_mm: number;
+  fiftyPercentReachFF_mm: number;
+}
+
+export function calculateMagneticFieldValues(
+  magnet: MagnetGeometry,
+  gap_mm: number
+): MagneticFieldValues {
+  const surfaceGauss = calculateSurfaceGauss(magnet);
+  const surfaceForceFactor = calculateSurfaceForceFactor(surfaceGauss, magnet.backplate_mm);
+  
+  const kGauss = getDecayGauss(magnet.backplate_mm);
+  const kFF = getDecayForceFactor(magnet.backplate_mm);
+  
+  const gaussAtGap = surfaceGauss * Math.exp(-kGauss * gap_mm);
+  const forceFactorAtGap = surfaceForceFactor * Math.exp(-kFF * gap_mm);
+  
+  return {
+    surfaceGauss,
+    surfaceForceFactor,
+    gaussAtGap,
+    forceFactorAtGap,
+    decayConstantGauss: kGauss,
+    decayConstantFF: kFF,
+    fiftyPercentReachGauss_mm: Math.log(2) / kGauss,
+    fiftyPercentReachFF_mm: Math.log(2) / kFF,
+  };
+}
+
+/**
+ * Parse model name to extract core and backplate dimensions
+ * Handles formats like "70 OCW 30", "70-30", "70OCW30"
+ * @param modelName - Model name string
+ * @returns Object with core_mm and backplate_mm, or null if parsing fails
+ */
+export function parseModelName(modelName: string): { core_mm: number; backplate_mm: number } | null {
+  // Try various patterns
+  const patterns = [
+    /(\d+)\s*OCW\s*(\d+)/i,      // "70 OCW 30" or "70OCW30"
+    /(\d+)\s*-\s*(\d+)/,         // "70-30"
+    /(\d+)\s+(\d+)/,             // "70 30"
+  ];
+  
+  for (const pattern of patterns) {
+    const match = modelName.match(pattern);
+    if (match) {
+      return {
+        core_mm: parseInt(match[1], 10),
+        backplate_mm: parseInt(match[2], 10),
+      };
+    }
+  }
+  
+  return null;
+}
+
+// -----------------------
+// Confidence Calculation
+// -----------------------
+
 /**
  * Convert margin ratio to confidence percentage (0-99%)
  * Higher margin ratios = higher confidence in successful pickup
@@ -74,7 +270,7 @@ export function marginRatioToConfidence(marginRatio: number): number {
   if (marginRatio <= 0) return 0;
   if (marginRatio < 0.5) return Math.round(marginRatio * 50); // 0-25%
   if (marginRatio < 0.8) return Math.round(25 + (marginRatio - 0.5) * 50); // 25-40%
-  if (marginRatio < 1.0) return Math.round(40 + (marginRatio - 0.8) * 50); // 40-50%
+  if (marginRatio < 1.0) return Math.round(40 + (marginRatio - 1.0) * 50); // 40-50%
   if (marginRatio < 1.5) return Math.round(50 + (marginRatio - 1.0) * 50); // 50-75%
   if (marginRatio < 2.0) return Math.round(75 + (marginRatio - 1.5) * 30); // 75-90%
   if (marginRatio < 3.0) return Math.round(90 + (marginRatio - 2.0) * 8);  // 90-98%
@@ -159,7 +355,7 @@ function availableMagForce_N(B_T: number, A_m2: number): number {
 }
 
 // -----------------------
-// Main function
+// Main function (original)
 // -----------------------
 
 export function evaluateTrampPickup(input: TrampPickupInput): TrampPickupResult {
@@ -219,18 +415,19 @@ export function evaluateTrampPickup(input: TrampPickupInput): TrampPickupResult 
 }
 
 /**
- * Calculate margin ratio directly from Gauss reading and tramp geometry
+ * Calculate margin ratio from Gauss reading using geometry-based decay
  * @param surfaceGauss - Surface Gauss reading (at 0 gap)
  * @param gapMm - Air gap in mm
+ * @param backplate_mm - Backplate thickness for decay calculation
  * @param geometry - Tramp geometry
  * @param orientation - Tramp orientation
  * @param burden - Burden severity
  * @param safetyFactor - Safety factor (default 3.0)
- * @deprecated Use calculateMarginRatioFromForce for more accurate results
  */
 export function calculateMarginRatioFromGauss(
   surfaceGauss: number,
   gapMm: number,
+  backplate_mm: number,
   geometry: TrampGeometry,
   orientation: TrampOrientation = "unknown",
   burden: BurdenSeverity = "moderate",
@@ -239,9 +436,9 @@ export function calculateMarginRatioFromGauss(
   // Convert Gauss to Tesla (1 Gauss = 0.0001 Tesla)
   const surfaceTesla = surfaceGauss * 0.0001;
   
-  // Apply decay based on gap (using same decay constant as OCWModelComparison)
-  const DECAY_GAUSS = 0.00575;
-  const fluxAtGap_T = surfaceTesla * Math.exp(-DECAY_GAUSS * gapMm);
+  // Apply geometry-based decay
+  const decayK = getDecayGauss(backplate_mm);
+  const fluxAtGap_T = surfaceTesla * Math.exp(-decayK * gapMm);
   
   return evaluateTrampPickup({
     geometry,
@@ -252,14 +449,12 @@ export function calculateMarginRatioFromGauss(
   });
 }
 
-// Force Factor decay constant (2× Gauss decay rate due to squared relationship)
-export const DECAY_FORCE_FACTOR = 0.0115;
-
 /**
- * Calculate margin ratio from Force Factor - preferred method for tramp pickup evaluation
- * Force Factor directly represents lifting capability and decays at 2× the Gauss rate
- * @param surfaceForceFactor - Surface Force Factor (at 0 gap) in Newtons
+ * Calculate margin ratio from Force Factor using geometry-based decay
+ * This is the PREFERRED method for tramp pickup evaluation
+ * @param surfaceForceFactor - Surface Force Factor (at 0 gap)
  * @param gapMm - Air gap in mm
+ * @param backplate_mm - Backplate thickness for decay calculation
  * @param geometry - Tramp geometry
  * @param orientation - Tramp orientation
  * @param burden - Burden severity
@@ -268,6 +463,7 @@ export const DECAY_FORCE_FACTOR = 0.0115;
 export function calculateMarginRatioFromForce(
   surfaceForceFactor: number,
   gapMm: number,
+  backplate_mm: number,
   geometry: TrampGeometry,
   orientation: TrampOrientation = "unknown",
   burden: BurdenSeverity = "moderate",
@@ -277,11 +473,11 @@ export function calculateMarginRatioFromForce(
   const baseSF = safetyFactor;
 
   // Calculate mass and weight from geometry
-  const mass_kg = estimateMassKgExported(geometry);
+  const mass_kg = estimateMassKg(geometry);
   const weight_N = mass_kg * g;
 
   // Get effective contact area
-  const A_eff = effectiveContactAreaExported(geometry, orientation);
+  const A_eff = effectiveContactArea_m2(geometry, orientation);
 
   if (A_eff <= 0) {
     throw new Error("Effective contact area is zero or invalid; check geometry.");
@@ -290,8 +486,9 @@ export function calculateMarginRatioFromForce(
     throw new Error("surfaceForceFactor must be > 0 for tramp pickup evaluation.");
   }
 
-  // Apply FF decay based on gap
-  const forceAtGap = surfaceForceFactor * Math.exp(-DECAY_FORCE_FACTOR * gapMm);
+  // Apply geometry-based FF decay
+  const decayK = getDecayForceFactor(backplate_mm);
+  const forceAtGap = surfaceForceFactor * Math.exp(-decayK * gapMm);
 
   const oriFactor = orientationFactor(orientation);
   const burFactor = burdenFactor(burden);
@@ -307,7 +504,7 @@ export function calculateMarginRatioFromForce(
   const notes: string[] = [];
   notes.push(`Mass ≈ ${mass_kg.toFixed(3)} kg, effective area ≈ ${(A_eff * 1e4).toFixed(2)} cm².`);
   notes.push(`Orientation factor = ${oriFactor.toFixed(2)}, burden factor = ${burFactor.toFixed(2)}, base SF = ${baseSF.toFixed(2)}.`);
-  notes.push(`Available F ≈ ${forceAtGap.toFixed(1)} N (from FF), required ≈ ${required.toFixed(1)} N (margin ratio ≈ ${marginRatio.toFixed(2)}).`);
+  notes.push(`Available F ≈ ${forceAtGap.toFixed(1)} N, required ≈ ${required.toFixed(1)} N (margin ratio ≈ ${marginRatio.toFixed(2)}).`);
   if (!isLikelyPickup) {
     notes.push("Result: NOT LIKELY to reliably pull this tramp through burden.");
   } else {
@@ -332,11 +529,46 @@ export function calculateMarginRatioFromForce(
   };
 }
 
-// Export helper functions for use in calculateMarginRatioFromForce
-function estimateMassKgExported(geom: TrampGeometry): number {
-  return estimateMassKg(geom);
+/**
+ * Evaluate tramp pickup from first principles using magnet geometry
+ * Complete calculation starting from model name and operating conditions
+ */
+export interface TrampEvaluationInput {
+  magnet: MagnetGeometry;
+  gap_mm: number;
+  tramp: TrampGeometry;
+  orientation?: TrampOrientation;
+  burden?: BurdenSeverity;
+  safetyFactor?: number;
 }
 
-function effectiveContactAreaExported(geom: TrampGeometry, orientation: TrampOrientation): number {
-  return effectiveContactArea_m2(geom, orientation);
+export interface TrampEvaluationResult extends TrampPickupResult {
+  magneticFieldValues: MagneticFieldValues;
+}
+
+export function evaluateTrampPickupFromGeometry(
+  input: TrampEvaluationInput
+): TrampEvaluationResult {
+  const orientation = input.orientation ?? "unknown";
+  const burden = input.burden ?? "moderate";
+  const safetyFactor = input.safetyFactor ?? 3.0;
+
+  // Calculate all magnetic field values
+  const fieldValues = calculateMagneticFieldValues(input.magnet, input.gap_mm);
+
+  // Use Force Factor method for pickup evaluation
+  const pickupResult = calculateMarginRatioFromForce(
+    fieldValues.surfaceForceFactor,
+    input.gap_mm,
+    input.magnet.backplate_mm,
+    input.tramp,
+    orientation,
+    burden,
+    safetyFactor
+  );
+
+  return {
+    ...pickupResult,
+    magneticFieldValues: fieldValues,
+  };
 }

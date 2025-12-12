@@ -483,6 +483,7 @@ export default function OCWSpecs() {
           <TrampSizeSection
             surfaceForceFactor={unit.force_factor || 0}
             airGap={airGap}
+            backplate_mm={unit.Suffix || 30}
             burden={burdenSeverity}
             onBurdenChange={setBurdenSeverity}
           />

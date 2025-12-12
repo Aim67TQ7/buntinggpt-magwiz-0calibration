@@ -6,12 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, LineChart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-// Scientific decay constants
-const DECAY_CONSTANTS = {
-  DECAY_GAUSS: 0.00575,
-  DECAY_FF: 0.01150,
-};
+import { calculateGaussAtGap, calculateForceFactorAtGap } from "@/utils/trampPickup";
 
 // Temperature scaling factors
 const TEMP_CONFIGS = {
@@ -21,14 +16,14 @@ const TEMP_CONFIGS = {
   45: { label: 'A45', gaussScale: 0.87739, ffScale: 0.7694 },
 };
 
-function calculateGaussAtGap(surfaceGauss: number, gap: number, tempKey: keyof typeof TEMP_CONFIGS): number {
-  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_GAUSS * gap);
-  return surfaceGauss * decayFactor * TEMP_CONFIGS[tempKey].gaussScale;
+function calculateGaussAtGapWithTemp(surfaceGauss: number, gap: number, backplate: number, tempKey: keyof typeof TEMP_CONFIGS): number {
+  const gaussAtGap = calculateGaussAtGap(surfaceGauss, gap, backplate);
+  return gaussAtGap * TEMP_CONFIGS[tempKey].gaussScale;
 }
 
-function calculateFFAtGap(surfaceFF: number, gap: number, tempKey: keyof typeof TEMP_CONFIGS): number {
-  const decayFactor = Math.exp(-DECAY_CONSTANTS.DECAY_FF * gap);
-  return surfaceFF * decayFactor * TEMP_CONFIGS[tempKey].ffScale;
+function calculateFFAtGapWithTemp(surfaceFF: number, gap: number, backplate: number, tempKey: keyof typeof TEMP_CONFIGS): number {
+  const ffAtGap = calculateForceFactorAtGap(surfaceFF, gap, backplate);
+  return ffAtGap * TEMP_CONFIGS[tempKey].ffScale;
 }
 
 interface OCWUnit {
@@ -86,18 +81,21 @@ export default function GaussTable() {
   const tableData = useMemo(() => {
     if (!unit) return [];
     
+    // Backplate is the Suffix value (e.g., 30 from "70 OCW 30")
+    const backplate = unit.Suffix || 30;
+    
     const data: GaussTableRow[] = [];
     for (let gap = 0; gap <= 800; gap += 25) {
       data.push({
         gap,
-        gauss20: Math.round(calculateGaussAtGap(unit.surface_gauss, gap, 20)),
-        gauss30: Math.round(calculateGaussAtGap(unit.surface_gauss, gap, 30)),
-        gauss40: Math.round(calculateGaussAtGap(unit.surface_gauss, gap, 40)),
-        gauss45: Math.round(calculateGaussAtGap(unit.surface_gauss, gap, 45)),
-        ff20: Math.round(calculateFFAtGap(unit.force_factor, gap, 20)),
-        ff30: Math.round(calculateFFAtGap(unit.force_factor, gap, 30)),
-        ff40: Math.round(calculateFFAtGap(unit.force_factor, gap, 40)),
-        ff45: Math.round(calculateFFAtGap(unit.force_factor, gap, 45)),
+        gauss20: Math.round(calculateGaussAtGapWithTemp(unit.surface_gauss, gap, backplate, 20)),
+        gauss30: Math.round(calculateGaussAtGapWithTemp(unit.surface_gauss, gap, backplate, 30)),
+        gauss40: Math.round(calculateGaussAtGapWithTemp(unit.surface_gauss, gap, backplate, 40)),
+        gauss45: Math.round(calculateGaussAtGapWithTemp(unit.surface_gauss, gap, backplate, 45)),
+        ff20: Math.round(calculateFFAtGapWithTemp(unit.force_factor, gap, backplate, 20)),
+        ff30: Math.round(calculateFFAtGapWithTemp(unit.force_factor, gap, backplate, 30)),
+        ff40: Math.round(calculateFFAtGapWithTemp(unit.force_factor, gap, backplate, 40)),
+        ff45: Math.round(calculateFFAtGapWithTemp(unit.force_factor, gap, backplate, 45)),
       });
     }
     return data;

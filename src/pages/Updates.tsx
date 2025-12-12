@@ -7,6 +7,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.15.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Geometry-based magnetic decay calculations - decay constants now derived from backplate thickness",
+      "New formulas: K_gauss = 0.1485/bp^0.95, K_ff = 0.3438/bp",
+      "Surface Gauss and Force Factor can now be calculated from magnet geometry and grade",
+      "Added parseModelName utility to extract core and backplate from model strings",
+      "All gap-adjusted calculations now use backplate-aware decay constants"
+    ]
+  },
+  {
     version: "3.13.0",
     date: "2025-12-11",
     type: "minor",

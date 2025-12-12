@@ -30,6 +30,7 @@ interface TrampItem {
 interface TrampSizeSectionProps {
   surfaceForceFactor: number;
   airGap: number;
+  backplate_mm: number;
   burden: BurdenSeverity;
   onBurdenChange: (burden: BurdenSeverity) => void;
   compact?: boolean;
@@ -57,7 +58,7 @@ function getConfidenceProgressColor(confidence: number): string {
   return "bg-green-500";
 }
 
-export function TrampSizeSection({ surfaceForceFactor, airGap, burden, onBurdenChange, compact = false }: TrampSizeSectionProps) {
+export function TrampSizeSection({ surfaceForceFactor, airGap, backplate_mm, burden, onBurdenChange, compact = false }: TrampSizeSectionProps) {
   const [trampItems, setTrampItems] = useState<TrampItem[]>(DEFAULT_TRAMPS);
   const [safetyFactor, setSafetyFactor] = useState<number>(3.0);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -78,6 +79,7 @@ export function TrampSizeSection({ surfaceForceFactor, airGap, burden, onBurdenC
       const result = calculateMarginRatioFromForce(
         surfaceForceFactor,
         airGap,
+        backplate_mm,
         geometry,
         item.orientation,
         burden,

@@ -15,20 +15,8 @@ import { useOCWList, OCWRecommendation } from "@/contexts/OCWListContext";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrampSizeSection } from "@/components/TrampSizeSection";
-import { BurdenSeverity } from "@/utils/trampPickup";
+import { BurdenSeverity, calculateGaussAtGap, calculateForceFactorAtGap } from "@/utils/trampPickup";
 import { Checkbox } from "@/components/ui/checkbox";
-
-// Decay constants for gap-adjusted calculations
-const DECAY_GAUSS = 0.00575;
-const DECAY_FF = 0.01150;
-
-function calculateGaussAtGap(surfaceGauss: number, gap: number): number {
-  return surfaceGauss * Math.exp(-DECAY_GAUSS * gap);
-}
-
-function calculateFFAtGap(surfaceFF: number, gap: number): number {
-  return surfaceFF * Math.exp(-DECAY_FF * gap);
-}
 
 interface OCWData {
   filename: string;
@@ -834,10 +822,10 @@ const OCW = () => {
                             )}
                           </TableCell>
                           <TableCell className="py-2 text-right" title={`Surface: ${unit.surface_gauss}`}>
-                            {Math.round(calculateGaussAtGap(unit.surface_gauss || 0, airGap)).toLocaleString()}
+                            {Math.round(calculateGaussAtGap(unit.surface_gauss || 0, airGap, unit.Suffix || 30)).toLocaleString()}
                           </TableCell>
                           <TableCell className="py-2 text-right" title={`Surface: ${unit.force_factor?.toLocaleString()}`}>
-                            {Math.round(calculateFFAtGap(unit.force_factor || 0, airGap)).toLocaleString()}
+                            {Math.round(calculateForceFactorAtGap(unit.force_factor || 0, airGap, unit.Suffix || 30)).toLocaleString()}
                           </TableCell>
                           <TableCell className="py-2 text-right">{unit.watts}</TableCell>
                           <TableCell className="py-2 text-right">{unit.width}</TableCell>
