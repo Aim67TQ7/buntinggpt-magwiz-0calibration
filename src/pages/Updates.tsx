@@ -7,6 +7,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.24.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "CRITICAL: Extraction now based on Force Factor (FF), not Gauss - matches legacy behavior",
+      "Added calculateRequiredForceFactor() - requiredFF = momentFactor × difficultyMultiplier × stabilityFactor",
+      "Extraction ratio = modelForceFactorAtGap / requiredForceFactor",
+      "Table columns updated: Reqd FF, Model FF (Gauss shown for reference only)",
+      "Validated calculateForceFactorAtGap() - gap=0 returns surfaceFF, decay matches legacy",
+      "No calibration constant applied (set to 1.0)"
+    ]
+  },
+  {
     version: "3.22.0",
     date: "2025-12-12",
     type: "minor",

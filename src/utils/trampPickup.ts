@@ -183,7 +183,16 @@ export interface TrampExtractionInput {
   burden_mm?: number;          // default 0 (embedding depth)
   waterPercent?: number;       // default 0
   material?: string;           // default "coal"
-  description?: string;        // for nut detection
+  description?: string;        // for nut/bolt detection
+  partType?: 'generic' | 'nut' | 'bolt' | 'plate';  // explicit part type (takes precedence over name detection)
+}
+
+export interface TrampExtractionResult {
+  requiredForceFactor: number;  // Primary metric for extraction calculation
+  momentFactor: number;         // Debug: mass × √volume
+  difficultyMultiplier: number; // Debug: composite difficulty from conditions
+  stabilityFactor: number;      // Debug: contact stability (nut/bolt/plate)
+  effectiveType: 'generic' | 'nut' | 'bolt' | 'plate';  // Debug: detected or specified type
 }
 
 /**
@@ -192,6 +201,96 @@ export interface TrampExtractionInput {
  * Uses material factors, speed loss, embedding loss, water penalty, and shape penalty.
  * @param input - Tramp extraction input parameters
  * @returns Baseline Required Gauss (integer)
+ */
+/**
+ * Calculate Required Force Factor for tramp metal pickup.
+ * This is the PRIMARY metric for extraction calculation.
+ * Formula: requiredFF = momentFactor × difficultyMultiplier × stabilityFactor
+ * 
+ * Extraction ratio = modelForceFactorAtGap / requiredForceFactor
+ * 
+ * @param input - Tramp extraction input parameters
+ * @returns TrampExtractionResult with requiredForceFactor and debug info
+ */
+export function calculateRequiredForceFactor(input: TrampExtractionInput): TrampExtractionResult {
+  // Clamp/default inputs
+  const width_mm = Math.max(input.width_mm, 0.001);
+  const length_mm = Math.max(input.length_mm, 0.001);
+  const height_mm = Math.max(input.height_mm, 0.001);
+  const beltSpeed_mps = Math.max(input.beltSpeed_mps ?? 1.5, 0);
+  const burden_mm = Math.max(input.burden_mm ?? 0, 0);
+  const waterPercent = Math.min(Math.max(input.waterPercent ?? 0, 0), 100);
+  const material = (input.material ?? "coal").toLowerCase();
+
+  // Step 1: Material factor
+  const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
+
+  // Step 2: Loss factors (adjusted caps/bases for responsive slider ranges)
+  const speedLoss = 1 - Math.min(beltSpeed_mps / 8.0, 0.50);
+  const embeddingLoss = 1 - Math.min(Math.pow(burden_mm / 800, 0.7), 0.50);
+  const waterPenalty = 1 - Math.min(waterPercent / 50, 0.40);
+
+  // Step 3: Shape penalty
+  const major = Math.max(width_mm, length_mm);
+  const minor = Math.min(width_mm, length_mm);
+  const aspectRatio = major / Math.max(1, minor);
+  const thinness = height_mm / Math.max(1, minor);
+  
+  let shapePenalty = 0.9 
+    - 0.25 * (aspectRatio - 1) 
+    - 0.3 * (thinness < 0.2 ? (0.2 - thinness) : 0);
+  shapePenalty = Math.max(0.25, Math.min(1.0, shapePenalty));
+
+  // Step 4: Magnetic moment proxy
+  const volume_cm3 = (width_mm * length_mm * height_mm) / 1000;
+  const mass_g = volume_cm3 * 7.85;
+  const momentFactor = mass_g * Math.sqrt(Math.max(0.0001, volume_cm3));
+
+  // Step 5: Composite difficulty - INVERT ease factors to get difficulty
+  const easeFactor = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
+  const difficultyMultiplier = 1 / Math.max(easeFactor, 0.05);
+
+  // Step 6: Contact Stability Factors
+  // Use explicit partType if provided, otherwise fall back to name detection
+  const partType = input.partType ?? 'generic';
+  const descLower = (input.description ?? "").toLowerCase();
+  const minFace = Math.min(width_mm, length_mm);
+  const isThinPlate = height_mm < 0.15 * minFace;
+
+  // Determine effective type: explicit partType takes precedence
+  let effectiveType: 'generic' | 'nut' | 'bolt' | 'plate' = partType;
+  if (partType === 'generic') {
+    // Fall back to name detection for backwards compat
+    if (descLower.includes("nut")) effectiveType = 'nut';
+    else if (descLower.includes("bolt")) effectiveType = 'bolt';
+    else if (isThinPlate) effectiveType = 'plate';
+  }
+
+  // Apply contact stability factor based on effective type
+  let stabilityFactor = 1.0;
+  switch (effectiveType) {
+    case 'nut': stabilityFactor = 1.8; break;
+    case 'bolt': stabilityFactor = 1.3; break;
+    case 'plate': stabilityFactor = 1.5; break;
+    // 'generic' = 1.0, no penalty
+  }
+
+  // Step 7: Calculate Required Force Factor (no calibration constant - set to 1.0)
+  // requiredFF = momentFactor × difficultyMultiplier × stabilityFactor
+  const requiredForceFactor = momentFactor * difficultyMultiplier * stabilityFactor;
+
+  return {
+    requiredForceFactor,
+    momentFactor,
+    difficultyMultiplier,
+    stabilityFactor,
+    effectiveType
+  };
+}
+
+/**
+ * @deprecated Use calculateRequiredForceFactor instead - this function outputs Gauss which is NOT used for extraction.
+ * Kept for legacy display purposes only.
  */
 export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   // Clamp/default inputs

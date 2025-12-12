@@ -9,7 +9,8 @@ import { ArrowLeft, Trash2, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   calculateGaussAtGap,
-  calculateRequiredGaussV2,
+  calculateForceFactorAtGap,
+  calculateRequiredForceFactor,
   MATERIAL_FACTORS
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
@@ -181,15 +182,19 @@ export default function OCWModelComparison() {
     
     const backplate = selectedModel.suffix || 30;
     const surfaceGauss = selectedModel.surface_gauss || 0;
+    const surfaceFF = selectedModel.force_factor || 0;
     
     const gaussAtGap = calculateGaussAtGap(surfaceGauss, airGap, backplate);
+    const forceFactorAtGap = calculateForceFactorAtGap(surfaceFF, airGap, backplate);
     
     return {
-      gaussAtGap: Math.round(gaussAtGap)
+      gaussAtGap: Math.round(gaussAtGap),
+      forceFactorAtGap: Math.round(forceFactorAtGap)
     };
   }, [selectedModel, airGap]);
   
   // Calculate extraction results for each tramp (with 3 orientation permutations)
+  // Uses Force Factor for extraction ratio calculation (legacy-correct)
   const trampResults = useMemo(() => {
     if (!selectedModel || !modelValues) return [];
     
@@ -197,9 +202,9 @@ export default function OCWModelComparison() {
       // Get 3 legacy orientation permutations: (W,L,H), (W,H,L), (H,L,W)
       const orientations = getOrientationPermutations(tramp.w, tramp.l, tramp.h);
       
-      // Calculate required Gauss for each orientation
-      const requiredGaussValues = orientations.map(dims => {
-        return calculateRequiredGaussV2({
+      // Calculate required Force Factor for each orientation
+      const results = orientations.map(dims => {
+        return calculateRequiredForceFactor({
           width_mm: dims.w,
           length_mm: dims.l,
           height_mm: dims.h,
@@ -207,33 +212,46 @@ export default function OCWModelComparison() {
           burden_mm: burdenMm,
           waterPercent: waterPercent,
           material: material,
-          description: tramp.name  // For nut detection
+          description: tramp.name  // For nut/bolt detection
         });
       });
       
-      // Use MAX required Gauss (worst-case orientation)
-      const maxRequiredGauss = Math.max(...requiredGaussValues);
+      // Use MAX required Force Factor (worst-case orientation)
+      const maxRequiredFF = Math.max(...results.map(r => r.requiredForceFactor));
       
-      // Calculate extraction ratio using worst case
-      const ratio = maxRequiredGauss > 0 ? modelValues.gaussAtGap / maxRequiredGauss : 0;
+      // Find the worst-case result for debug info
+      const worstCaseIdx = results.findIndex(r => r.requiredForceFactor === maxRequiredFF);
+      const worstCaseResult = results[worstCaseIdx];
+      
+      // Calculate extraction ratio using Force Factor (NOT Gauss)
+      const ratio = maxRequiredFF > 0 ? modelValues.forceFactorAtGap / maxRequiredFF : 0;
       const extractionPercent = getExtractionPercent(ratio);
       
       return {
         ...tramp,
-        requiredGauss: maxRequiredGauss,
+        requiredFF: Math.round(maxRequiredFF),
         ratio,
-        extractionPercent
+        extractionPercent,
+        // Debug info
+        debugInfo: {
+          momentFactor: worstCaseResult.momentFactor,
+          difficultyMultiplier: worstCaseResult.difficultyMultiplier,
+          stabilityFactor: worstCaseResult.stabilityFactor,
+          effectiveType: worstCaseResult.effectiveType,
+          worstCaseOrientation: orientations[worstCaseIdx]
+        }
       };
     });
   }, [selectedModel, modelValues, allTramps, beltSpeed, burdenMm, airGap, waterPercent, material]);
   
-  // Sanity check: log when burden/water changes affect required Gauss
+  // Debug log for FF-based extraction
   useEffect(() => {
-    if (trampResults.length > 0) {
-      console.log('[Sanity Check] First tramp required Gauss:', trampResults[0].requiredGauss);
-      console.log('[Sanity Check] Burden:', burdenMm, 'Water:', waterPercent, 'Speed:', beltSpeed);
+    if (trampResults.length > 0 && modelValues) {
+      console.log('[FF Extraction] Model FF @ gap:', modelValues.forceFactorAtGap);
+      console.log('[FF Extraction] First tramp required FF:', trampResults[0].requiredFF);
+      console.log('[FF Extraction] Ratio:', trampResults[0].ratio.toFixed(2));
     }
-  }, [trampResults, burdenMm, waterPercent, beltSpeed]);
+  }, [trampResults, modelValues]);
   
   // Remove a saved configuration
   const handleRemoveConfig = async (config: SavedConfiguration) => {
@@ -334,6 +352,7 @@ export default function OCWModelComparison() {
                   savedConfigs.map((config) => {
                     const backplate = config.suffix || 30;
                     const gaussAtGap = Math.round(calculateGaussAtGap(config.surface_gauss || 0, airGap, backplate));
+                    const ffAtGap = Math.round(calculateForceFactorAtGap(config.force_factor || 0, airGap, backplate));
                     
                     return (
                       <div 
@@ -349,7 +368,7 @@ export default function OCWModelComparison() {
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm truncate">{config.name}</h3>
                             <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                              <div>Gauss @ {airGap}mm: <span className="font-medium text-foreground">{gaussAtGap.toLocaleString()}</span></div>
+                              <div>FF @ {airGap}mm: <span className="font-medium text-foreground">{ffAtGap.toLocaleString()}</span> | Gauss: {gaussAtGap.toLocaleString()}</div>
                               <div>{config.watts?.toLocaleString()} W | {config.width}mm | Frame {config.frame}</div>
                             </div>
                           </div>
@@ -465,7 +484,9 @@ export default function OCWModelComparison() {
                     </CardTitle>
                     {modelValues && (
                       <CardDescription className="text-xs mt-1">
-                        Model Gauss @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.gaussAtGap.toLocaleString()}</span>
+                        Model FF @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.forceFactorAtGap.toLocaleString()}</span>
+                        {' | '}
+                        Gauss: {modelValues.gaussAtGap.toLocaleString()}
                         {' | '}
                         Material: <span className="capitalize">{material}</span>
                       </CardDescription>
@@ -542,10 +563,10 @@ export default function OCWModelComparison() {
                         <TableHeader>
                           <TableRow className="bg-muted/50">
                             <TableHead className="w-[160px] text-xs font-semibold">Description</TableHead>
-                            <TableHead className="w-[120px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
-                            <TableHead className="w-[120px] text-xs font-semibold text-right">Reqd Gauss (Baseline)</TableHead>
-                            <TableHead className="w-[100px] text-xs font-semibold text-right">Model Gauss</TableHead>
-                            <TableHead className="w-[100px] text-xs font-semibold text-right">Extraction</TableHead>
+                            <TableHead className="w-[100px] text-xs font-semibold">Dimension</TableHead>
+                            <TableHead className="w-[90px] text-xs font-semibold text-right">Reqd FF</TableHead>
+                            <TableHead className="w-[90px] text-xs font-semibold text-right">Model FF</TableHead>
+                            <TableHead className="w-[80px] text-xs font-semibold text-right">Extraction</TableHead>
                             <TableHead className="w-[40px]"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -553,16 +574,19 @@ export default function OCWModelComparison() {
                           {trampResults.map((result) => (
                             <TableRow key={result.id}>
                               <TableCell className="text-sm font-medium">
-                                {result.name}
+                                <div>{result.name}</div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {result.debugInfo.effectiveType !== 'generic' && `(${result.debugInfo.effectiveType} ×${result.debugInfo.stabilityFactor})`}
+                                </div>
                               </TableCell>
-                              <TableCell className="text-sm font-mono">
-                                {result.w} × {result.l} × {result.h}
+                              <TableCell className="text-xs font-mono">
+                                {result.w}×{result.l}×{result.h}
                               </TableCell>
                               <TableCell className="text-right text-sm font-mono text-muted-foreground">
-                                {result.requiredGauss.toLocaleString()}
+                                {result.requiredFF.toLocaleString()}
                               </TableCell>
                               <TableCell className="text-right text-sm font-mono font-medium">
-                                {modelValues?.gaussAtGap.toLocaleString()}
+                                {modelValues?.forceFactorAtGap.toLocaleString()}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge 
