@@ -11,7 +11,8 @@ import {
   BurdenSeverity, 
   marginRatioToConfidence,
   calculateForceFactorAtGap,
-  calculateGaussAtGap
+  calculateGaussAtGap,
+  calculateRequiredGaussForPickup
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -285,10 +286,21 @@ export default function OCWModelComparison() {
       const marginRatio = requiredForce > 0 ? availableForce / requiredForce : 0;
       const confidence = marginRatioToConfidence(marginRatio);
       
+      // Calculate required Gauss for this tramp
+      const requiredGauss = calculateRequiredGaussForPickup(
+        tramp.w, tramp.l, tramp.h,
+        tramp.orientation,
+        burdenSeverity,
+        airGap,
+        backplate,
+        3.0
+      );
+      
       return {
         ...tramp,
         requiredForce,
-        confidence
+        confidence,
+        requiredGauss: Math.round(requiredGauss)
       };
     });
   }, [selectedModel, modelValues, orientedTramps, airGap, ambientTemp, burdenSeverity]);
@@ -521,9 +533,11 @@ export default function OCWModelComparison() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">
-                            <TableHead className="w-[180px] text-xs font-semibold">Description</TableHead>
-                            <TableHead className="w-[140px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
-                            <TableHead className="w-[100px] text-xs font-semibold text-right">Extraction %</TableHead>
+                            <TableHead className="w-[160px] text-xs font-semibold">Description</TableHead>
+                            <TableHead className="w-[120px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
+                            <TableHead className="w-[90px] text-xs font-semibold text-right">Reqd Gauss</TableHead>
+                            <TableHead className="w-[90px] text-xs font-semibold text-right">Model Gauss</TableHead>
+                            <TableHead className="w-[90px] text-xs font-semibold text-right">Extraction %</TableHead>
                             <TableHead className="w-[40px]"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -543,6 +557,12 @@ export default function OCWModelComparison() {
                               )}
                               <TableCell className="text-sm font-mono">
                                 {result.w} × {result.l} × {result.h}
+                              </TableCell>
+                              <TableCell className="text-right text-sm font-mono text-muted-foreground">
+                                {result.requiredGauss.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right text-sm font-mono font-medium">
+                                {modelValues?.gaussAtGap.toLocaleString()}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge 

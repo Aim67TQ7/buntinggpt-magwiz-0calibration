@@ -7,6 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.17.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Added 'Required Gauss' column to tramp extraction table",
+      "Shows minimum Gauss at gap needed for reliable pickup of each tramp item",
+      "Added 'Model Gauss' column showing the gap-adjusted Gauss from the selected model",
+      "Helps users select magnets by comparing required vs available Gauss"
+    ]
+  },
+  {
     version: "3.16.0",
     date: "2025-12-12",
     type: "minor",
