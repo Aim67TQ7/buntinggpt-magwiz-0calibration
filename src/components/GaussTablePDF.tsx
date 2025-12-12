@@ -88,26 +88,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  tempScaleRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  tempBox: {
-    flex: 1,
-    padding: 4,
-    backgroundColor: '#f5f5f5',
-    marginRight: 4,
-    alignItems: 'center',
-  },
-  tempLabel: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  tempValue: {
-    fontSize: 7,
-    color: '#666',
-  },
   table: {
     display: 'flex',
     width: 'auto',

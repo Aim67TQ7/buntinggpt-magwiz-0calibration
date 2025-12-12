@@ -203,26 +203,6 @@ export default function GaussTable() {
         </CardContent>
       </Card>
 
-      {/* Temperature Scaling Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Temperature Scaling Reference</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-4 gap-4 text-center">
-            {Object.entries(TEMP_CONFIGS).map(([temp, config]) => (
-              <div key={temp} className="p-3 rounded-lg bg-muted/50">
-                <Badge variant="outline" className="mb-2">{config.label}</Badge>
-                <div className="text-sm">
-                  <div>Gauss: <span className="font-semibold">{(config.gaussScale * 100).toFixed(1)}%</span></div>
-                  <div>FF: <span className="font-semibold">{(config.ffScale * 100).toFixed(1)}%</span></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Full Gauss/FF Table */}
       <Card>
         <CardHeader>
