@@ -372,6 +372,15 @@ export default function OCWModelComparison() {
               </CardContent>
             </Card>
             
+            {/* Temporary Debug Display - remove after verification */}
+            <Card className="bg-muted/50 border-dashed">
+              <CardContent className="p-3">
+                <pre className="text-xs font-mono overflow-x-auto">
+                  {JSON.stringify({ beltSpeed, burdenMm, waterPercent, material }, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+
             {/* Extraction Parameters */}
             <Card>
               <CardHeader className="pb-3">

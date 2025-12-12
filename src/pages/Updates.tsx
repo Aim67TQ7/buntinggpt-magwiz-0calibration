@@ -7,6 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.22.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Added contact stability factors: Nut ×1.8, Bolt ×1.3, Thin Plate ×1.5 (cubes = baseline)",
+      "Thin plate detection: height < 15% of minimum face dimension",
+      "Added debug state display to verify slider/material reactivity",
+      "Difficulty ranking: cubes easiest → bolts → plates → nuts hardest"
+    ]
+  },
+  {
     version: "3.21.0",
     date: "2025-12-12",
     type: "minor",
