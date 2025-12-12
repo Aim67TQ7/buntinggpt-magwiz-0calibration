@@ -7,6 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.19.0",
+    date: "2025-12-12",
+    type: "minor",
+    changes: [
+      "Removed temperature scaling reference card from Gauss Table page and PDF export",
+      "Required Gauss calculation now includes air gap distance scaling (anchored at 75mm)",
+      "Replaced burden loss with embedding loss to avoid double-counting when using effective gap",
+      "Column header updated to show 'Reqd Gauss @ {gap}mm' for clarity"
+    ]
+  },
+  {
     version: "3.18.0",
     date: "2025-12-12",
     type: "minor",
