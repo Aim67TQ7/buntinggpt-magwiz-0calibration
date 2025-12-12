@@ -180,17 +180,17 @@ export interface TrampExtractionInput {
   length_mm: number;
   height_mm: number;
   beltSpeed_mps?: number;      // default 1.5
-  burden_mm?: number;          // default 0 (embedding depth, not air gap)
-  gap_mm?: number;             // default 0 (air gap to top of burden)
+  burden_mm?: number;          // default 0 (embedding depth)
   waterPercent?: number;       // default 0
   material?: string;           // default "coal"
 }
 
 /**
- * Calculate required Gauss at gap for tramp metal pickup using engineering heuristic model.
- * Uses material factors, speed loss, embedding loss, water penalty, shape penalty, and gap distance scaling.
+ * Calculate baseline required Gauss for tramp metal pickup using engineering heuristic model.
+ * This is a baseline value independent of air gap - compare with gap-adjusted Model Gauss.
+ * Uses material factors, speed loss, embedding loss, water penalty, and shape penalty.
  * @param input - Tramp extraction input parameters
- * @returns Required Gauss at gap (integer)
+ * @returns Baseline Required Gauss (integer)
  */
 export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   // Clamp/default inputs
@@ -199,19 +199,15 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   const height_mm = Math.max(input.height_mm, 0.001);
   const beltSpeed_mps = Math.max(input.beltSpeed_mps ?? 1.5, 0);
   const burden_mm = Math.max(input.burden_mm ?? 0, 0);
-  const gap_mm = Math.max(input.gap_mm ?? 0, 0);
   const waterPercent = Math.min(Math.max(input.waterPercent ?? 0, 0), 100);
   const material = (input.material ?? "coal").toLowerCase();
-
-  // Calculate effective gap (air gap + burden depth)
-  const effectiveGap_mm = gap_mm + burden_mm;
 
   // Step 1: Material factor
   const materialFactor = MATERIAL_FACTORS[material] ?? 0.75;
 
   // Step 2: Loss factors
   const speedLoss = 1 - Math.min(beltSpeed_mps / 3.0, 0.35);
-  // Embedding loss (reduced cap to 0.35 since gap distance scaling now handles distance)
+  // Embedding loss represents tramp burial in burden (not distance scaling)
   const embeddingLoss = 1 - Math.min(Math.pow(burden_mm / 500, 0.6), 0.35);
   const waterPenalty = 1 - Math.min(waterPercent / 20, 0.25);
 
@@ -235,17 +231,11 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   const difficultyModifier = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
   const forceFactor = momentFactor * difficultyModifier;
 
-  // Step 6: Map to base Required Gauss
+  // Step 6: Map to baseline Required Gauss (no gap distance scaling)
   const gradientReq = forceFactor > 0 ? Math.pow(forceFactor, 0.33) : 0;
-  const baseRequiredGauss = 30 * gradientReq + 70;
+  const baselineRequiredGauss = 30 * gradientReq + 70;
 
-  // Step 7: Apply gap distance scaling (anchored at 75mm reference gap)
-  const refGap_mm = 75;
-  const n = 2.3;
-  const gapMultiplier = Math.pow((effectiveGap_mm + refGap_mm) / refGap_mm, n);
-  const requiredGaussAtGap = baseRequiredGauss * gapMultiplier;
-
-  return Math.round(requiredGaussAtGap);
+  return Math.round(baselineRequiredGauss);
 }
 
 /**

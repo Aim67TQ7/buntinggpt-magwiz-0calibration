@@ -7,6 +7,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const updates = [
   {
+    version: "3.20.0",
+    date: "2025-12-12",
+    type: "patch",
+    changes: [
+      "Fixed Required Gauss calculation - removed incorrect gap distance scaling",
+      "Required Gauss is now a baseline value independent of air gap",
+      "Extraction ratio correctly compares gap-adjusted Model Gauss vs baseline Required Gauss",
+      "Column header updated to 'Reqd Gauss (Baseline)' for clarity"
+    ]
+  },
+  {
     version: "3.19.0",
     date: "2025-12-12",
     type: "minor",
