@@ -235,8 +235,9 @@ export function calculateRequiredGaussV2(input: TrampExtractionInput): number {
   const easeFactor = shapePenalty * materialFactor * embeddingLoss * speedLoss * waterPenalty;
   
   // Invert to get difficulty multiplier (higher = harder to pick up)
-  // Clamped at 0.20 to avoid extreme values (max 5x multiplier)
-  const difficultyMultiplier = 1 / Math.max(easeFactor, 0.20);
+  // Clamped at 0.05 to avoid extreme values (max 20x multiplier)
+  // Lower clamp ensures sliders remain responsive for all shapes
+  const difficultyMultiplier = 1 / Math.max(easeFactor, 0.05);
   
   // forceFactor now INCREASES when conditions are harder
   const forceFactor = momentFactor * difficultyMultiplier;
