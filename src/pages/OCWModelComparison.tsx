@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +8,9 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Trash2, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  BurdenSeverity, 
-  marginRatioToConfidence,
-  calculateForceFactorAtGap,
   calculateGaussAtGap,
-  calculateRequiredGaussForPickup
+  calculateRequiredGaussV2,
+  MATERIAL_FACTORS
 } from "@/utils/trampPickup";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,16 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-// Temperature scaling for Force Factor
-const FF_TEMP_RATIOS: Record<number, number> = {
-  20: 1.000,
-  30: 0.9117,
-  40: 0.8181
-};
-
-// Steel density for mass calculation
-const STEEL_DENSITY = 7850; // kg/m³
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 
 // Standard tramp metal presets
 interface TrampPreset {
@@ -51,58 +47,20 @@ const STANDARD_TRAMPS: TrampPreset[] = [
   { id: "plate-6mm", name: "6mm Plate", w: 100, l: 100, h: 6 },
 ];
 
-// Orientation types
-type Orientation = 'flat' | 'edge' | 'corner';
-
-interface OrientedTramp {
-  name: string;
-  orientation: Orientation;
-  w: number;
-  l: number;
-  h: number;
-  isFirstOfGroup: boolean;
-  groupRowSpan: number;
-}
-
-// Generate all orientation variants for a tramp item
-function generateOrientations(tramp: TrampPreset): OrientedTramp[] {
-  const orientations: OrientedTramp[] = [];
-  
-  // Flat: original W × L × H
-  orientations.push({
-    name: tramp.name,
-    orientation: 'flat',
-    w: tramp.w,
-    l: tramp.l,
-    h: tramp.h,
-    isFirstOfGroup: true,
-    groupRowSpan: 3
-  });
-  
-  // Edge: W × H × L (swap L and H)
-  orientations.push({
-    name: tramp.name,
-    orientation: 'edge',
-    w: tramp.w,
-    l: tramp.h,
-    h: tramp.l,
-    isFirstOfGroup: false,
-    groupRowSpan: 0
-  });
-  
-  // Corner: H × L × W (rotate all)
-  orientations.push({
-    name: tramp.name,
-    orientation: 'corner',
-    w: tramp.h,
-    l: tramp.l,
-    h: tramp.w,
-    isFirstOfGroup: false,
-    groupRowSpan: 0
-  });
-  
-  return orientations;
-}
+// Material options with display names
+const MATERIAL_OPTIONS = [
+  { value: "coal", label: "Coal" },
+  { value: "limestone", label: "Limestone" },
+  { value: "gravel", label: "Gravel" },
+  { value: "sand", label: "Sand" },
+  { value: "slag", label: "Slag" },
+  { value: "wood", label: "Wood" },
+  { value: "aggregate", label: "Aggregate" },
+  { value: "glass", label: "Glass" },
+  { value: "c&d", label: "C&D" },
+  { value: "compost", label: "Compost" },
+  { value: "msw", label: "MSW" },
+];
 
 // Interface for saved configuration from database
 interface SavedConfiguration {
@@ -124,77 +82,39 @@ interface OCWSelectorState {
   burdenDepth?: number;
   airGap?: number;
   ambientTemp?: number;
-  burdenSeverity?: BurdenSeverity;
-  trampWidth?: number;
-  trampLength?: number;
-  trampHeight?: number;
 }
 
-// Calculate Force Factor at gap with temperature adjustment
-function calculateFFAtGapWithTemp(surfaceFF: number, gap: number, backplate: number, temp: number): number {
-  const ffAtGap = calculateForceFactorAtGap(surfaceFF, gap, backplate);
-  const tempRatio = FF_TEMP_RATIOS[temp] || 1.0;
-  return ffAtGap * tempRatio;
-}
-
-// Calculate required force for tramp pickup with orientation
-function calculateRequiredForce(
-  widthMm: number,
-  lengthMm: number,
-  heightMm: number,
-  orientation: Orientation,
-  burdenSeverity: BurdenSeverity,
-  safetyFactor: number = 3.0
-): number {
-  const volume_m3 = (widthMm / 1000) * (lengthMm / 1000) * (heightMm / 1000);
-  const mass_kg = volume_m3 * STEEL_DENSITY;
-  const weight_N = mass_kg * 9.81;
-  
-  // Orientation factor
-  const oriFactor = orientation === 'flat' ? 1.0 
-    : orientation === 'edge' ? 4.0 
-    : 6.0; // corner
-  
-  // Burden factor
-  const burFactor = burdenSeverity === 'none' ? 1.0
-    : burdenSeverity === 'light' ? 1.5
-    : burdenSeverity === 'moderate' ? 2.5
-    : burdenSeverity === 'heavy' ? 4.0
-    : burdenSeverity === 'severe' ? 6.0
-    : 3.0;
-    
-  return weight_N * oriFactor * burFactor * safetyFactor;
-}
-
-// Get confidence badge variant
-function getConfidenceBadgeVariant(confidence: number): 'default' | 'secondary' | 'destructive' {
-  if (confidence >= 75) return 'default';
-  if (confidence >= 50) return 'secondary';
+// Get confidence badge variant based on ratio
+function getConfidenceBadgeVariant(ratio: number): 'default' | 'secondary' | 'destructive' {
+  if (ratio >= 1.5) return 'default';
+  if (ratio >= 1.0) return 'secondary';
   return 'destructive';
 }
 
-// Get confidence color class
-function getConfidenceColor(confidence: number): string {
-  if (confidence >= 75) return 'text-green-600';
-  if (confidence >= 50) return 'text-yellow-600';
-  return 'text-red-600';
-}
-
-// Get extraction percentage display
-function getExtractionDisplay(confidence: number): string {
-  return `${confidence}%`;
+// Get extraction percentage from ratio
+function getExtractionPercent(ratio: number): number {
+  if (ratio <= 0) return 0;
+  if (ratio >= 2) return 99;
+  if (ratio >= 1.5) return Math.min(99, Math.round(75 + (ratio - 1.5) * 48));
+  if (ratio >= 1.0) return Math.round(50 + (ratio - 1.0) * 50);
+  return Math.max(0, Math.round(ratio * 50));
 }
 
 export default function OCWModelComparison() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const passedParams = location.state as OCWSelectorState | undefined;
   
   // Parameters from OCW Selector
   const airGap = passedParams?.airGap ?? 200;
-  const ambientTemp = passedParams?.ambientTemp ?? 20;
-  const burdenSeverity = passedParams?.burdenSeverity ?? 'moderate';
+  const passedBeltSpeed = passedParams?.beltSpeed ?? 1.5;
+  const passedBurdenDepth = passedParams?.burdenDepth ?? 0;
+  
+  // Local state for extraction parameters
+  const [beltSpeed, setBeltSpeed] = useState(passedBeltSpeed);
+  const [burdenMm, setBurdenMm] = useState(passedBurdenDepth);
+  const [waterPercent, setWaterPercent] = useState(0);
+  const [material, setMaterial] = useState("coal");
   
   const [savedConfigs, setSavedConfigs] = useState<SavedConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,11 +127,6 @@ export default function OCWModelComparison() {
   
   // Combine standard and custom tramps
   const allTramps = useMemo(() => [...STANDARD_TRAMPS, ...customTramps], [customTramps]);
-  
-  // Generate all oriented tramps
-  const orientedTramps = useMemo(() => {
-    return allTramps.flatMap(tramp => generateOrientations(tramp));
-  }, [allTramps]);
   
   // Fetch saved configurations
   useEffect(() => {
@@ -256,54 +171,40 @@ export default function OCWModelComparison() {
     
     const backplate = selectedModel.suffix || 30;
     const surfaceGauss = selectedModel.surface_gauss || 0;
-    const surfaceFF = selectedModel.force_factor || 0;
     
     const gaussAtGap = calculateGaussAtGap(surfaceGauss, airGap, backplate);
-    const ffAtGap = calculateFFAtGapWithTemp(surfaceFF, airGap, backplate, ambientTemp);
     
     return {
-      gaussAtGap: Math.round(gaussAtGap),
-      ffAtGap: Math.round(ffAtGap)
+      gaussAtGap: Math.round(gaussAtGap)
     };
-  }, [selectedModel, airGap, ambientTemp]);
+  }, [selectedModel, airGap]);
   
-  // Calculate extraction percentages for each oriented tramp
+  // Calculate extraction results for each tramp
   const trampResults = useMemo(() => {
     if (!selectedModel || !modelValues) return [];
     
-    const backplate = selectedModel.suffix || 30;
-    const surfaceFF = selectedModel.force_factor || 0;
-    const availableForce = calculateFFAtGapWithTemp(surfaceFF, airGap, backplate, ambientTemp);
-    
-    return orientedTramps.map(tramp => {
-      const requiredForce = calculateRequiredForce(
-        tramp.w, tramp.l, tramp.h,
-        tramp.orientation,
-        burdenSeverity,
-        3.0
-      );
+    return allTramps.map(tramp => {
+      const requiredGauss = calculateRequiredGaussV2({
+        width_mm: tramp.w,
+        length_mm: tramp.l,
+        height_mm: tramp.h,
+        beltSpeed_mps: beltSpeed,
+        burden_mm: burdenMm,
+        waterPercent: waterPercent,
+        material: material
+      });
       
-      const marginRatio = requiredForce > 0 ? availableForce / requiredForce : 0;
-      const confidence = marginRatioToConfidence(marginRatio);
-      
-      // Calculate required Gauss for this tramp
-      const requiredGauss = calculateRequiredGaussForPickup(
-        tramp.w, tramp.l, tramp.h,
-        tramp.orientation,
-        burdenSeverity,
-        airGap,
-        backplate,
-        3.0
-      );
+      const ratio = requiredGauss > 0 ? modelValues.gaussAtGap / requiredGauss : 0;
+      const extractionPercent = getExtractionPercent(ratio);
       
       return {
         ...tramp,
-        requiredForce,
-        confidence,
-        requiredGauss: Math.round(requiredGauss)
+        requiredGauss,
+        ratio,
+        extractionPercent
       };
     });
-  }, [selectedModel, modelValues, orientedTramps, airGap, ambientTemp, burdenSeverity]);
+  }, [selectedModel, modelValues, allTramps, beltSpeed, burdenMm, waterPercent, material]);
   
   // Remove a saved configuration
   const handleRemoveConfig = async (config: SavedConfiguration) => {
@@ -376,9 +277,10 @@ export default function OCWModelComparison() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Panel - Saved Models (35%) */}
-          <div className="lg:col-span-4">
-            <Card className="h-full">
+          {/* Left Panel - Saved Models + Parameters */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Saved Models */}
+            <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Saved Models</CardTitle>
                 <CardDescription className="text-xs">
@@ -403,7 +305,6 @@ export default function OCWModelComparison() {
                   savedConfigs.map((config) => {
                     const backplate = config.suffix || 30;
                     const gaussAtGap = Math.round(calculateGaussAtGap(config.surface_gauss || 0, airGap, backplate));
-                    const ffAtGap = Math.round(calculateFFAtGapWithTemp(config.force_factor || 0, airGap, backplate, ambientTemp));
                     
                     return (
                       <div 
@@ -420,7 +321,6 @@ export default function OCWModelComparison() {
                             <h3 className="font-semibold text-sm truncate">{config.name}</h3>
                             <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                               <div>Gauss @ {airGap}mm: <span className="font-medium text-foreground">{gaussAtGap.toLocaleString()}</span></div>
-                              <div>FF @ {airGap}mm: <span className="font-medium text-foreground">{ffAtGap.toLocaleString()}</span></div>
                               <div>{config.watts?.toLocaleString()} W | {config.width}mm | Frame {config.frame}</div>
                             </div>
                           </div>
@@ -442,9 +342,81 @@ export default function OCWModelComparison() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Extraction Parameters */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Extraction Parameters</CardTitle>
+                <CardDescription className="text-xs">
+                  Adjust conditions for tramp pickup calculation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Material Type</Label>
+                  <Select value={material} onValueChange={setMaterial}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MATERIAL_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label} ({((MATERIAL_FACTORS[opt.value] || 0.75) * 100).toFixed(0)}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-xs">Belt Speed</Label>
+                    <span className="text-xs text-muted-foreground">{beltSpeed.toFixed(1)} m/s</span>
+                  </div>
+                  <Slider
+                    value={[beltSpeed]}
+                    onValueChange={([v]) => setBeltSpeed(v)}
+                    min={0.5}
+                    max={4.0}
+                    step={0.1}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-xs">Burden Depth</Label>
+                    <span className="text-xs text-muted-foreground">{burdenMm} mm</span>
+                  </div>
+                  <Slider
+                    value={[burdenMm]}
+                    onValueChange={([v]) => setBurdenMm(v)}
+                    min={0}
+                    max={500}
+                    step={10}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-xs">Water Content</Label>
+                    <span className="text-xs text-muted-foreground">{waterPercent}%</span>
+                  </div>
+                  <Slider
+                    value={[waterPercent]}
+                    onValueChange={([v]) => setWaterPercent(v)}
+                    min={0}
+                    max={25}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Right Panel - Tramp Extraction Table (65%) */}
+          {/* Right Panel - Tramp Extraction Table */}
           <div className="lg:col-span-8">
             <Card>
               <CardHeader className="pb-3">
@@ -455,11 +427,9 @@ export default function OCWModelComparison() {
                     </CardTitle>
                     {modelValues && (
                       <CardDescription className="text-xs mt-1">
-                        Gauss @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.gaussAtGap.toLocaleString()}</span>
+                        Model Gauss @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.gaussAtGap.toLocaleString()}</span>
                         {' | '}
-                        Force Factor @ {airGap}mm: <span className="font-semibold text-foreground">{modelValues.ffAtGap.toLocaleString()}</span>
-                        {' | '}
-                        Burden: <span className="capitalize">{burdenSeverity}</span>
+                        Material: <span className="capitalize">{material}</span>
                       </CardDescription>
                     )}
                   </div>
@@ -535,26 +505,18 @@ export default function OCWModelComparison() {
                           <TableRow className="bg-muted/50">
                             <TableHead className="w-[160px] text-xs font-semibold">Description</TableHead>
                             <TableHead className="w-[120px] text-xs font-semibold">Dimension (W×L×H)</TableHead>
-                            <TableHead className="w-[90px] text-xs font-semibold text-right">Reqd Gauss</TableHead>
-                            <TableHead className="w-[90px] text-xs font-semibold text-right">Model Gauss</TableHead>
-                            <TableHead className="w-[90px] text-xs font-semibold text-right">Extraction %</TableHead>
+                            <TableHead className="w-[100px] text-xs font-semibold text-right">Reqd Gauss</TableHead>
+                            <TableHead className="w-[100px] text-xs font-semibold text-right">Model Gauss</TableHead>
+                            <TableHead className="w-[100px] text-xs font-semibold text-right">Extraction</TableHead>
                             <TableHead className="w-[40px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {trampResults.map((result, idx) => (
-                            <TableRow 
-                              key={`${result.name}-${result.orientation}-${idx}`}
-                              className={result.isFirstOfGroup ? 'border-t-2' : ''}
-                            >
-                              {result.isFirstOfGroup && (
-                                <TableCell 
-                                  rowSpan={result.groupRowSpan} 
-                                  className="text-sm font-medium align-top pt-3"
-                                >
-                                  {result.name}
-                                </TableCell>
-                              )}
+                          {trampResults.map((result) => (
+                            <TableRow key={result.id}>
+                              <TableCell className="text-sm font-medium">
+                                {result.name}
+                              </TableCell>
                               <TableCell className="text-sm font-mono">
                                 {result.w} × {result.l} × {result.h}
                               </TableCell>
@@ -566,28 +528,23 @@ export default function OCWModelComparison() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge 
-                                  variant={getConfidenceBadgeVariant(result.confidence)}
+                                  variant={getConfidenceBadgeVariant(result.ratio)}
                                   className="text-xs font-mono min-w-[50px] justify-center"
                                 >
-                                  {getExtractionDisplay(result.confidence)}
+                                  {result.extractionPercent}%
                                 </Badge>
                               </TableCell>
                               <TableCell className="p-1">
-                                {result.name.startsWith('custom-') || customTramps.some(t => t.name === result.name) ? (
-                                  result.isFirstOfGroup && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                      onClick={() => {
-                                        const tramp = customTramps.find(t => t.name === result.name);
-                                        if (tramp) handleRemoveCustomTramp(tramp.id);
-                                      }}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  )
-                                ) : null}
+                                {result.id.startsWith('custom-') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                    onClick={() => handleRemoveCustomTramp(result.id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -598,16 +555,16 @@ export default function OCWModelComparison() {
                     {/* Legend */}
                     <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <Badge variant="default" className="text-[10px] px-1.5">75%+</Badge>
-                        <span>High confidence</span>
+                        <Badge variant="default" className="text-[10px] px-1.5">≥150%</Badge>
+                        <span>Reliable pickup</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Badge variant="secondary" className="text-[10px] px-1.5">50-74%</Badge>
-                        <span>Moderate</span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5">100-149%</Badge>
+                        <span>Marginal</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Badge variant="destructive" className="text-[10px] px-1.5">&lt;50%</Badge>
-                        <span>Low confidence</span>
+                        <Badge variant="destructive" className="text-[10px] px-1.5">&lt;100%</Badge>
+                        <span>Unlikely</span>
                       </div>
                     </div>
                   </>
