@@ -5,27 +5,27 @@
 **Status:** In Transition
 
 ## What This Was
-Bunting Magnetics tool — likely a single-purpose app for a specific Bunting workflow
+BuntingGPT MagWiz calibration tool — magnet calibration workflow
 
 ## Current State
-Deprecated — function should be handled by agent. Last pushed 2025-12-12.
+Function replaceable by agent — last pushed 2025-12-12
 
 ## Agent Replacement
 **Agent Name:** PENDING
-**Lives On:** Maggie or Pete VPS (TBD)
+**Lives On:** Maggie or Pete VPS (to be determined during build)
 **Orchestrator:** Cal Agent (cal.gp3.app)
-**Endpoint or Trigger:** N/A
+**Endpoint or Trigger:** PENDING
 **Supabase Table:** N/A
 
 ## Handoff Notes
-This repo's core function was: Bunting-specific: Calibration management/tracking. The recommended replacement pattern is: Cal Agent (cal.gp3.app). Check ORC skill list at https://orc.gp3.app/skills before building anything new.
+Core function: Guided calibration process for magnetic equipment. Recommended replacement: Cal Agent (cal.gp3.app). Verify at https://orc.gp3.app/skills before building anything new.
 
 ## Dependencies
-- None identified from README
+- None identified — check package.json for specifics
 
 ## Last Known Working State
 2025-12-12
 
 ## Claude's Notes
-- Bunting-specific tool — verify ORC can handle this function before archiving.
-- Agent replacement not yet built. This is a backlog item.
+- Bunting-specific — verify ORC handles this function before retiring.
+- Agent replacement not yet built. This is a backlog item for the GP3 platform team.
